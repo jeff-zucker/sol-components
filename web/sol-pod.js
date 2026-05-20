@@ -62,6 +62,9 @@ class SolPod extends HTMLElement {
     this._selected = new Set();
     this._lastSelectedIndex = -1;
     this._currentItems = [];
+    this._allItems = [];
+    this._filterText = '';
+    this._focusIndex = -1;
     this._prefs = { hideDot: true, hideHash: true, hideTilde: true };
   }
 
@@ -184,7 +187,12 @@ class SolPod extends HTMLElement {
       const items = await fetchContainer(url, fetchFn);
       this._currentPath = url;
       this._items = this._filterItems(items);
-      this._renderTree(this._items);
+      this._allItems = this._items;
+      // New container = fresh context; clear any in-flight filter.
+      this._filterText = '';
+      const filterInput = this.shadowRoot.querySelector('.pod-filter');
+      if (filterInput) filterInput.value = '';
+      this._renderTree(this._allItems, { preserveFocus: false });
       this._updateBreadcrumb(url);
       this._emitStatus('', '');
 
@@ -230,7 +238,12 @@ class SolPod extends HTMLElement {
         </div>
       </div>
       <div class="breadcrumb"></div>
-      <div class="tree-wrapper">
+      <div class="pod-filter-row">
+        <input class="pod-filter" type="search"
+               placeholder="Filter (press / to focus, Esc to clear)"
+               aria-label="Filter items in this container" />
+      </div>
+      <div class="tree-wrapper" tabindex="0">
         <div class="empty">Loading...</div>
       </div>`;
     s.adoptedStyleSheets = [];
@@ -245,6 +258,35 @@ class SolPod extends HTMLElement {
         this.loadContainer(sel.value);
       }
     });
+
+    const filter = s.querySelector('.pod-filter');
+    filter.addEventListener('input', () => {
+      this._filterText = filter.value;
+      this._renderTree(this._allItems, { preserveFocus: false });
+    });
+    filter.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        filter.value = '';
+        this._filterText = '';
+        this._renderTree(this._allItems, { preserveFocus: false });
+        this.shadowRoot.querySelector('.tree-wrapper')?.focus();
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+        // Move focus into the list.
+        const ul = this.shadowRoot.querySelector('.file-tree');
+        const first = ul?.querySelector('li');
+        if (first) {
+          this._focusIndex = 0;
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    });
+
+    // Keyboard nav at the wrapper level so it works whether the wrapper
+    // or an individual li has focus.
+    const wrapper = s.querySelector('.tree-wrapper');
+    wrapper.addEventListener('keydown', (e) => this._onWrapperKey(e));
   }
 
   _populateSelect(storages) {
@@ -328,22 +370,143 @@ class SolPod extends HTMLElement {
     }
   }
 
-  _renderTree(items) {
-    this._currentItems = items;
-    this._selected.clear();
-    this._lastSelectedIndex = -1;
+  _renderTree(allItems, { preserveFocus = true } = {}) {
+    this._allItems = allItems;
+    const visible = this._applyFilter(allItems);
+    this._currentItems = visible;
+
+    // Drop selections that are no longer visible.
+    const visibleUrls = new Set(visible.map(it => it.url));
+    for (const u of [...this._selected]) if (!visibleUrls.has(u)) this._selected.delete(u);
+
     const tw = this.shadowRoot.querySelector('.tree-wrapper');
+    const prevFocusUrl = preserveFocus
+      ? tw.querySelector('li:focus')?.dataset?.url || null
+      : null;
     tw.innerHTML = '';
-    if (items.length === 0) { tw.innerHTML = '<div class="empty">Empty container</div>'; return; }
+
+    if (visible.length === 0) {
+      const msg = this._filterText
+        ? `No matches for "${this._filterText}"`
+        : (allItems.length === 0 ? 'Empty container' : 'No matches');
+      tw.innerHTML = `<div class="empty">${msg}</div>`;
+      this._focusIndex = -1;
+      return;
+    }
+
     const ul = document.createElement('ul');
     ul.className = 'file-tree';
-    items.forEach((item, idx) => ul.appendChild(this._createTreeItem(item, idx)));
+    visible.forEach((item, idx) => ul.appendChild(this._createTreeItem(item, idx)));
     tw.appendChild(ul);
+
+    // Restore focus if requested (linear scan — URLs contain characters that
+    // are awkward to escape in a CSS attribute selector).
+    if (prevFocusUrl) {
+      const li = Array.from(ul.children).find(el => el.dataset.url === prevFocusUrl);
+      if (li) {
+        li.focus();
+        this._focusIndex = Number(li.dataset.index);
+      }
+    }
 
     // Drop zone
     tw.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; tw.parentElement?.classList.add('drag-over'); };
     tw.ondragleave = (e) => { if (e.target === tw) tw.parentElement?.classList.remove('drag-over'); };
     tw.ondrop = (e) => { e.preventDefault(); tw.parentElement?.classList.remove('drag-over'); };
+  }
+
+  _applyFilter(items) {
+    const q = (this._filterText || '').trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(it => {
+      const n = (it.displayName || it.name || '').toLowerCase();
+      return n.includes(q);
+    });
+  }
+
+  _onWrapperKey(e) {
+    // Don't intercept while the filter input is the target.
+    if (e.target?.classList?.contains('pod-filter')) return;
+
+    const ul = this.shadowRoot.querySelector('.file-tree');
+    const items = ul ? Array.from(ul.children) : [];
+    const focusEl = this.shadowRoot.activeElement;
+    let idx = focusEl?.tagName === 'LI'
+      ? items.indexOf(focusEl)
+      : (this._focusIndex >= 0 ? this._focusIndex : -1);
+
+    const focusAt = (i) => {
+      if (i < 0 || i >= items.length) return;
+      this._focusIndex = i;
+      items[i].focus();
+    };
+
+    switch (e.key) {
+      case 'ArrowDown':
+        focusAt(idx < 0 ? 0 : Math.min(items.length - 1, idx + 1));
+        e.preventDefault();
+        break;
+      case 'ArrowUp':
+        focusAt(idx <= 0 ? 0 : idx - 1);
+        e.preventDefault();
+        break;
+      case 'Home':
+        focusAt(0);
+        e.preventDefault();
+        break;
+      case 'End':
+        focusAt(items.length - 1);
+        e.preventDefault();
+        break;
+      case 'Enter': {
+        if (idx < 0) return;
+        const item = this._currentItems[idx];
+        if (!item) return;
+        if (item.isContainer) this.loadContainer(item.url);
+        else this._activateItem(item);
+        e.preventDefault();
+        break;
+      }
+      case 'Backspace': {
+        const parent = this._parentOf(this._currentPath);
+        if (parent) { this.loadContainer(parent); e.preventDefault(); }
+        break;
+      }
+      case '/': {
+        const f = this.shadowRoot.querySelector('.pod-filter');
+        if (f) { f.focus(); f.select(); e.preventDefault(); }
+        break;
+      }
+      case 'Escape':
+        if (this._filterText) {
+          this._filterText = '';
+          const f = this.shadowRoot.querySelector('.pod-filter');
+          if (f) f.value = '';
+          this._renderTree(this._allItems, { preserveFocus: false });
+          e.preventDefault();
+        }
+        break;
+    }
+  }
+
+  _parentOf(url) {
+    if (!url || !this._rootUrl) return null;
+    if (url === this._rootUrl) return null;
+    const u = url.endsWith('/') ? url.slice(0, -1) : url;
+    const i = u.lastIndexOf('/');
+    if (i < 0) return null;
+    const p = u.slice(0, i + 1);
+    return p.startsWith(this._rootUrl) ? p : this._rootUrl;
+  }
+
+  _activateItem(item) {
+    if (typeof this._gearAction === 'function') {
+      this._gearAction(item, this);
+    } else if (typeof this._gearAction === 'string') {
+      this._openNamedHandler(this._gearAction, item);
+    } else {
+      this._openItemModal(item);
+    }
   }
 
   _createTreeItem(item, idx) {
@@ -422,11 +585,12 @@ class SolPod extends HTMLElement {
         if (e.shiftKey || e.ctrlKey || e.metaKey) { handleSelectClick(e); return; }
         if (!li.classList.contains('dragging')) this.loadContainer(item.url);
       };
-      li.onkeypress = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.loadContainer(item.url); } };
     } else {
       li.onclick = handleSelectClick;
       li.ondblclick = openItemAction;
     }
+    // Keyboard activation (Enter / Backspace / arrows / `/`) is handled at
+    // the .tree-wrapper level — see _onWrapperKey.
 
     return li;
   }

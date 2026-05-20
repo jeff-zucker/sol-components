@@ -50,8 +50,35 @@ export const CSS = BTN_CSS + `
   }
   .breadcrumb button:hover { background: var(--hover, #f0f0f0); color: var(--accent, #2196f3); }
 
+  .pod-filter-row {
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border-soft, var(--border, #e0e0e0));
+    background: var(--surface, #fff);
+    flex-shrink: 0;
+  }
+  .pod-filter {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 4px;
+    background: var(--surface, #fff);
+    color: var(--text, #212121);
+    font-family: inherit; font-size: 0.85em;
+    box-sizing: border-box;
+  }
+  .pod-filter::placeholder { color: var(--text-faint, #999); }
+  .pod-filter:focus {
+    outline: none;
+    border-color: var(--accent, #2196f3);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #2196f3) 22%, transparent);
+  }
+
   .tree-wrapper {
     flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px;
+    outline: none;
+  }
+  .tree-wrapper:focus-visible {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent, #2196f3) 35%, transparent);
   }
   .file-tree { list-style: none; }
   .file-tree li {
