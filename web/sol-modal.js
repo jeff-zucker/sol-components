@@ -273,6 +273,8 @@ class SolModal extends HTMLElement {
    */
   static prompt(message, placeholder = '') {
     return new Promise(resolve => {
+      let settled = false;
+      const finish = (v) => { if (settled) return; settled = true; resolve(v); };
       const m = document.createElement('sol-modal');
       m.setAttribute('size', 'small');
       m.modalTitle = message;
@@ -293,7 +295,7 @@ class SolModal extends HTMLElement {
         footer.appendChild(cancel);
         footer.appendChild(ok);
 
-        const done = (v) => { m.onClose = null; m.close(); resolve(v); };
+        const done = (v) => { m.onClose = null; m.close(); finish(v); };
         ok.onclick = () => done(input.value.trim());
         cancel.onclick = () => done(null);
         input.onkeydown = (e) => {
@@ -302,7 +304,66 @@ class SolModal extends HTMLElement {
         };
         setTimeout(() => input.focus(), 50);
       };
-      m.onClose = () => resolve(null);
+      m.onClose = () => finish(null);
+      m.open();
+    });
+  }
+
+  /**
+   * Static choice dialog. Renders a message (optionally with extra
+   * body content) and a row of buttons; resolves with the chosen
+   * button's `value` (or null if dismissed via Esc / overlay / X).
+   *
+   *   const pick = await SolModal.choice({
+   *     title: 'Transfer "foo.ttl"',
+   *     message: 'Move (delete original) or copy (keep original)?',
+   *     buttons: [
+   *       { label: 'Cancel', value: null },
+   *       { label: 'Copy',   value: 'copy' },
+   *       { label: 'Move',   value: 'move', primary: true },
+   *     ],
+   *     // optional: extra body content
+   *     render: (body) => { ... },
+   *     size: 'small',
+   *   });
+   *
+   * Guarantees the promise resolves exactly once, even if the user
+   * clicks a button and the close handler also fires.
+   *
+   * @param {object}   opts
+   * @param {string}   opts.title
+   * @param {string=}  opts.message
+   * @param {Array<{label:string, value:*, primary?:boolean}>} opts.buttons
+   * @param {(body:HTMLElement) => void} [opts.render]
+   * @param {string=}  opts.size  - 'small' | 'large' (default 'small')
+   * @returns {Promise<*>}
+   */
+  static choice({ title, message, buttons, render, size = 'small' } = {}) {
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = (v) => { if (settled) return; settled = true; resolve(v); };
+      const m = document.createElement('sol-modal');
+      m.setAttribute('size', size);
+      m.modalTitle = title || '';
+      m.handler = (body, footer) => {
+        body.style.padding = '16px 20px';
+        if (message) {
+          const p = document.createElement('p');
+          p.style.margin = '0 0 8px';
+          p.textContent = message;
+          body.appendChild(p);
+        }
+        if (typeof render === 'function') render(body);
+
+        for (const btn of buttons || []) {
+          const el = document.createElement('button');
+          el.className = 'sol-btn sol-btn-sm' + (btn.primary ? ' sol-btn-primary' : '');
+          el.textContent = btn.label;
+          el.onclick = () => { m.onClose = null; m.close(); finish(btn.value); };
+          footer.appendChild(el);
+        }
+      };
+      m.onClose = () => finish(null);
       m.open();
     });
   }

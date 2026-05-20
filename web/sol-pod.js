@@ -4,7 +4,7 @@
  *             gear-action (Function|string — custom callback when gear icon is clicked;
  *                          if omitted, opens the default pod-ops modal)
  * Properties: login (SolLogin element ref), currentPath, items
- * Events: sol-navigate({url}), sol-drag-start({item}), sol-status({message,type})
+ * Events: sol-navigate({url}), sol-drag-start({item}), sol-drag-end(), sol-status({message,type})
  *
  * Usage:
  *   <sol-login id="auth"></sol-login>
@@ -40,6 +40,7 @@ import {
  * @property {Array} items - current directory listing
  * @fires sol-navigate - detail: { url }
  * @fires sol-drag-start - detail: { item, element }
+ * @fires sol-drag-end
  * @fires sol-auth-needed - detail: { url }
  * @fires sol-status - detail: { message, type }
  */
@@ -578,7 +579,10 @@ class SolPod extends HTMLElement {
         bubbles: true, composed: true, detail: { items, item: items[0], element: this }
       }));
     };
-    li.ondragend = () => { li.classList.remove('dragging'); };
+    li.ondragend = () => {
+      li.classList.remove('dragging');
+      this.dispatchEvent(new CustomEvent('sol-drag-end', { bubbles: true, composed: true }));
+    };
 
     if (item.isContainer) {
       li.onclick = (e) => {
