@@ -375,7 +375,7 @@ class SolLiveEdit extends HTMLElement {
     }
   }
 
-  _loadCfg(){try{Object.assign(this._cfg,JSON.parse(localStorage.getItem('sle-cfg')||'{}'));}catch(_){}}
+  _loadCfg(){try{Object.assign(this._cfg,JSON.parse(localStorage.getItem('sle-cfg')||'{}'));}catch(_){}this._cfg.view='both';}
   _saveCfg(){try{localStorage.setItem('sle-cfg',JSON.stringify(this._cfg));}catch(_){}}
   _setZoom(z){
     this._zoom=Math.max(0.2,Math.min(5.0,Math.round(z*10)/10));
