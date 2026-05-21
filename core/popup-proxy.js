@@ -149,6 +149,15 @@ export class PopupProxySession extends EventTarget {
     this._onMessage = (e) => this._handleMessage(e);
     window.addEventListener('message', this._onMessage);
 
+    // Close the popup when the app page goes away (tab close, navigation,
+    // browser quit) so we don't leave orphaned login windows behind.
+    this._onPageHide = () => {
+      if (this._popup && !this._popup.closed) {
+        try { this._popup.close(); } catch (_) { /* ignore */ }
+      }
+    };
+    window.addEventListener('pagehide', this._onPageHide);
+
     // Notice if the popup is closed out from under us.
     this._closeWatch = setInterval(() => {
       if (this._popup && this._popup.closed) this._handlePopupClosed();
@@ -233,6 +242,7 @@ export class PopupProxySession extends EventTarget {
   destroy() {
     clearInterval(this._closeWatch);
     window.removeEventListener('message', this._onMessage);
+    window.removeEventListener('pagehide', this._onPageHide);
     if (this._popup && !this._popup.closed) {
       try { this._popup.close(); } catch (_) { /* ignore */ }
     }
