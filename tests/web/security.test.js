@@ -41,15 +41,12 @@ const queryHtmlWithSelector = (...a) => {
   const d = _queryHtmlWithSelector(...a);
   return d?.head?.vars ? { vars: d.head.vars, results: d.results.bindings } : d;
 };
-/* SOL-WAC-DISABLED: sol-wac is currently out of the bundle — re-enable
-   together with the WAC describe blocks below when it returns. */
-// import {
-//   parseAcl,
-//   authsToRoleModel,
-//   roleModelToTurtle,
-//   adaptInheritedAcl,
-//   ROLES,
-// } from '../../web/sol-wac.js';
+import {
+  parseAcl,
+  authsToRoleModel,
+  roleModelToTurtle,
+  adaptInheritedAcl,
+} from '../../web/sol-wac.js';
 
 const ACL = 'http://www.w3.org/ns/auth/acl#';
 const FOAF = 'http://xmlns.com/foaf/0.1/';
@@ -341,10 +338,7 @@ describe('queryHtmlWithSelector — safety', () => {
 // ║                      WAC Permission Security                             ║
 // ╚═══════════════════════════════════════════════════════════════════════════╝
 
-// SOL-WAC-DISABLED: see import block. The four WAC describe blocks below are
-// .skip-ed so jest reports them as pending rather than failing to load the
-// (commented-out) sol-wac symbols.
-describe.skip('WAC — round-trip integrity', () => {
+describe('WAC — round-trip integrity', () => {
   test('parse → model → turtle → parse preserves public viewer', () => {
     const turtle1 = `
       <http://ex/.acl#viewer> <${RDF_TYPE}> <${ACL}Authorization> .
@@ -402,7 +396,7 @@ describe.skip('WAC — round-trip integrity', () => {
   });
 });
 
-describe.skip('WAC — permission escalation prevention', () => {
+describe('WAC — permission escalation prevention', () => {
   test('read-only auth does not grant write', () => {
     const turtle = `
       <http://ex/.acl#r> <${RDF_TYPE}> <${ACL}Authorization> .
@@ -464,7 +458,7 @@ describe.skip('WAC — permission escalation prevention', () => {
   });
 });
 
-describe.skip('WAC — WebID URL safety in generated Turtle', () => {
+describe('WAC — WebID URL safety in generated Turtle', () => {
   test('WebID with angle brackets is quoted correctly', () => {
     const model = authsToRoleModel([]);
     model.viewer.grant = 'specific';
@@ -503,7 +497,7 @@ describe.skip('WAC — WebID URL safety in generated Turtle', () => {
   });
 });
 
-describe.skip('WAC — adaptInheritedAcl safety', () => {
+describe('WAC — adaptInheritedAcl safety', () => {
   test('does not introduce extra permissions when adapting', () => {
     const inherited = `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
 @prefix foaf: <http://xmlns.com/foaf/0.1/>.
