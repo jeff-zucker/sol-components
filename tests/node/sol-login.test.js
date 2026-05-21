@@ -413,9 +413,20 @@ describe('fetch', () => {
   });
 
   test('routes remote URLs through fetchFor', async () => {
-    const auth = new SolidAuth({ tokenStore: null });
-    const resp = await auth.fetch('https://example.com');
-    expect(resp.status).toBeDefined();
+    // Stub globalThis.fetch so this stays a unit test — a real request to
+    // example.com leaves an undici keep-alive socket open, which prevents
+    // the jest worker from exiting gracefully.
+    const realFetch = globalThis.fetch;
+    let calledWith = null;
+    globalThis.fetch = async (u, init) => { calledWith = u; return { status: 200 }; };
+    try {
+      const auth = new SolidAuth({ tokenStore: null });
+      const resp = await auth.fetch('https://example.com');
+      expect(calledWith).toBe('https://example.com');   // went via fetchFor, not _localFetch
+      expect(resp.status).toBe(200);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
 
