@@ -277,18 +277,26 @@ describe('expandBnodes', () => {
     expect(result.vars).toContain('s');
   });
 
-  test.skip('bnode object in non-s/p column becomes modal cell', () => {
+  test('bnode object in non-s/p column becomes modal cell', () => {
     const store = rdflib.graph();
     const bn = rdflib.blankNode('b0');
     store.add(bn, rdflib.sym('http://ex/p'), rdflib.literal('val'));
+    // The column needs a non-bnode value too — an all-bnode column is
+    // dropped outright before the modal-cell conversion can run.
     const data = {
       vars: ['o'],
-      results: [{ o: { type: 'bnode', value: 'b0', _term: bn } }],
+      results: [
+        { o: { type: 'bnode',   value: 'b0', _term: bn } },
+        { o: { type: 'literal', value: 'plain' } },
+      ],
     };
     const result = expandBnodes(store, data);
     expect(result.results[0].o.type).toBe('bnode');
     expect(result.results[0].o._data).toBeDefined();
-    expect(result.results[0].o._data.vars).toEqual(['p', 'o']);
+    // _data is itself a W3C envelope ({head:{vars}, results:{bindings}});
+    // the outer flatten() shim does not recurse into it.
+    expect(result.results[0].o._data.head.vars).toEqual(['p', 'o']);
+    expect(result.results[1].o.type).toBe('literal');   // non-bnode cell untouched
   });
 });
 
