@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solid Web Components</title>
+  <link rel="stylesheet" href="web/styles/root.css">
+  <link rel="stylesheet" href="web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="web/styles/help.css">
+<style>
+  .table { display:table; border-spacing:0 1rem; }
+  .row { display:table-row; }
+  .cell { display:table-cell; padding-right:1rem;}
+  .cell.name { font-weight:bold; white-space: nowrap; text-decoration:none; }
+</style>
+</head>
+<body>
+  <h1>solid-web-components</h1>
+  <h3>Access Solid and Linked Data resources using HTML custom elements</h3>
+
+  <nav class="page-nav" aria-label="See Also">
+    <b><a href="help/install-modes.html">Invoking components</a></b>
+    <b><a href="help/theming.html">Theming components</a></b>
+    <b><a href="help/custom-views.html">Creating custom views</a></b>
+  </nav>
+
+<section class="table" role="table" aria-label="Components list">
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-menu-from-rdf.html">sol-menu</a></span>
+   <span class="cell" role="cell">Define a menu entirely in RDF using the <i><code>ui:</code></i> vocabulary; run it as a GUI with a simple web component; run it in a terminal with a single command.</span>
+ </article> 
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-query-help.html">sol-query</a></span>
+   <span class="cell" role="cell">Search data sources using Comunica with inline or stored SPARQL or using triple patterns.  Display the results as a table, an auto-complete field, a rolodex, other built-in and custom views.</span>
+ </article> 
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-login-help.html">sol-login</a></span>
+   <span class="cell" role="cell">Dynamically generated login/logout button. Once logged in, the authenticated fetch is propagated to all other fetches, including Comunica queries and HTML/Markdown page includes.</span>
+ </article> 
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-include-help.html">sol-include</a></span>
+   <span class="cell" role="cell">Fetch text based documents and display their contents inline. Supports authenticated fetch, robust modular page construction, CSS/RDFa filetering, Markdown conversion, and always sanitizes by default.</span>
+ </article> 
+</section>
+
+<h3 style="width:100%;text-align:center">Components for SHACL-validated ui: forms and more coming soon!</h3>
+    <b><a style="text-decoration:none; display:inline-block; width:95%; text-align:right;" href="https://github.com/solidos/solid-web-components">visit the Github repository</a></b>
+
+
+<!--
+  <nav class="page-nav" aria-label="Page sections">
+  <ul>
+<b><a href="sol-login-help.html">sol-login</a></b> - Log in or out of a Solid Pod.
+  <li><b><a href="sol-form-help.html">sol-form</a></b> - Display auto-saving forms based on the <code>ui:</code> ontology.
+  <li><b><a href="sol-solidos-help.html">sol-solidos</a></b> - Display any URL using the SolidOS front end.
+  <li><b><a href="sol-modal-help.html">sol-modal</a></b> - Display any content in a popout modal.
+  </ul>
+  </nav>
+-->
+
+</body>
+</html>

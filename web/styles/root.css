@@ -16,6 +16,17 @@
   --shadow-popup: 0 4px 12px rgba(0,0,0,0.12);
   --shadow-modal: 0 8px 24px rgba(0,0,0,0.25);
   --scrim: rgba(0,0,0,0.4);
+
+  /* doc-page palette */
+  --pre-bg: #2c3e50;
+  --pre-fg: #ecf0f1;
+  --th-bg: #f0f4f8;
+  --link: #2980b9;
+  --link-border: #d0dce8;
+  --note-bg: #fff8e1;     --note-border: #f9a825;
+  --warn-bg: #fdecea;     --warn-border: #e53935;
+  --tip-bg:  #e8f5e9;     --tip-border:  #43a047;
+  --hero-bg: #e3f2fd;     --hero-border: #1976d2;
   --small-font: 16px;
   --medium-font: 20px;
   --large-font: 24px;
@@ -76,6 +87,16 @@
   --code-bg: #1e1e1e;
   --accent: #4dabf7;
   --accent-dark: #339af0;
+
+  --pre-bg: #0e1620;
+  --pre-fg: #cfd9e6;
+  --th-bg: #2a2e34;
+  --link: #6cc0f5;
+  --link-border: #3e4a55;
+  --note-bg: #2e2814;     --note-border: #d4a020;
+  --warn-bg: #2e1817;     --warn-border: #e57373;
+  --tip-bg:  #15281a;     --tip-border:  #66bb6a;
+  --hero-bg: #122a3e;     --hero-border: #4dabf7;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

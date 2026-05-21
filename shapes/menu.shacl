@@ -5,6 +5,8 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ui: <http://www.w3.org/ns/ui#> .
 @prefix schema: <http://schema.org/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
 :MenuShape
   a sh:NodeShape ;
@@ -95,6 +97,17 @@
     sh:name "icon" ;
     sh:description "Icon URL" ;
   ] ;
+  sh:property [
+    sh:path rdfs:comment ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:description "Description of the Link" ;
+  ] ;
+  sh:property [
+    sh:path dcterms:subject ;
+    sh:class skos:Concept ;
+    sh:description "Categories associated with the Link" ;
+  ] .
   sh:xone (
     [ sh:property [ sh:path ui:href ; sh:minCount 1 ] ]
     [ sh:property [ sh:path ui:contents ; sh:minCount 1 ] ]

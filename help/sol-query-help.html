@@ -7,8 +7,12 @@
   <link rel="stylesheet" href="../web/styles/root.css">
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
 
 <!-- IMPORTED SCRIPTS ---------------------------------------------- -->
+  <!-- rdflib (required) : peer dep — publishes window.$rdf -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+
   <!-- Comunica (optional) : load if using SPARQL
   -->
   <script src="../dist/vendor/@comunica-query-sparql.umd.js"></script>
@@ -22,9 +26,6 @@
 
 </head>
 <body>
-
-<p><a href="../" style="text-decoration:none"><span style="font-size:24px;"> ← </span>main menu</a></p>
-
 
   <h1>sol-query component</h1>
 

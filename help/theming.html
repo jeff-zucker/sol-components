@@ -4,21 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Theming &amp; customization</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
   <style>
-    .api-block { background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.1); padding:1.5rem; margin-bottom:1.5rem; }
-    .attr-table { width:100%; border-collapse:collapse; font-size:.9rem; margin:.5rem 0 1rem; }
-    .attr-table th { background:#f0f4f8; text-align:left; padding:.5rem .75rem; border:1px solid #d0dce8; }
-    .attr-table td { padding:.45rem .75rem; border:1px solid #e0e8f0; vertical-align:top; }
-    .attr-table td:first-child { font-family:'Courier New',monospace; color:#2c6e9e; white-space:nowrap; }
-    .attr-table td:nth-child(2) { font-family:'Courier New',monospace; color:#444; white-space:nowrap; }
-    .note-box { background:#fff8e1; border-left:4px solid #f9a825; padding:.75rem 1rem; border-radius:4px; font-size:.9rem; margin:.75rem 0; }
-    .tip-box  { background:#e8f5e9; border-left:4px solid #43a047; padding:.75rem 1rem; border-radius:4px; font-size:.9rem; margin:.75rem 0; }
+    .api-block { padding:1.5rem; margin-bottom:1.5rem; }
+    .attr-table td:nth-child(2) { font-family:'Courier New',monospace; }
     .swatch { display:inline-block; width:1em; height:1em; vertical-align:middle; border:1px solid var(--border, #ccc); border-radius:3px; margin-right:.35em; }
   </style>
 </head>
 <body>
-<p><a href="../" style="text-decoration:none"><span style="font-size:24px;">←</span> main menu</a></p>
 
   <h1>Theming &amp; customization</h1>
   <p>The components are designed to be styled from the host page using CSS custom properties. There are no Sass overrides or build steps — set a variable in <code>:root</code> (or any ancestor) and the value flows through Shadow DOM to every component on the page.</p>

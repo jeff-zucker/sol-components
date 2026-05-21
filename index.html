@@ -5,58 +5,144 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Solid Web Components</title>
   <link rel="stylesheet" href="web/styles/root.css">
-  <link rel="stylesheet" href="web/styles/sol-query-help.css">
-  <link rel="stylesheet" href="web/styles/help.css">
-<style>
-  .table { display:table; border-spacing:0 1rem; }
-  .row { display:table-row; }
-  .cell { display:table-cell; padding-right:1rem;}
-  .cell.name { font-weight:bold; white-space: nowrap; text-decoration:none; }
-</style>
+  <style>
+    html, body { height:100%; margin:0; }
+    body { display:flex; flex-direction:column; padding:0; max-width:none;
+           background:var(--bg, #f5f5f5); color:var(--text, #000);
+           font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           font-size:var(--font-size, 20px); }
+    .app-bar { display:flex; align-items:center; gap:1rem;
+               padding:.4rem .9rem;
+               background:var(--surface, #fff);
+               border-bottom:1px solid var(--border, #d0d0d0);
+               flex-wrap:wrap; }
+    .app-title { font-weight:600; font-size:1rem; margin-right:auto;
+                 color:var(--accent, #1F618D); text-decoration:none; }
+    .app-title:hover { text-decoration:underline; }
+    .app-bar label { font-size:.85rem; color:var(--text-muted, #4d4d4d);
+                     display:flex; align-items:center; gap:.35rem; }
+    .app-bar select { padding:.2rem .35rem; border-radius:4px;
+                      border:1px solid var(--border, #ccc);
+                      background:var(--surface, #fff); color:var(--text, #000);
+                      font-size:.85rem; }
+    .app-frame { flex:1; width:100%; border:0;
+                 background:var(--bg, #fff); }
+  </style>
 </head>
 <body>
-  <h1>solid-web-components</h1>
-  <h3>Access Solid and Linked Data resources using HTML custom elements</h3>
+  <header class="app-bar">
+    <a class="app-title" href="#home.html" id="home-link" style="text-decoratin:underline">solid-web-components</a>
+    <label>Theme
+      <select id="theme-pref">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+    <label>Font size
+      <select id="font-pref">
+        <option value="16px">Small</option>
+        <option value="20px">Medium</option>
+        <option value="24px">Large</option>
+        <option value="28px">X-Large</option>
+      </select>
+    </label>
+  </header>
+  <iframe id="app-frame" class="app-frame" src="home.html" title="Solid Web Components"></iframe>
 
-  <nav class="page-nav" aria-label="See Also">
-    <b><a href="help/install-modes.html">Invoking components</a></b>
-    <b><a href="help/theming.html">Theming components</a></b>
-    <b><a href="help/custom-views.html">Creating custom views</a></b>
-  </nav>
+  <script>
+  (function () {
+    // Break out of self-iframe (e.g. when an inner page links back to "../").
+    if (window.top !== window.self) {
+      window.location.replace('home.html');
+      return;
+    }
 
-<section class="table" role="table" aria-label="Components list">
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-menu-from-rdf.html">sol-menu</a></span>
-   <span class="cell" role="cell">Define a menu entirely in RDF using the <i><code>ui:</code></i> vocabulary; run it as a GUI with a simple web component; run it in a terminal with a single command.</span>
- </article> 
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-query-help.html">sol-query</a></span>
-   <span class="cell" role="cell">Search data sources using Comunica with inline or stored SPARQL or using triple patterns.  Display the results as a table, an auto-complete field, a rolodex, other built-in and custom views.</span>
- </article> 
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-login-help.html">sol-login</a></span>
-   <span class="cell" role="cell">Dynamically generated login/logout button. Once logged in, the authenticated fetch is propagated to all other fetches, including Comunica queries and HTML/Markdown page includes.</span>
- </article> 
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-include-help.html">sol-include</a></span>
-   <span class="cell" role="cell">Fetch text based documents and display their contents inline. Supports authenticated fetch, robust modular page construction, CSS/RDFa filetering, Markdown conversion, and always sanitizes by default.</span>
- </article> 
-</section>
+    var THEME_KEY = 'swc-theme';
+    var FONT_KEY  = 'swc-font-size';
+    var SAFE_PATH = /^[A-Za-z0-9_\-./]+\.html$/;
 
-<h3 style="width:100%;text-align:center">Components for SHACL-validated ui: forms and more coming soon!</h3>
-    <b><a style="text-decoration:none; display:inline-block; width:95%; text-align:right;" href="https://github.com/solidos/solid-web-components">visit the Github repository</a></b>
+    var themeSel = document.getElementById('theme-pref');
+    var fontSel  = document.getElementById('font-pref');
+    var frame    = document.getElementById('app-frame');
+    var homeLink = document.getElementById('home-link');
 
+    function readPrefs() {
+      var t = 'light', f = '20px';
+      try {
+        t = localStorage.getItem(THEME_KEY) || 'light';
+        f = localStorage.getItem(FONT_KEY)  || '20px';
+      } catch (e) {}
+      return { theme: t, fontSize: f };
+    }
+    function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    function applyToWrapper(p) {
+      document.documentElement.setAttribute('data-theme', p.theme);
+      document.documentElement.style.setProperty('--font-size', p.fontSize);
+      themeSel.value = p.theme;
+      fontSel.value  = p.fontSize;
+    }
+    function postToFrame(p) {
+      try {
+        frame.contentWindow.postMessage(
+          { type: 'swc-prefs', theme: p.theme, fontSize: p.fontSize }, '*'
+        );
+      } catch (e) {}
+    }
 
-<!--
-  <nav class="page-nav" aria-label="Page sections">
-  <ul>
-<b><a href="sol-login-help.html">sol-login</a></b> - Log in or out of a Solid Pod.
-  <li><b><a href="sol-form-help.html">sol-form</a></b> - Display auto-saving forms based on the <code>ui:</code> ontology.
-  <li><b><a href="sol-solidos-help.html">sol-solidos</a></b> - Display any URL using the SolidOS front end.
-  <li><b><a href="sol-modal-help.html">sol-modal</a></b> - Display any content in a popout modal.
-  </ul>
-  </nav>
--->
+    var prefs = readPrefs();
+    applyToWrapper(prefs);
 
+    // Initial src from hash if present (for shareable / reload-stable URLs).
+    if (location.hash) {
+      var target = decodeURIComponent(location.hash.slice(1));
+      if (SAFE_PATH.test(target)) frame.src = target;
+    }
+
+    frame.addEventListener('load', function () {
+      postToFrame(readPrefs());
+      try {
+        var loc = frame.contentWindow.location;
+        if (loc && loc.pathname) {
+          var here = window.location.pathname.replace(/[^/]*$/, '');
+          var rel  = loc.pathname.indexOf(here) === 0
+                       ? loc.pathname.slice(here.length)
+                       : loc.pathname;
+          if (rel && SAFE_PATH.test(rel)) {
+            history.replaceState(null, '', '#' + rel);
+          }
+        }
+      } catch (e) {}
+    });
+
+    window.addEventListener('message', function (ev) {
+      if (ev.data && ev.data.type === 'swc-ready') postToFrame(readPrefs());
+    });
+
+    themeSel.addEventListener('change', function () {
+      var p = readPrefs(); p.theme = themeSel.value;
+      save(THEME_KEY, p.theme);
+      applyToWrapper(p); postToFrame(p);
+    });
+    fontSel.addEventListener('change', function () {
+      var p = readPrefs(); p.fontSize = fontSel.value;
+      save(FONT_KEY, p.fontSize);
+      applyToWrapper(p); postToFrame(p);
+    });
+
+    homeLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      frame.src = 'home.html';
+    });
+
+    window.addEventListener('hashchange', function () {
+      var t = decodeURIComponent(location.hash.slice(1));
+      if (SAFE_PATH.test(t)) {
+        try {
+          if (frame.contentWindow.location.pathname.indexOf(t) === -1) frame.src = t;
+        } catch (e) { frame.src = t; }
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

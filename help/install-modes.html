@@ -4,21 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Install — one script tag is all you need</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
   <style>
-    .api-block { background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.1); padding:1.5rem; margin-bottom:1.5rem; }
-    .attr-table { width:100%; border-collapse:collapse; font-size:.9rem; margin:.5rem 0 1rem; }
-    .attr-table th { background:#f0f4f8; text-align:left; padding:.5rem .75rem; border:1px solid #d0dce8; }
-    .attr-table td { padding:.45rem .75rem; border:1px solid #e0e8f0; vertical-align:top; }
-    .attr-table td:first-child { font-family:'Courier New',monospace; color:#2c6e9e; white-space:nowrap; }
-    .note-box { background:#fff8e1; border-left:4px solid #f9a825; padding:.75rem 1rem; border-radius:4px; font-size:.9rem; margin:.75rem 0; }
-    .tip-box  { background:#e8f5e9; border-left:4px solid #43a047; padding:.75rem 1rem; border-radius:4px; font-size:.9rem; margin:.75rem 0; }
-    .hero     { background:#e3f2fd; border-left:4px solid #1976d2; padding:1rem 1.25rem; border-radius:6px; margin:1rem 0; }
-    .hero h2  { margin-top:0; }
+    .api-block { padding:1.5rem; margin-bottom:1.5rem; }
   </style>
 </head>
 <body>
-<p><a href="../" style="text-decoration:none"><span style="font-size:24px;"> ← </span>main menu</a></p>
 
   <h1>Invoking Components</h1>
 
@@ -35,13 +29,19 @@
 </div>
 
   <div class="hero">
-    <h2>3. Always import Solid-Web-Components</h2>
-      A pre-built bundle containing all components and their pre-requisites is included in the Solid-Web-Components dist folder.
+    <h2>3. Always import rdflib (peer dependency)</h2>
+      <code>rdflib</code> is a "bring your own" peer dep — the bundle externalizes it so a single instance is shared with mashlib / solid-ui / solid-logic on the page. Load it <em>before</em> the bundle.
+<pre><code>&lt;script src="../dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;</code></pre>
+</div>
+
+  <div class="hero">
+    <h2>4. Always import Solid-Web-Components</h2>
+      A pre-built bundle containing all components is included in the Solid-Web-Components dist folder.
 <pre><code>&lt;script src="../dist/solid-web-components.bundle.min.js"&gt;&lt;/script&gt;</code></pre>
 </div>
 
   <div class="hero">
-    <h2>4. Place Component tags anywhere in your HTML</h2>
+    <h2>5. Place Component tags anywhere in your HTML</h2>
 <pre><code>&lt;sol-query
     endpoint = "https://example.org/myEndpoint"
     sparql = "../data/myQueries.ttl#MyQuery"
