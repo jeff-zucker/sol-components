@@ -1,5 +1,6 @@
 let mermaidReady = false;
 let _mermaid = null;
+let _mmdSeq = 0;
 
 async function ensureMermaid() {
   if (mermaidReady) return _mermaid;
@@ -12,7 +13,15 @@ async function ensureMermaid() {
 }
 
 export async function renderMermaid(content, outputEl) {
-  const trimmed = content.trim();
+  // Strip %% comment lines ourselves before handing the source to
+  // Mermaid — its built-in comment handling is unreliable when a
+  // diagram opens with a comment block. %%{…}%% init directives are
+  // NOT comments and are kept.
+  const trimmed = content
+    .split(/\r?\n/)
+    .filter(line => !/^\s*%%(?!\{)/.test(line))
+    .join('\n')
+    .trim();
   if (!trimmed) {
     outputEl.innerHTML = '<p style="padding:1rem;color:#888">Enter a Mermaid diagram above.</p>';
     return;
@@ -26,10 +35,14 @@ export async function renderMermaid(content, outputEl) {
     return;
   }
 
-  const id = 'mmd-' + Date.now();
+  const id = 'mmd-' + (++_mmdSeq);
   try {
     const { svg } = await mermaid.render(id, trimmed);
     outputEl.innerHTML = svg;
+    // Make the diagram responsive — fit the preview pane as it is
+    // resized / zoomed, instead of Mermaid's fixed pixel max-width.
+    const svgEl = outputEl.querySelector('svg');
+    if (svgEl) { svgEl.style.maxWidth = '100%'; svgEl.style.height = 'auto'; }
   } catch (e) {
     // Mermaid leaves orphan elements on parse errors — clean up
     const orphan = document.getElementById('d' + id);

@@ -8,7 +8,7 @@ export const CSS = `
 .er{padding:.5em 1em;background:#fff0f0;border-bottom:1px solid #f5c6cb;color:#c0392b;font-size:.82em;display:none;flex-shrink:0}
 .er.on{display:block}
 
-.cf{display:none;position:absolute;top:0;right:0;z-index:20;
+.cf{display:none;position:absolute;top:34px;right:0;z-index:20;
     min-width:180px;padding:10px 14px;
     background:var(--surface,#fff);border:1px solid var(--border,#ccc);
     border-radius:0 0 0 8px;box-shadow:0 4px 16px rgba(0,0,0,.15);
@@ -43,8 +43,13 @@ export const CSS = `
 .modal-box .stat-table td{padding:2px 8px;font-size:.8em}
 
 .body{display:flex;flex:1;overflow:hidden}
-.ep{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border,#ccc)}
+.ep{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pp{flex:1;overflow:auto;position:relative;display:flex;justify-content:safe center;align-items:safe center}
+
+/* Resizer — draggable divider between the editor and preview panes. */
+.sle-resizer{flex:0 0 6px;align-self:stretch;cursor:col-resize;
+    background:var(--border,#ccc);touch-action:none}
+.sle-resizer:hover,.sle-resizer.dragging{background:var(--accent,#4a9eff)}
 .pp>#po{flex-shrink:0}
 .pp>.mdp{padding:1rem 1.4rem}
 
@@ -52,6 +57,27 @@ export const CSS = `
 .csv-tbl th{padding:7px 10px;text-align:left;background:var(--text,#222);color:var(--surface,#fff);font-weight:600;position:sticky;top:0;z-index:1}
 .csv-tbl td{padding:5px 10px;border-bottom:1px solid var(--border,#eee)}
 .csv-tbl tr:nth-child(even) td{background:var(--hover,#f4f4f4)}
+
+/* Toolbar — Save / Settings / Help / Zoom / Statistics, right-aligned. */
+.sle-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:6px;
+    flex-shrink:0;padding:4px 8px;border-bottom:1px solid var(--border,#ccc);
+    background:var(--surface,#fff)}
+.sle-btn{border:1px solid var(--border,#ccc);background:var(--surface,#fff);
+    color:var(--text,#333);cursor:pointer;font:inherit;font-size:.82em;
+    padding:3px 10px;border-radius:5px;line-height:1.5}
+.sle-btn:hover{background:var(--hover,#f0f0f0)}
+.sle-btn[hidden]{display:none}
+.sle-btn-primary{background:var(--accent,#4a9eff);border-color:var(--accent,#4a9eff);color:#fff}
+.sle-btn-primary:hover{background:var(--accent,#4a9eff);filter:brightness(1.08)}
+/* Zoom control — sits in the toolbar; shown only for zoomable formats. */
+.sle-zoom{display:flex;align-items:center;gap:2px}
+.sle-zoom[hidden]{display:none}
+.sle-zoom button{border:1px solid var(--border,#ccc);background:var(--surface,#fff);
+    cursor:pointer;color:var(--text,#333);font-size:1em;line-height:1;
+    padding:3px 9px;border-radius:5px}
+.sle-zoom button:hover{background:var(--hover,#f0f0f0)}
+.sle-zoom span{min-width:3.4em;text-align:center;color:var(--text-muted,#555);
+    font-size:.82em;font-variant-numeric:tabular-nums}
 `;
 
 export const sheet = sheetFrom(CSS);

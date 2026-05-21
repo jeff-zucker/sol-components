@@ -123,6 +123,17 @@ class SolLiveEdit extends HTMLElement {
   async _init(){
     const s=this.shadowRoot;
     s.innerHTML=`
+<div class="sle-toolbar" id="toolbar">
+  <button type="button" class="sle-btn" id="statsBtn" hidden>Statistics</button>
+  <div class="sle-zoom" id="zoomctl" hidden>
+    <button type="button" id="zmOut" title="Zoom out" aria-label="Zoom out">−</button>
+    <span id="zmPct">100%</span>
+    <button type="button" id="zmIn" title="Zoom in" aria-label="Zoom in">+</button>
+  </div>
+  <button type="button" class="sle-btn sle-btn-primary" id="svBtn">Save</button>
+  <button type="button" class="sle-btn" id="cfgBtn" title="Settings" aria-label="Settings">⚙</button>
+  <button type="button" class="sle-btn" id="hlpBtn" title="Help" aria-label="Help">?</button>
+</div>
 <div class="er" id="er"></div>
 <div class="cf" id="cf">
   <div class="cg">
@@ -146,6 +157,7 @@ class SolLiveEdit extends HTMLElement {
 </div>
 <div class="body">
   <div class="ep" id="ep"></div>
+  <div class="sle-resizer" id="resizer" title="Drag to resize"></div>
   <div class="pp" id="pp">
     <div id="po" style="width:100%;height:100%;position:relative"></div>
   </div>
@@ -167,10 +179,42 @@ class SolLiveEdit extends HTMLElement {
     });
     s.getElementById('modalClose').addEventListener('click',()=>this._closeModal());
 
+    // Toolbar — Save / Settings / Help / Zoom / Statistics. Zoom and
+    // Statistics are shown per-format (see _setFmt); Save is hidden
+    // when the component is readonly.
+    s.getElementById('zmOut').addEventListener('click',()=>this.zoomOut());
+    s.getElementById('zmIn').addEventListener('click',()=>this.zoomIn());
+    s.getElementById('statsBtn').addEventListener('click',()=>this.toggleStats());
+    s.getElementById('svBtn').addEventListener('click',()=>this.save());
+    s.getElementById('cfgBtn').addEventListener('click',e=>{e.stopPropagation();this.toggleSettings();});
+    s.getElementById('hlpBtn').addEventListener('click',()=>this.toggleHelp());
+    if(this.hasAttribute('readonly'))s.getElementById('svBtn').style.display='none';
+
     // Close settings dropdown when clicking outside
     s.addEventListener('click',e=>{
       const cf=s.getElementById('cf');
       if(cf.classList.contains('on')&&!cf.contains(e.target))cf.classList.remove('on');
+    });
+
+    // Resizer — drag the bar between editor and preview panes.
+    const rz=s.getElementById('resizer');
+    rz.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const body=s.querySelector('.body'),ep=s.getElementById('ep');
+      rz.setPointerCapture(e.pointerId);
+      rz.classList.add('dragging');
+      const move=ev=>{
+        const r=body.getBoundingClientRect(),min=120;
+        const w=Math.max(min,Math.min(ev.clientX-r.left,r.width-min));
+        ep.style.flex='0 0 '+w+'px';
+      };
+      const up=()=>{
+        rz.classList.remove('dragging');
+        rz.removeEventListener('pointermove',move);
+        rz.removeEventListener('pointerup',up);
+      };
+      rz.addEventListener('pointermove',move);
+      rz.addEventListener('pointerup',up);
     });
 
     this._loadCfg();
@@ -186,7 +230,13 @@ class SolLiveEdit extends HTMLElement {
     this._fmt=fmt||'markdown';
     this._zoom=1.0;
     const po=this.shadowRoot.getElementById('po');
-    if(po){po.style.transform='';po.style.transformOrigin='';po.style.width='';}
+    if(po){po.style.transform='';po.style.transformOrigin='';po.style.width='';po.style.height='';}
+    const zc=this.shadowRoot.getElementById('zoomctl');
+    if(zc)zc.hidden=!this.canZoom;
+    const zp=this.shadowRoot.getElementById('zmPct');
+    if(zp)zp.textContent='100%';
+    const sb=this.shadowRoot.getElementById('statsBtn');
+    if(sb)sb.hidden=!this.canStats;
     this.dispatchEvent(new CustomEvent('sol-format',{detail:{format:this._fmt,canZoom:this.canZoom,canStats:this.canStats},bubbles:true,composed:true}));
     await this._buildEditor();
   }
@@ -246,7 +296,7 @@ class SolLiveEdit extends HTMLElement {
     if(fmt!==this._fmt)await this._setFmt(fmt);
     try{
       const fn=this._fn||fetch;
-      const resp=await fn(url);
+      const resp=await fn(url,{cache:'no-store'});
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const text=await resp.text();
       const mf=MIME[(resp.headers.get('content-type')||'').split(';')[0].trim()];
@@ -330,6 +380,8 @@ class SolLiveEdit extends HTMLElement {
   _setZoom(z){
     this._zoom=Math.max(0.2,Math.min(5.0,Math.round(z*5)/5));
     const pct=Math.round(this._zoom*100);
+    const zp=this.shadowRoot.getElementById('zmPct');
+    if(zp)zp.textContent=pct+'%';
     const po=this.shadowRoot.getElementById('po');
     const pp=this.shadowRoot.getElementById('pp');
     if(po){
@@ -344,7 +396,7 @@ class SolLiveEdit extends HTMLElement {
     }
     this.dispatchEvent(new CustomEvent('sol-zoom',{detail:{zoom:this._zoom,pct},bubbles:true,composed:true}));
   }
-  _applyView(){const v=this._cfg.view,sr=this.shadowRoot,ep=sr.getElementById('ep'),pp=sr.getElementById('pp');if(ep)ep.style.display=v==='preview'?'none':'';if(pp)pp.style.display=v==='editor'?'none':'';}
+  _applyView(){const v=this._cfg.view,sr=this.shadowRoot,ep=sr.getElementById('ep'),pp=sr.getElementById('pp'),rz=sr.getElementById('resizer');if(ep)ep.style.display=v==='preview'?'none':'';if(pp)pp.style.display=v==='editor'?'none':'';if(rz)rz.style.display=v==='both'?'':'none';}
 }
 
 function _helpHtml(h){

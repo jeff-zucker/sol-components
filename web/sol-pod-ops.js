@@ -215,28 +215,10 @@ class SolPodOps extends HTMLElement {
     body.style.padding = '0'; body.style.overflow = 'hidden';
 
     const fmt = liveFormatFor(item.url, item.contentType);
-    const canZoom = ['turtle','jsonld','graphviz'].includes(fmt);
-    const canStats = fmt === 'csv';
 
+    // Save / Settings / Help / Zoom / Statistics are <sol-live-edit>'s
+    // own toolbar now \u2014 the modal tab adds nothing here.
     actions.innerHTML = '';
-    const mkBtn = (text, title, cls = '') => {
-      const b = document.createElement('button');
-      b.className = 'sol-btn sol-btn-ghost' + (cls ? ' ' + cls : '');
-      b.textContent = text; if (title) b.title = title;
-      actions.appendChild(b); return b;
-    };
-    let zmOut, zmPct, zmIn;
-    if (canZoom) {
-      zmOut = mkBtn('\u2212', 'Zoom out');
-      zmPct = document.createElement('span');
-      zmPct.className = 'modal-zoom-pct'; zmPct.textContent = '100%';
-      actions.appendChild(zmPct);
-      zmIn = mkBtn('+', 'Zoom in');
-    }
-    const statsBtn = canStats ? mkBtn('Statistics', '') : null;
-    const saveBtn = mkBtn('Save', '', 'sol-btn-primary');
-    const cfgBtn = mkBtn('\u2699', 'Settings');
-    const hlpBtn = mkBtn('?', 'Help');
 
     const fetchFn = this._fetchFor(item.url);
     const onSave = async (content, url) => {
@@ -263,14 +245,6 @@ class SolPodOps extends HTMLElement {
       await onSave(ev.detail.content, ev.detail.url);
     });
     body.appendChild(el);
-
-    if (zmOut) zmOut.onclick = () => el.zoomOut();
-    if (zmIn) zmIn.onclick = () => el.zoomIn();
-    if (statsBtn) statsBtn.onclick = () => el.toggleStats();
-    saveBtn.onclick = () => el.save();
-    cfgBtn.onclick = () => el.toggleSettings();
-    hlpBtn.onclick = () => el.toggleHelp();
-    el.addEventListener('sol-zoom', (e) => { if (zmPct) zmPct.textContent = e.detail.pct + '%'; });
 
     return () => { body.innerHTML = ''; };
   }
