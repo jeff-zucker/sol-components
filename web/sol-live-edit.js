@@ -113,8 +113,8 @@ class SolLiveEdit extends HTMLElement {
   get canZoom()  { return ZOOM_FMTS.has(this._fmt); }
   get canStats() { return this._fmt === 'csv'; }
   get zoom()     { return Math.round(this._zoom * 100); }
-  zoomIn()       { this._setZoom(this._zoom + 0.2); }
-  zoomOut()      { this._setZoom(this._zoom - 0.2); }
+  zoomIn()       { this._setZoom(this._zoom + 0.1); }
+  zoomOut()      { this._setZoom(this._zoom - 0.1); }
   save()         { this._save(); }
   toggleSettings(){ this._toggleCfg(); }
   toggleHelp()   { this._toggleHelp(); }
@@ -230,7 +230,7 @@ class SolLiveEdit extends HTMLElement {
     this._fmt=fmt||'markdown';
     this._zoom=1.0;
     const po=this.shadowRoot.getElementById('po');
-    if(po){po.style.transform='';po.style.transformOrigin='';po.style.width='';po.style.height='';}
+    if(po){po.style.transform='';po.style.transformOrigin='';po.style.width='100%';po.style.height='';}
     const zc=this.shadowRoot.getElementById('zoomctl');
     if(zc)zc.hidden=!this.canZoom;
     const zp=this.shadowRoot.getElementById('zmPct');
@@ -378,7 +378,7 @@ class SolLiveEdit extends HTMLElement {
   _loadCfg(){try{Object.assign(this._cfg,JSON.parse(localStorage.getItem('sle-cfg')||'{}'));}catch(_){}}
   _saveCfg(){try{localStorage.setItem('sle-cfg',JSON.stringify(this._cfg));}catch(_){}}
   _setZoom(z){
-    this._zoom=Math.max(0.2,Math.min(5.0,Math.round(z*5)/5));
+    this._zoom=Math.max(0.2,Math.min(5.0,Math.round(z*10)/10));
     const pct=Math.round(this._zoom*100);
     const zp=this.shadowRoot.getElementById('zmPct');
     if(zp)zp.textContent=pct+'%';
