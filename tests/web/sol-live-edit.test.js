@@ -47,6 +47,9 @@ beforeAll(() => {
       turtle: Promise.resolve('@prefix x: <x>.'),
       csv: Promise.resolve('a,b\n1,2'),
     },
+    help: {
+      markdown: { title: 'Markdown Help', sections: [] },
+    },
   });
   if (typeof globalThis.fetch === 'undefined') {
     globalThis.fetch = async () => ({
@@ -188,5 +191,120 @@ describe('SolLiveEdit — toolbar', () => {
     expect(el.shadowRoot.getElementById('cf').classList.contains('on')).toBe(false);
     el.toggleSettings();
     expect(el.shadowRoot.getElementById('cf').classList.contains('on')).toBe(true);
+  });
+});
+
+// ── _loadSrc ────────────────────────────────────────────────────────────────
+
+const flush = () => new Promise(r => setTimeout(r, 0));
+
+function srcFetch(body, { ok = true, status = 200, contentType = '' } = {}) {
+  return async () => ({
+    ok, status,
+    text: async () => body,
+    headers: { get: (h) => (h.toLowerCase() === 'content-type' ? contentType : null) },
+  });
+}
+
+describe('SolLiveEdit — _loadSrc', () => {
+  test('loads the document content and fires sol-load', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el.fetchFn = srcFetch('# fetched doc');
+    let detail = null;
+    el.addEventListener('sol-load', (e) => { detail = e.detail; });
+    await el._loadSrc('https://pod.example/notes.md');
+    expect(el.content).toBe('# fetched doc');
+    expect(detail).toEqual({ content: '# fetched doc', url: 'https://pod.example/notes.md' });
+  });
+
+  test('adopts the format from the response content-type', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el.fetchFn = srcFetch('a,b\n1,2', { contentType: 'text/csv' });
+    await el._loadSrc('https://pod.example/data.unknownext');
+    expect(el.format).toBe('csv');
+  });
+
+  test('a failed load shows an error', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el.fetchFn = srcFetch('', { ok: false, status: 500 });
+    await el._loadSrc('https://pod.example/missing.md');
+    const er = el.shadowRoot.getElementById('er');
+    expect(er.classList.contains('on')).toBe(true);
+    expect(er.textContent).toMatch(/Load failed.*500/);
+  });
+});
+
+// ── save to a server ────────────────────────────────────────────────────────
+
+describe('SolLiveEdit — save', () => {
+  test('save() PUTs the content to the source URL', async () => {
+    const el = await mkEditor({ format: 'turtle', source: 'https://pod.example/x.ttl' });
+    const calls = [];
+    el.fetchFn = async (url, opts = {}) => {
+      calls.push({ url, method: opts.method });
+      return { ok: true, status: 200, text: async () => '', headers: { get: () => null } };
+    };
+    el.content = '@prefix x: <x>.';
+    el.save();
+    await flush();
+    expect(calls).toContainEqual({ url: 'https://pod.example/x.ttl', method: 'PUT' });
+  });
+});
+
+// ── _change ─────────────────────────────────────────────────────────────────
+
+describe('SolLiveEdit — _change', () => {
+  test('an editor change fires sol-change with the current content', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el.content = 'draft';
+    let detail = null;
+    el.addEventListener('sol-change', (e) => { detail = e.detail; });
+    el._change();
+    if (el._db) clearTimeout(el._db);   // cancel the debounced re-render
+    expect(detail).toEqual({ content: 'draft' });
+  });
+});
+
+// ── attributeChangedCallback ────────────────────────────────────────────────
+
+describe('SolLiveEdit — attributeChangedCallback', () => {
+  test('changing the format attribute re-sets the format', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el.setAttribute('format', 'csv');
+    await flush();
+    expect(el.format).toBe('csv');
+  });
+});
+
+// ── view configuration ──────────────────────────────────────────────────────
+
+describe('SolLiveEdit — _applyView', () => {
+  test('"editor" view hides the preview pane', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el._cfg.view = 'editor';
+    el._applyView();
+    expect(el.shadowRoot.getElementById('pp').style.display).toBe('none');
+    expect(el.shadowRoot.getElementById('ep').style.display).toBe('');
+  });
+
+  test('"preview" view hides the editor pane', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    el._cfg.view = 'preview';
+    el._applyView();
+    expect(el.shadowRoot.getElementById('ep').style.display).toBe('none');
+    expect(el.shadowRoot.getElementById('pp').style.display).toBe('');
+  });
+});
+
+// ── help modal ──────────────────────────────────────────────────────────────
+
+describe('SolLiveEdit — toggleHelp', () => {
+  test('opens the help modal, and toggling again closes it', async () => {
+    const el = await mkEditor({ format: 'markdown' });
+    const modal = el.shadowRoot.getElementById('modal');
+    await el.toggleHelp();
+    expect(modal.classList.contains('on')).toBe(true);
+    await el.toggleHelp();
+    expect(modal.classList.contains('on')).toBe(false);
   });
 });

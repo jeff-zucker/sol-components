@@ -480,3 +480,98 @@ describe('SolPod — _promptAddPod', () => {
     }
   });
 });
+
+// ── keyboard navigation (_onWrapperKey) ─────────────────────────────────────
+
+describe('SolPod — keyboard navigation', () => {
+  function tree(items) {
+    const el = mkPod();
+    el._renderTree(items);
+    const tw = el.shadowRoot.querySelector('.tree-wrapper');
+    const press = (key) => tw.dispatchEvent(new KeyboardEvent('keydown', { key }));
+    return { el, tw, press };
+  }
+
+  test('ArrowDown / ArrowUp move the focus index through the list', () => {
+    const { el, press } = tree([item('a.txt'), item('b.txt'), item('c.txt')]);
+    press('ArrowDown');
+    expect(el._focusIndex).toBe(0);
+    press('ArrowDown');
+    expect(el._focusIndex).toBe(1);
+    press('ArrowUp');
+    expect(el._focusIndex).toBe(0);
+  });
+
+  test('Home and End jump to the first and last items', () => {
+    const { el, press } = tree([item('a.txt'), item('b.txt'), item('c.txt')]);
+    press('End');
+    expect(el._focusIndex).toBe(2);
+    press('Home');
+    expect(el._focusIndex).toBe(0);
+  });
+
+  test('Enter on a folder loads that container', () => {
+    const { el, press } = tree([item('docs', true)]);
+    el.loadContainer = jest.fn();
+    press('ArrowDown');
+    press('Enter');
+    expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/docs/');
+  });
+
+  test('Enter on a file activates it through gearAction', () => {
+    const { el, press } = tree([item('a.txt')]);
+    const action = jest.fn();
+    el.gearAction = action;
+    press('ArrowDown');
+    press('Enter');
+    expect(action).toHaveBeenCalled();
+  });
+
+  test('Backspace navigates to the parent container', () => {
+    const { el, press } = tree([item('a.txt')]);
+    el._rootUrl = 'https://pod.example/';
+    el._currentPath = 'https://pod.example/docs/';
+    el.loadContainer = jest.fn();
+    press('Backspace');
+    expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/');
+  });
+
+  test('"/" moves focus to the filter input', () => {
+    const { el, press } = tree([item('a.txt')]);
+    press('/');
+    expect(el.shadowRoot.activeElement).toBe(el.shadowRoot.querySelector('.pod-filter'));
+  });
+
+  test('Escape clears an active filter', () => {
+    const { el, press } = tree([item('a.txt')]);
+    el._filterText = 'abc';
+    press('Escape');
+    expect(el._filterText).toBe('');
+  });
+});
+
+// ── filter input and pod selector ───────────────────────────────────────────
+
+describe('SolPod — filter input', () => {
+  test('typing in the filter narrows the rendered tree', () => {
+    const el = mkPod();
+    el._renderTree([item('notes.txt'), item('photo.png')]);
+    const filter = el.shadowRoot.querySelector('.pod-filter');
+    filter.value = 'note';
+    filter.dispatchEvent(new Event('input'));
+    expect(fileTreeItems(el).map(li => li.dataset.url))
+      .toEqual(['https://pod.example/notes.txt']);
+  });
+});
+
+describe('SolPod — pod selector', () => {
+  test('choosing a storage loads that container', () => {
+    const el = mkPod();
+    el.setStorages(['https://a.pod/', 'https://b.pod/']);
+    el.loadContainer = jest.fn();
+    const sel = el.shadowRoot.querySelector('.pod-select');
+    sel.value = 'https://b.pod/';
+    sel.dispatchEvent(new Event('change'));
+    expect(el.loadContainer).toHaveBeenCalledWith('https://b.pod/');
+  });
+});
