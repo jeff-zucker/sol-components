@@ -1,0 +1,351 @@
+/**
+ * @jest-environment jsdom
+ *
+ * Tests for <sol-tabs>:
+ *   - from-rdf loading of the shared ui:Menu RDF shape
+ *   - ui:Link (href / contents), ui:Component, ui:handler, ui:orientation
+ *   - Nested ui:Menu → a tab whose body is a <sol-tabs variant="sub"> strip
+ *   - Fragment-based subject selection + fallback when no fragment
+ *   - observedAttributes / attributeChangedCallback
+ *   - Declarative anchor API and imperative tabs setter still work
+ */
+
+import { jest } from '@jest/globals';
+import rdflib from '../__mocks__/rdflib-esm.js';
+window.$rdf = rdflib;
+window.__SolSuppressDefineWarn = true;
+
+const UI = 'http://www.w3.org/ns/ui#';
+const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+const SCHEMA = 'http://schema.org/';
+const BASE = 'http://example.org/tabs.ttl';
+
+// ── Mock loadRdfStore ───────────────────────────────────────────────────────
+
+let mockStore;
+jest.unstable_mockModule('../../core/rdf-utils.js', () => ({
+  loadRdfStore: jest.fn(async () => mockStore),
+}));
+
+const { SolTabs } = await import('../../web/sol-tabs.js');
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+// #Main → ( #Home #Settings #Table #About )
+//   #Home     ui:Link      href + icon
+//   #Settings ui:Menu      nested: ( #Light #Dark ) both ui:contents links
+//   #Table    ui:Component ui:name "sol-query" + ui:attribute endpoint
+//   #About    ui:Link      href + ui:handler Component "sol-query" + param
+function buildStore() {
+  const store = rdflib.graph();
+  const s = (v) => rdflib.sym(v);
+  const l = (v) => rdflib.literal(v);
+
+  store.add(s(BASE + '#Main'), s(RDF + 'type'), s(UI + 'Menu'));
+  store.add(s(BASE + '#Main'), s(UI + 'label'), l('main'));
+
+  const b1 = s(BASE + '#_l1');
+  const b2 = s(BASE + '#_l2');
+  const b3 = s(BASE + '#_l3');
+  const b4 = s(BASE + '#_l4');
+  store.add(s(BASE + '#Main'), s(UI + 'parts'), b1);
+  store.add(b1, s(RDF + 'first'), s(BASE + '#Home'));
+  store.add(b1, s(RDF + 'rest'), b2);
+  store.add(b2, s(RDF + 'first'), s(BASE + '#Settings'));
+  store.add(b2, s(RDF + 'rest'), b3);
+  store.add(b3, s(RDF + 'first'), s(BASE + '#Table'));
+  store.add(b3, s(RDF + 'rest'), b4);
+  store.add(b4, s(RDF + 'first'), s(BASE + '#About'));
+  store.add(b4, s(RDF + 'rest'), s(RDF + 'nil'));
+
+  store.add(s(BASE + '#Home'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#Home'), s(UI + 'label'), l('Home'));
+  store.add(s(BASE + '#Home'), s(UI + 'href'), s('http://example.org/home.html'));
+  store.add(s(BASE + '#Home'), s(UI + 'icon'), s('http://example.org/house.svg'));
+
+  store.add(s(BASE + '#Settings'), s(RDF + 'type'), s(UI + 'Menu'));
+  store.add(s(BASE + '#Settings'), s(UI + 'label'), l('Settings'));
+  const sb1 = s(BASE + '#_s1');
+  const sb2 = s(BASE + '#_s2');
+  store.add(s(BASE + '#Settings'), s(UI + 'parts'), sb1);
+  store.add(sb1, s(RDF + 'first'), s(BASE + '#Light'));
+  store.add(sb1, s(RDF + 'rest'), sb2);
+  store.add(sb2, s(RDF + 'first'), s(BASE + '#Dark'));
+  store.add(sb2, s(RDF + 'rest'), s(RDF + 'nil'));
+
+  store.add(s(BASE + '#Light'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#Light'), s(UI + 'label'), l('Light'));
+  store.add(s(BASE + '#Light'), s(UI + 'contents'), l('light content'));
+
+  store.add(s(BASE + '#Dark'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#Dark'), s(UI + 'label'), l('Dark'));
+  store.add(s(BASE + '#Dark'), s(UI + 'contents'), l('dark content'));
+
+  store.add(s(BASE + '#Table'), s(RDF + 'type'), s(UI + 'Component'));
+  store.add(s(BASE + '#Table'), s(UI + 'label'), l('Data Table'));
+  store.add(s(BASE + '#Table'), s(UI + 'name'), l('sol-query'));
+  const attr1 = s(BASE + '#_a1');
+  store.add(s(BASE + '#Table'), s(UI + 'attribute'), attr1);
+  store.add(attr1, s(SCHEMA + 'name'), l('endpoint'));
+  store.add(attr1, s(SCHEMA + 'value'), s('http://example.org/data.ttl'));
+
+  store.add(s(BASE + '#About'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#About'), s(UI + 'label'), l('About'));
+  store.add(s(BASE + '#About'), s(UI + 'href'), s('http://example.org/about.ttl'));
+  store.add(s(BASE + '#About'), s(UI + 'handler'), s(BASE + '#AboutHandler'));
+  store.add(s(BASE + '#AboutHandler'), s(RDF + 'type'), s(UI + 'Component'));
+  store.add(s(BASE + '#AboutHandler'), s(UI + 'label'), l('sol-query'));
+  const param1 = s(BASE + '#_p1');
+  store.add(s(BASE + '#AboutHandler'), s(UI + 'parameter'), param1);
+  store.add(param1, s(SCHEMA + 'name'), l('pattern'));
+  store.add(param1, s(SCHEMA + 'value'), l('?s ?p ?o'));
+
+  return store;
+}
+
+function attached(el) {
+  document.body.appendChild(el);
+  return el;
+}
+
+function flush() {
+  return new Promise((r) => setTimeout(r, 0));
+}
+
+function tabBar(el)  { return el.querySelector(':scope > .sol-tabs-bar'); }
+function tabBtns(el) { return Array.from(tabBar(el).querySelectorAll('button')); }
+function content(el) { return el.querySelector(':scope > .sol-tabs-content'); }
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+// ── observedAttributes ──────────────────────────────────────────────────────
+
+describe('SolTabs — observedAttributes', () => {
+  test('observes from-rdf', () => {
+    expect(SolTabs.observedAttributes).toContain('from-rdf');
+  });
+});
+
+// ── from-rdf loading ────────────────────────────────────────────────────────
+
+describe('SolTabs — from-rdf loading', () => {
+  beforeEach(() => { mockStore = buildStore(); });
+
+  test('renders one tab button per ui:parts entry', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    const labels = tabBtns(el).map(b => b.textContent);
+    expect(labels).toEqual(['Home', 'Settings', 'Data Table', 'About']);
+  });
+
+  test('first tab is active after load', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    expect(el.activeTab).toBe('Home');
+    expect(tabBtns(el)[0].classList.contains('active')).toBe(true);
+  });
+
+  test('ui:contents link renders its literal HTML into the body', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('Settings');           // nested menu tab
+    const sub = content(el).querySelector('sol-tabs[variant="sub"]');
+    expect(sub).toBeTruthy();
+    expect(content(sub).textContent).toContain('light content');
+  });
+
+  test('ui:href link wraps the URL in sol-include by default', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('Home');
+    const embed = content(el).querySelector('.sol-tab-embed');
+    expect(embed).toBeTruthy();
+    expect(embed.tagName.toLowerCase()).toBe('sol-include');
+    expect(embed.getAttribute('source')).toBe('http://example.org/home.html');
+    expect(embed.getAttribute('endpoint')).toBe('http://example.org/home.html');
+  });
+
+  test('ui:Component part renders the named component with its attributes', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('Data Table');
+    const embed = content(el).querySelector('.sol-tab-embed');
+    expect(embed.tagName.toLowerCase()).toBe('sol-query');
+    expect(embed.getAttribute('endpoint')).toBe('http://example.org/data.ttl');
+  });
+
+  test('ui:handler on a link wraps the href in that component with params', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('About');
+    const embed = content(el).querySelector('.sol-tab-embed');
+    expect(embed.tagName.toLowerCase()).toBe('sol-query');
+    expect(embed.getAttribute('source')).toBe('http://example.org/about.ttl');
+    expect(embed.getAttribute('pattern')).toBe('?s ?p ?o');
+  });
+});
+
+// ── nested ui:Menu → sub-tab strip ──────────────────────────────────────────
+
+describe('SolTabs — nested ui:Menu', () => {
+  beforeEach(() => { mockStore = buildStore(); });
+
+  test('nested menu becomes a single tab, not flattened', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    const labels = tabBtns(el).map(b => b.textContent);
+    expect(labels).toContain('Settings');
+    expect(labels).not.toContain('Light');
+    expect(labels).not.toContain('Dark');
+  });
+
+  test('selecting the nested tab shows a <sol-tabs variant="sub"> strip', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('Settings');
+    const sub = content(el).querySelector('sol-tabs[variant="sub"]');
+    expect(sub).toBeTruthy();
+    const subLabels = tabBtns(sub).map(b => b.textContent);
+    expect(subLabels).toEqual(['Light', 'Dark']);
+  });
+
+  test('sub-tab strip switches its own children independently', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.switchTab('Settings');
+    const sub = content(el).querySelector('sol-tabs[variant="sub"]');
+    sub.switchTab('Dark');
+    expect(content(sub).textContent).toContain('dark content');
+  });
+});
+
+// ── ui:orientation ──────────────────────────────────────────────────────────
+
+describe('SolTabs — from-rdf with ui:orientation', () => {
+  test('applies ui:orientation from the menu root', async () => {
+    mockStore = buildStore();
+    mockStore.add(rdflib.sym(BASE + '#Main'),
+      rdflib.sym(UI + 'orientation'), rdflib.literal('vertical'));
+
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    expect(el.getAttribute('orientation')).toBe('vertical');
+  });
+
+  test('an explicit orientation attribute is not overridden', async () => {
+    mockStore = buildStore();
+    mockStore.add(rdflib.sym(BASE + '#Main'),
+      rdflib.sym(UI + 'orientation'), rdflib.literal('vertical'));
+
+    const el = document.createElement('sol-tabs');
+    el.setAttribute('orientation', 'horizontal');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    attached(el);
+    await flush();
+
+    expect(el.getAttribute('orientation')).toBe('horizontal');
+  });
+});
+
+// ── fragment fallback ───────────────────────────────────────────────────────
+
+describe('SolTabs — from-rdf without fragment', () => {
+  test('finds the ui:Menu by type when no fragment is given', async () => {
+    mockStore = buildStore();
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE);
+    await flush();
+
+    expect(tabBtns(el).map(b => b.textContent)).toContain('Home');
+  });
+});
+
+// ── attributeChangedCallback ────────────────────────────────────────────────
+
+describe('SolTabs — attributeChangedCallback', () => {
+  test('reloads tabs when from-rdf changes', async () => {
+    mockStore = buildStore();
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+    expect(tabBtns(el).length).toBe(4);
+
+    // Swap in a smaller menu document.
+    const store2 = rdflib.graph();
+    const s = (v) => rdflib.sym(v);
+    const l = (v) => rdflib.literal(v);
+    const B2 = 'http://example.org/other.ttl';
+    store2.add(s(B2 + '#M'), s(RDF + 'type'), s(UI + 'Menu'));
+    const lb = s(B2 + '#_lb1');
+    store2.add(s(B2 + '#M'), s(UI + 'parts'), lb);
+    store2.add(lb, s(RDF + 'first'), s(B2 + '#One'));
+    store2.add(lb, s(RDF + 'rest'), s(RDF + 'nil'));
+    store2.add(s(B2 + '#One'), s(RDF + 'type'), s(UI + 'Link'));
+    store2.add(s(B2 + '#One'), s(UI + 'label'), l('Only'));
+    store2.add(s(B2 + '#One'), s(UI + 'contents'), l('only content'));
+    mockStore = store2;
+
+    el.setAttribute('from-rdf', B2 + '#M');
+    await flush();
+    expect(el.activeTab).toBe('Only');
+  });
+});
+
+// ── sol-tab-change event ────────────────────────────────────────────────────
+
+describe('SolTabs — sol-tab-change event', () => {
+  test('switching an RDF-built tab fires sol-tab-change', async () => {
+    mockStore = buildStore();
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    let detail = null;
+    el.addEventListener('sol-tab-change', (e) => { detail = e.detail; });
+    el.switchTab('About');
+    expect(detail).toEqual({ name: 'About' });
+  });
+});
+
+// ── declarative / imperative APIs still work ────────────────────────────────
+
+describe('SolTabs — declarative and imperative APIs', () => {
+  test('declarative anchors still build tabs', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.md">Alpha</a><a href="b.md">Beta</a>';
+    attached(el);
+    expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);
+  });
+
+  test('imperative tabs setter still works', () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.tabs = [
+      { name: 'X', render: (b) => { b.textContent = 'x-body'; } },
+      { name: 'Y', render: (b) => { b.textContent = 'y-body'; } },
+    ];
+    el.switchTab('Y');
+    expect(content(el).textContent).toBe('y-body');
+  });
+});

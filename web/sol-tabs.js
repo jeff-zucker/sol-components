@@ -32,17 +32,26 @@
  *     <a href="readme.md">Readme</a>
  *   </sol-tabs>
  *
+ * RDF usage: point `from-rdf` at a ui:Menu document — the same RDF shape
+ * <sol-menu> consumes. Each ui:Link / ui:Component part becomes a tab; a
+ * nested ui:Menu becomes a tab whose content is a slimmer
+ * <sol-tabs variant="sub"> strip of that group's children.
+ *
+ *   <sol-tabs from-rdf="./demo-tabs.ttl#MainTabs"></sol-tabs>
+ *
  * The tab bar is hidden when only one tab is supplied. Set attribute
  * `variant="sub"` for the slimmer nested subtab styling.
  *
  * Events (bubbling, composed):
  *   sol-tab-change — detail: { name }
+ *   sol-error      — detail: { source, kind, ... } on RDF / handler load failure
  */
 
 import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
-import { siblingUrl } from '../core/here.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
+import { loadMenuFromUri } from '../core/menu-rdf.js';
+import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
 
 /**
  * Tabbed content container.
@@ -55,7 +64,9 @@ import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
  * @attr {string} orientation - "horizontal" (default) or "vertical"
  * @attr {string} handler - default sol-* component tag for all tabs
  * @attr {string} variant - "sub" for slimmer nested subtab styling
+ * @attr {string} from-rdf - URL of a ui:Menu RDF document to build tabs from
  * @fires sol-tab-change - detail: { name }
+ * @fires sol-error - detail: { source, kind } on RDF / handler load failure
  */
 class SolTabs extends HTMLElement {
   constructor() {
@@ -69,12 +80,23 @@ class SolTabs extends HTMLElement {
     this._rendered = false;
   }
 
+  static get observedAttributes() { return ['from-rdf']; }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === 'from-rdf' && oldValue !== newValue && this._rendered) {
+      this._loadFromRdf(newValue);
+    }
+  }
+
   connectedCallback() {
     ensureDocStyle(this.getRootNode(), 'sol-tabs-styles', TABS_CSS);
     if (this._rendered) return;
 
+    const fromRdf = this.getAttribute('from-rdf');
+
     // Harvest declarative anchors before we overwrite innerHTML.
-    const declared = this._tabs.length === 0 ? this._harvestAnchors() : null;
+    const declared = (!fromRdf && this._tabs.length === 0)
+      ? this._harvestAnchors() : null;
 
     this.innerHTML = `
       <div class="sol-tabs-bar" role="tablist"></div>
@@ -90,12 +112,71 @@ class SolTabs extends HTMLElement {
       this._actionsEl = this.querySelector(':scope > .sol-tabs-actions');
     }
 
+    if (fromRdf) {
+      this._loadFromRdf(fromRdf);
+      return;
+    }
+
     if (declared?.length) {
       this._tabs = declared;
     }
     this._renderBar();
 
     if (declared?.length) this.switchTab(declared[0].name);
+  }
+
+  // Fetch a ui:Menu RDF document and render its parts as tabs. This is the
+  // exact shape <sol-menu> consumes — ui:parts of ui:Link / ui:Component
+  // with ui:label / ui:href / ui:contents / ui:handler — so a single RDF
+  // document can drive either element. A nested ui:Menu becomes a tab whose
+  // body holds a slimmer <sol-tabs variant="sub"> strip of its children.
+  async _loadFromRdf(uri) {
+    try {
+      const result = await loadMenuFromUri(uri, document.baseURI);
+      if (!result) return;
+      if (result.orientation && !this.hasAttribute('orientation')) {
+        this.setAttribute('orientation', result.orientation);
+      }
+      this._tabs = this._wrapRdfItems(result.items);
+      this._renderBar();
+      if (this._tabs.length) this.switchTab(this._tabs[0].name);
+    } catch (err) {
+      console.error('<sol-tabs> from-rdf load failed:', err);
+      this.dispatchEvent(new CustomEvent('sol-error', {
+        bubbles: true, composed: true,
+        detail: { source: 'sol-tabs', kind: 'rdf-load', uri, message: err.message },
+      }));
+    }
+  }
+
+  // Wrap the plain item descriptions from core/menu-rdf.js with render
+  // closures. Leaf links/components use the shared factory in
+  // core/rdf-render.js; a nested ui:Menu becomes a tab whose body is a
+  // <sol-tabs variant="sub"> holding the group's own children.
+  _wrapRdfItems(descriptions) {
+    const ctx = {
+      host: this, baseUrl: import.meta.url,
+      sourceName: 'sol-tabs', embedClass: 'sol-tab-embed',
+    };
+    return descriptions.map(desc => {
+      if (desc.type === 'submenu') {
+        const children = this._wrapRdfItems(desc.children);
+        return {
+          name: desc.name,
+          render: (body) => {
+            const sub = document.createElement('sol-tabs');
+            sub.setAttribute('variant', 'sub');
+            sub.tabs = children;
+            body.appendChild(sub);
+            if (children.length) sub.switchTab(children[0].name);
+          },
+        };
+      }
+      if (desc.type === 'component') {
+        return { name: desc.name, render: renderComponentItem(desc, ctx) };
+      }
+      return { name: desc.name, render: renderLinkItem(desc, ctx) };
+    });
   }
 
   // Parse <a href="url" [handler="tag"] [attr=val ...]>Label</a> children
@@ -117,7 +198,7 @@ class SolTabs extends HTMLElement {
       return {
         name: label,
         render: (body) => {
-          _ensureHandler(handlerTag);
+          ensureHandler(handlerTag, this, import.meta.url, 'sol-tabs');
           const el = document.createElement(handlerTag);
           el.setAttribute('source', url);
           el.setAttribute('endpoint', url);
@@ -192,14 +273,6 @@ class SolTabs extends HTMLElement {
   disconnectedCallback() {
     if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
   }
-}
-
-// Lazy-import a sibling sol-* handler module on first use so authors don't
-// have to manually <script> every component used by a declared tab.
-function _ensureHandler(tag) {
-  if (!/^sol-[a-z-]+$/.test(tag)) return;
-  if (customElements.get(tag)) return;
-  import(siblingUrl(`./${tag}.js`, import.meta.url)).catch(() => {});
 }
 
 define('sol-tabs', SolTabs);

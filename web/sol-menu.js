@@ -51,9 +51,9 @@
 
 import { define } from '../core/define.js';
 import { adopt } from '../core/adopt.js';
-import { siblingUrl } from '../core/here.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
+import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
 
 /**
  * Sidebar navigation + content panel.
@@ -194,51 +194,22 @@ class SolMenu extends HTMLElement {
   }
 
   // Wrap pure item descriptions from core/menu-rdf.js with the DOM-side
-  // render closures the rest of the component expects.
+  // render closures the rest of the component expects. The leaf closures
+  // are built by core/rdf-render.js, shared with <sol-tabs>.
   _wrapRdfItems(descriptions) {
+    const ctx = {
+      host: this, baseUrl: import.meta.url,
+      sourceName: 'sol-menu', embedClass: 'sol-menu-embed',
+    };
     return descriptions.map(desc => {
       if (desc.type === 'submenu') {
         return { name: desc.name, children: this._wrapRdfItems(desc.children) };
       }
       if (desc.type === 'component') {
-        return { name: desc.name, icon: desc.icon, render: this._renderComponentItem(desc) };
+        return { name: desc.name, icon: desc.icon, render: renderComponentItem(desc, ctx) };
       }
-      return { name: desc.name, icon: desc.icon, render: this._renderLinkItem(desc) };
+      return { name: desc.name, icon: desc.icon, render: renderLinkItem(desc, ctx) };
     });
-  }
-
-  _renderComponentItem({ tag, params, linkTarget }) {
-    return (body) => {
-      if (!tag) return;
-      _ensureHandler(tag, this);
-      const el = document.createElement(tag);
-      for (const [k, v] of params) el.setAttribute(k, v);
-      el.classList.add('sol-menu-embed');
-      const target = linkTarget ? document.querySelector(linkTarget) : body;
-      target.innerHTML = '';
-      target.appendChild(el);
-    };
-  }
-
-  _renderLinkItem({ href, contents, handlerTag, handlerParams, linkTarget }) {
-    return (body) => {
-      if (contents) {
-        const target = linkTarget ? document.querySelector(linkTarget) : body;
-        target.innerHTML = contents;
-        return;
-      }
-      if (!href) return;
-      const tag = handlerTag || this.getAttribute('handler') || 'sol-include';
-      _ensureHandler(tag, this);
-      const el = document.createElement(tag);
-      el.setAttribute('source', href);
-      el.setAttribute('endpoint', href);
-      for (const [k, v] of handlerParams) el.setAttribute(k, v);
-      el.classList.add('sol-menu-embed');
-      const target = linkTarget ? document.querySelector(linkTarget) : body;
-      target.innerHTML = '';
-      target.appendChild(el);
-    };
   }
 
   _harvestItems(root) {
@@ -254,7 +225,7 @@ class SolMenu extends HTMLElement {
         out.push({
           name: label,
           render: (body) => {
-            _ensureHandler(handlerTag, this);
+            ensureHandler(handlerTag, this, import.meta.url, 'sol-menu');
             const el = document.createElement(handlerTag);
             el.setAttribute('source', url);
             el.setAttribute('endpoint', url);
@@ -461,19 +432,6 @@ class SolMenu extends HTMLElement {
     if (this._onDocClick) { document.removeEventListener('click', this._onDocClick); this._onDocClick = null; }
     if (this._onKeyDown) { this.shadowRoot.removeEventListener('keydown', this._onKeyDown); this._onKeyDown = null; }
   }
-}
-
-function _ensureHandler(tag, host) {
-  if (!/^sol-[a-z-]+$/.test(tag)) return;
-  if (customElements.get(tag)) return;
-  import(siblingUrl(`./${tag}.js`, import.meta.url)).catch(err => {
-    const msg = `<sol-menu> could not auto-load handler "${tag}" — make sure its module is reachable and any externals are in the importmap (${err.message})`;
-    console.warn(msg);
-    if (host) host.dispatchEvent(new CustomEvent('sol-error', {
-      bubbles: true, composed: true,
-      detail: { source: 'sol-menu', kind: 'handler-load', tag, message: err.message },
-    }));
-  });
 }
 
 define('sol-menu', SolMenu);
