@@ -151,7 +151,11 @@ export class PopupProxySession extends EventTarget {
 
     // Close the popup when the app page goes away (tab close, navigation,
     // browser quit) so we don't leave orphaned login windows behind.
-    this._onPageHide = () => {
+    // Skip when the page is going into the back/forward cache
+    // (event.persisted) — it may be restored, and the popup should
+    // survive with it.
+    this._onPageHide = (e) => {
+      if (e && e.persisted) return;
       if (this._popup && !this._popup.closed) {
         try { this._popup.close(); } catch (_) { /* ignore */ }
       }
