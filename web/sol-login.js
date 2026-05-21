@@ -26,6 +26,7 @@ import {
   getWebId as _getWebId,
   getFirstLoggedIn as _getFirstLoggedIn,
 } from '../core/auth-core.js';
+import { PopupProxySession } from '../core/popup-proxy.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const login = document.querySelector('sol-login');
@@ -165,40 +166,71 @@ class AuthManager {
   }
 }
 
+// All <sol-login> instances on a page share one AuthManager so that
+// podz's per-side login elements register into a single session Map.
+// Single-login pages are unaffected (one consumer of the singleton).
+const sharedAuth = new AuthManager();
+
 /**
  * Solid OIDC login web component.
  *
  * Shows a log-in/log-out button with issuer dropdown. Manages OIDC sessions
  * via @inrupt/solid-client-authn-browser and provides authenticated fetch.
  *
+ * Two modes (the `mode` attribute):
+ *   - "redirect" (default) — classic full-page OIDC redirect. One session
+ *     per page. Unchanged behavior for existing consumers.
+ *   - "popup" — login happens in a popup window that holds the real
+ *     Session; the parent talks to it via a PopupProxySession. Lets
+ *     multiple <sol-login side="..."> elements hold independent sessions
+ *     in one tab. See core/popup-proxy.js and popup-auth-callback.html.
+ *
  * @class SolLogin
  * @extends HTMLElement
  * @attr {string} issuers - comma-separated list of known OIDC issuer origins
+ * @attr {string} mode - "redirect" (default) | "popup"
+ * @attr {string} side - session tag for this element (popup mode); default "default"
+ * @attr {string} popup-callback - URL of the popup callback page (popup mode)
  * @property {Function} fetchFor - fetchFor(url) returns authenticated fetch
  * @property {string} webId - logged-in user's WebID
  * @property {boolean} isLoggedIn - whether a session is active
- * @fires sol-login - detail: { webId, issuer }
- * @fires sol-logout
+ * @fires sol-login - detail: { webId, issuer, side }
+ * @fires sol-logout - detail: { side }
  */
 class SolLogin extends HTMLElement {
-  static get observedAttributes() { return ['issuers']; }
+  static get observedAttributes() { return ['issuers', 'mode', 'side', 'popup-callback']; }
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._auth = new AuthManager();
+    this._auth = sharedAuth;
     this._issuers = [];
     this._initialized = false;
+    this._mode = 'redirect';
+    this._side = 'default';
+    this._popupCallback = './popup-auth-callback.html';
+    this._popupWindow = null;
+    this._popupMsgHandler = null;
   }
 
   get auth() { return this._auth; }
 
+  /** The session for this element's side (popup mode), if any. */
+  _sideSession() {
+    return this._auth.sessions.get(this._side) || null;
+  }
+
   get webId() {
-    const s = this._auth.getFirstLoggedIn();
+    const s = this._mode === 'popup'
+      ? this._sideSession()
+      : this._auth.getFirstLoggedIn();
     return s?.info?.webId || null;
   }
 
   get isLoggedIn() {
+    if (this._mode === 'popup') {
+      return !!this._sideSession()?.info?.isLoggedIn;
+    }
     return !!this._auth.getFirstLoggedIn();
   }
 
@@ -226,23 +258,125 @@ class SolLogin extends HTMLElement {
   connectedCallback() {
     if (!this._initialized) {
       this._initialized = true;
+      this._mode = (this.getAttribute('mode') || 'redirect').toLowerCase();
+      this._side = this.getAttribute('side') || 'default';
+      const cb = this.getAttribute('popup-callback');
+      if (cb) this._popupCallback = cb;
       this._render();
       const attr = this.getAttribute('issuers');
       if (attr) this._issuers = attr.split(',').map(s => s.trim()).filter(Boolean);
     }
   }
 
+  disconnectedCallback() {
+    if (this._popupMsgHandler) {
+      window.removeEventListener('message', this._popupMsgHandler);
+      this._popupMsgHandler = null;
+    }
+  }
+
   attributeChangedCallback(name, oldV, newV) {
-    if (name === 'issuers' && oldV !== newV && this._initialized) {
+    if (oldV === newV) return;
+    if (name === 'issuers' && this._initialized) {
       this._issuers = (newV || '').split(',').map(s => s.trim()).filter(Boolean);
       this._renderIssuers();
+    } else if (name === 'mode' && this._initialized) {
+      this._mode = (newV || 'redirect').toLowerCase();
+    } else if (name === 'side' && this._initialized) {
+      this._side = newV || 'default';
+      this._updateUI();
+    } else if (name === 'popup-callback' && newV) {
+      this._popupCallback = newV;
     }
   }
 
   async login(issuerUrl, tag = 'default') {
+    if (this._mode === 'popup') {
+      return this._popupLogin(issuerUrl);
+    }
     await this._auth.ensureAuthenticated(issuerUrl, tag);
   }
+
+  /**
+   * Popup-mode login. Opens the callback page in a popup that runs the
+   * OIDC redirect on its own; when it posts back `logged-in`, we wrap the
+   * popup in a PopupProxySession and register it under this element's side.
+   */
+  _popupLogin(issuerUrl) {
+    let issuer = issuerUrl;
+    try { issuer = new URL(issuerUrl).href; } catch (e) {
+      this._setStatusMessage('Invalid issuer URL', true);
+      return;
+    }
+
+    // Reuse an already-open popup for this side rather than stacking windows.
+    if (this._popupWindow && !this._popupWindow.closed) {
+      this._popupWindow.focus();
+      return;
+    }
+
+    const url = this._popupCallback +
+      (this._popupCallback.includes('?') ? '&' : '?') +
+      'side=' + encodeURIComponent(this._side) +
+      '&issuer=' + encodeURIComponent(issuer);
+    const features = 'popup=yes,width=480,height=620';
+    const w = window.open(url, 'sol-login-' + this._side, features);
+    if (!w) {
+      this._setStatusMessage('Popup blocked — allow popups and retry', true);
+      this.dispatchEvent(new CustomEvent('sol-popup-blocked', {
+        bubbles: true, composed: true, detail: { side: this._side },
+      }));
+      return;
+    }
+    this._popupWindow = w;
+    this._setStatusMessage('Signing in…');
+
+    if (!this._popupMsgHandler) {
+      this._popupMsgHandler = (e) => this._onPopupMessage(e);
+      window.addEventListener('message', this._popupMsgHandler);
+    }
+  }
+
+  _onPopupMessage(e) {
+    const d = e.data;
+    if (!d || d.source !== 'sol-popup-auth') return;
+    if (d.side && d.side !== this._side) return;
+
+    if (d.type === 'logged-in') {
+      const proxy = new PopupProxySession(this._popupWindow, {
+        webId: d.webId, sessionId: d.sessionId, issuer: d.issuer,
+        clientId: null, side: this._side,
+      }, window.location.origin);
+      proxy.addEventListener('logout', () => {
+        if (this._auth.sessions.get(this._side) === proxy) {
+          this._auth.sessions.delete(this._side);
+        }
+        this._popupWindow = null;
+        this._updateUI();
+        this.dispatchEvent(new CustomEvent('sol-logout', {
+          bubbles: true, composed: true, detail: { side: this._side },
+        }));
+      });
+      this._auth.sessions.set(this._side, proxy);
+      this._updateUI();
+      this.dispatchEvent(new CustomEvent('sol-login', {
+        bubbles: true, composed: true,
+        detail: { webId: d.webId, issuer: d.issuer, side: this._side },
+      }));
+      this._integrateWithRdflib();
+    } else if (d.type === 'login-failed') {
+      this._popupWindow = null;
+      this._setStatusMessage('Sign-in failed', true);
+    }
+  }
+
 async initialize(tags = ['default']) {
+  if (this._mode === 'popup') {
+    // PR 1: no cross-reload persistence — nothing to restore on boot.
+    this._updateUI();
+    this._integrateWithRdflib();
+    return;
+  }
   for (const tag of tags) {
     this._auth.sessionFor(tag);
   }
@@ -254,7 +388,7 @@ async initialize(tags = ['default']) {
   if (firstSession) {
     this.dispatchEvent(new CustomEvent('sol-login', {
       bubbles: true, composed: true,
-      detail: { 
+      detail: {
         webId: firstSession.info.webId,
         issuer: firstSession.info.issuer
       }
@@ -263,6 +397,21 @@ async initialize(tags = ['default']) {
 }
 
 async logout() {
+  if (this._mode === 'popup') {
+    // Log out only this element's side.
+    const session = this._sideSession();
+    if (session) {
+      try { await session.logout(); } catch (e) {}
+      this._auth.sessions.delete(this._side);
+    }
+    this._popupWindow = null;
+    this._updateUI();
+    this._integrateWithRdflib();
+    this.dispatchEvent(new CustomEvent('sol-logout', {
+      bubbles: true, composed: true, detail: { side: this._side },
+    }));
+    return;
+  }
   for (const [, session] of this._auth.sessions) {
     if (session.info?.isLoggedIn) {
       await session.logout();
@@ -430,13 +579,23 @@ _integrateWithRdflib() {
     await this.login(issuer);
   }
 
+/** Show a transient message in the status span (overwritten by _updateUI). */
+_setStatusMessage(msg, isErr) {
+  const status = this.shadowRoot && this.shadowRoot.querySelector('.auth-status');
+  if (!status) return;
+  status.textContent = msg;
+  status.className = 'auth-status' + (isErr ? ' auth-error' : '');
+}
+
 _updateUI() {
   const status = this.shadowRoot.querySelector('.auth-status');
   const btn = this.shadowRoot.querySelector('.auth-btn');
   if (!status || !btn) return;
 
-  const session = this._auth.getFirstLoggedIn();
-  if (session) {
+  const session = this._mode === 'popup'
+    ? this._sideSession()
+    : this._auth.getFirstLoggedIn();
+  if (session && session.info && session.info.isLoggedIn) {
     const webId = session.info.webId || '';
     const displayName = webId.replace(/^https?:\/\//, '').replace(/\/profile.*$/, '');
     status.textContent = displayName;

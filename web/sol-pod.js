@@ -45,12 +45,13 @@ import {
  * @fires sol-status - detail: { message, type }
  */
 class SolPod extends HTMLElement {
-  static get observedAttributes() { return ['source', 'login', 'gear-action', 'handler']; }
+  static get observedAttributes() { return ['source', 'login', 'gear-action', 'handler', 'side']; }
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this._login = null;
+    this._side = null;
     this._currentPath = '';
     this._rootUrl = '';
     this._items = [];
@@ -74,6 +75,15 @@ class SolPod extends HTMLElement {
     if (typeof el === 'string') el = document.querySelector(el);
     this._login = el;
   }
+
+  /**
+   * Auth session tag for this pod ('left' / 'right' in podz, etc).
+   * Passed to the linked sol-login's fetchFor() so multi-session setups
+   * pick the right session. When unset, fetchFor falls back to
+   * origin-coverage matching — back-compatible for single-session pages.
+   */
+  get side() { return this._side; }
+  set side(v) { this._side = v || null; }
 
   get currentPath() { return this._currentPath; }
   get items() { return this._items; }
@@ -109,6 +119,8 @@ class SolPod extends HTMLElement {
       this._render();
       const loginAttr = this.getAttribute('login');
       if (loginAttr) this.login = loginAttr;
+      const sideAttr = this.getAttribute('side');
+      if (sideAttr) this._side = sideAttr;
       const gearAttr = this.getAttribute('gear-action') || this.getAttribute('handler');
       if (gearAttr) this.gearAction = gearAttr;
     }
@@ -124,6 +136,9 @@ class SolPod extends HTMLElement {
     }
     if (name === 'gear-action' || name === 'handler') {
       this.gearAction = newV;
+    }
+    if (name === 'side') {
+      this._side = newV || null;
     }
   }
 
@@ -165,7 +180,7 @@ class SolPod extends HTMLElement {
   }
 
   _fetchFor(url) {
-    if (this._login?.fetchFor) return this._login.fetchFor(url);
+    if (this._login?.fetchFor) return this._login.fetchFor(url, this._side);
     return fetch;
   }
 
