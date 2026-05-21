@@ -987,3 +987,50 @@ describe('SolQuery.run', () => {
     expect(typeof SolQuery.run).toBe('function');
   });
 });
+
+// ── _patternAttr (pattern / wanted alias) ────────────────────────────────────
+
+describe('SolQuery — _patternAttr', () => {
+  test('returns the pattern attribute', () => {
+    const el = createElement();
+    el.setAttribute('pattern', '?s ?p ?o');
+    expect(el._patternAttr()).toBe('?s ?p ?o');
+  });
+
+  test('falls back to the wanted attribute when pattern is absent', () => {
+    const el = createElement();
+    el.setAttribute('wanted', '?a ?b ?c');
+    expect(el._patternAttr()).toBe('?a ?b ?c');
+  });
+
+  test('pattern takes precedence over wanted', () => {
+    const el = createElement();
+    el.setAttribute('pattern', 'P');
+    el.setAttribute('wanted', 'W');
+    expect(el._patternAttr()).toBe('P');
+  });
+
+  test('is null when neither attribute is set', () => {
+    expect(createElement()._patternAttr()).toBe(null);
+  });
+});
+
+// ── _reportError ─────────────────────────────────────────────────────────────
+
+describe('SolQuery — _reportError', () => {
+  test('shows the message through the renderer', () => {
+    const el = createElement();
+    el._reportError('config', 'No endpoint provided');
+    expect(el.renderer.showError).toHaveBeenCalledWith('No endpoint provided');
+  });
+
+  test('dispatches a bubbling, composed sol-error event with detail', () => {
+    const el = createElement();
+    let evt = null;
+    el.addEventListener('sol-error', (e) => { evt = e; });
+    el._reportError('sparql-load', 'boom');
+    expect(evt.bubbles).toBe(true);
+    expect(evt.composed).toBe(true);
+    expect(evt.detail).toEqual({ source: 'sol-query', kind: 'sparql-load', message: 'boom' });
+  });
+});
