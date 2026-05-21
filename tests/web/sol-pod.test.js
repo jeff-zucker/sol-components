@@ -210,3 +210,273 @@ describe('SolPod — loadContainer', () => {
     expect(authUrl).toBe('https://pod.example/private/');
   });
 });
+
+// ── helpers for the DOM-rendering tests below ───────────────────────────────
+
+function mkPod() {
+  const el = document.createElement('sol-pod');
+  document.body.appendChild(el);   // connectedCallback → _render()
+  return el;
+}
+function item(name, isContainer = false, displayName) {
+  return {
+    url: 'https://pod.example/' + name + (isContainer ? '/' : ''),
+    name, displayName: displayName || name, isContainer,
+  };
+}
+const fileTreeItems = (el) =>
+  [...el.shadowRoot.querySelectorAll('.file-tree > li')];
+
+// ── _renderTree ─────────────────────────────────────────────────────────────
+
+describe('SolPod — _renderTree', () => {
+  test('renders one <li> per item, folders flagged by class', () => {
+    const el = mkPod();
+    el._renderTree([item('docs', true), item('a.txt')]);
+    const lis = fileTreeItems(el);
+    expect(lis).toHaveLength(2);
+    expect(lis[0].className).toBe('folder');
+    expect(lis[1].className).toBe('file');
+    expect(lis[0].dataset.url).toBe('https://pod.example/docs/');
+    expect(lis[1].dataset.index).toBe('1');
+  });
+
+  test('an item label carries the icon and display name', () => {
+    const el = mkPod();
+    el._renderTree([item('photo.png', false, 'photo.png')]);
+    const label = fileTreeItems(el)[0].querySelector('.item-label');
+    expect(label.textContent).toContain('photo.png');
+  });
+
+  test('each item gets a gear button', () => {
+    const el = mkPod();
+    el._renderTree([item('a.txt')]);
+    expect(fileTreeItems(el)[0].querySelector('.item-gear')).toBeTruthy();
+  });
+
+  test('an empty container shows the empty-container message', () => {
+    const el = mkPod();
+    el._renderTree([]);
+    expect(el.shadowRoot.querySelector('.tree-wrapper .empty').textContent)
+      .toBe('Empty container');
+  });
+
+  test('a filter with no matches shows a no-matches message', () => {
+    const el = mkPod();
+    el._filterText = 'zzz';
+    el._renderTree([item('a.txt'), item('b.md')]);
+    expect(el.shadowRoot.querySelector('.tree-wrapper .empty').textContent)
+      .toBe('No matches for "zzz"');
+  });
+
+  test('the filter narrows the rendered items', () => {
+    const el = mkPod();
+    el._filterText = 'note';
+    el._renderTree([item('notes.txt'), item('photo.png')]);
+    expect(fileTreeItems(el).map(li => li.dataset.url))
+      .toEqual(['https://pod.example/notes.txt']);
+  });
+});
+
+// ── selection ───────────────────────────────────────────────────────────────
+
+describe('SolPod — selection', () => {
+  function rendered() {
+    const el = mkPod();
+    el._renderTree([item('a.txt'), item('b.txt'), item('c.txt')]);
+    return { el, lis: fileTreeItems(el) };
+  }
+  const click = (li, mods = {}) =>
+    li.dispatchEvent(new MouseEvent('click', { bubbles: true, ...mods }));
+
+  test('a plain click selects exactly one item', () => {
+    const { lis } = rendered();
+    click(lis[0]);
+    expect(lis[0].classList.contains('selected')).toBe(true);
+    click(lis[1]);
+    expect(lis[0].classList.contains('selected')).toBe(false);
+    expect(lis[1].classList.contains('selected')).toBe(true);
+  });
+
+  test('ctrl-click toggles items into and out of the selection', () => {
+    const { lis } = rendered();
+    click(lis[0]);
+    click(lis[2], { ctrlKey: true });
+    expect(lis[0].classList.contains('selected')).toBe(true);
+    expect(lis[2].classList.contains('selected')).toBe(true);
+    click(lis[0], { ctrlKey: true });
+    expect(lis[0].classList.contains('selected')).toBe(false);
+  });
+
+  test('shift-click selects a contiguous range', () => {
+    const { lis } = rendered();
+    click(lis[0]);
+    click(lis[2], { shiftKey: true });
+    expect(lis.every(li => li.classList.contains('selected'))).toBe(true);
+  });
+});
+
+// ── _updateBreadcrumb ───────────────────────────────────────────────────────
+
+describe('SolPod — _updateBreadcrumb', () => {
+  test('renders a Home button plus one button per path segment', () => {
+    const el = mkPod();
+    el._rootUrl = 'https://pod.example/';
+    el._updateBreadcrumb('https://pod.example/docs/sub/');
+    const labels = [...el.shadowRoot.querySelectorAll('.breadcrumb button')]
+      .map(b => b.textContent);
+    expect(labels).toEqual(['\u{1F3E0}', 'docs', 'sub']);
+  });
+
+  test('at the root only the Home button is shown', () => {
+    const el = mkPod();
+    el._rootUrl = 'https://pod.example/';
+    el._updateBreadcrumb('https://pod.example/');
+    expect(el.shadowRoot.querySelectorAll('.breadcrumb button')).toHaveLength(1);
+  });
+
+  test('the Home button loads the root container', () => {
+    const el = mkPod();
+    el._rootUrl = 'https://pod.example/';
+    el.loadContainer = jest.fn();
+    el._updateBreadcrumb('https://pod.example/docs/');
+    el.shadowRoot.querySelector('.breadcrumb button').click();
+    expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/');
+  });
+});
+
+// ── _populateSelect ─────────────────────────────────────────────────────────
+
+describe('SolPod — _populateSelect', () => {
+  test('lists each storage plus an "Add a Pod" entry', () => {
+    const el = mkPod();
+    el._populateSelect(['https://a.pod/', 'https://b.pod/']);
+    const opts = [...el.shadowRoot.querySelectorAll('.pod-select option')];
+    expect(opts.map(o => o.value)).toEqual(['https://a.pod/', 'https://b.pod/', '__add__']);
+  });
+
+  test('shows "No pods found" when the storage list is empty', () => {
+    const el = mkPod();
+    el._populateSelect([]);
+    const opts = [...el.shadowRoot.querySelectorAll('.pod-select option')];
+    expect(opts[0].textContent).toBe('No pods found');
+  });
+});
+
+// ── tree-wrapper status messages ────────────────────────────────────────────
+
+describe('SolPod — _showLoading / _showMessage', () => {
+  test('_showLoading puts a loading indicator in the tree wrapper', () => {
+    const el = mkPod();
+    el._showLoading();
+    expect(el.shadowRoot.querySelector('.tree-wrapper .loading').textContent)
+      .toBe('Loading...');
+  });
+
+  test('_showMessage marks errors with the error class', () => {
+    const el = mkPod();
+    el._showMessage('went wrong', true);
+    const box = el.shadowRoot.querySelector('.tree-wrapper .empty');
+    expect(box.classList.contains('error')).toBe(true);
+    expect(box.textContent).toBe('went wrong');
+  });
+});
+
+// ── navigation, gear, drag, events ──────────────────────────────────────────
+
+describe('SolPod — interaction', () => {
+  test('clicking a folder loads that container', () => {
+    const el = mkPod();
+    el.loadContainer = jest.fn();
+    el._renderTree([item('docs', true)]);
+    fileTreeItems(el)[0].click();
+    expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/docs/');
+  });
+
+  test('the gear button invokes a function gearAction with the item', () => {
+    const el = mkPod();
+    const action = jest.fn();
+    el.gearAction = action;
+    const it = item('a.txt');
+    el._renderTree([it]);
+    fileTreeItems(el)[0].querySelector('.item-gear').click();
+    expect(action).toHaveBeenCalledWith(it, el);
+  });
+
+  test('dragging an item fires sol-drag-start with the dragged items', () => {
+    const el = mkPod();
+    el._renderTree([item('a.txt')]);
+    let detail = null;
+    el.addEventListener('sol-drag-start', (e) => { detail = e.detail; });
+
+    const li = fileTreeItems(el)[0];
+    const ev = new Event('dragstart', { bubbles: true });
+    ev.dataTransfer = { effectAllowed: '', setData() {} };
+    li.dispatchEvent(ev);
+
+    expect(detail.items.map(i => i.url)).toEqual(['https://pod.example/a.txt']);
+  });
+
+  test('_emitStatus dispatches a bubbling, composed sol-status', () => {
+    const el = mkPod();
+    let detail = null, composed = false;
+    el.addEventListener('sol-status', (e) => { detail = e.detail; composed = e.composed; });
+    el._emitStatus('done', 'success');
+    expect(detail).toEqual({ message: 'done', type: 'success' });
+    expect(composed).toBe(true);
+  });
+});
+
+// ── initialize / _promptAddPod ──────────────────────────────────────────────
+
+describe('SolPod — initialize', () => {
+  test('with a source attribute, loads that container as the root', async () => {
+    mockFetchContainer = async () => [item('a.txt')];
+    const el = document.createElement('sol-pod');
+    el.setAttribute('source', 'https://pod.example/');
+    document.body.appendChild(el);
+    await el.initialize();
+    expect(el.rootUrl).toBe('https://pod.example/');
+    expect(el.currentPath).toBe('https://pod.example/');
+  });
+
+  test('with no source but preset storages, loads the first storage', async () => {
+    mockFetchContainer = async () => [];
+    const el = mkPod();
+    el.setStorages(['https://first.pod/', 'https://second.pod/']);
+    await el.initialize();
+    expect(el.rootUrl).toBe('https://first.pod/');
+  });
+});
+
+describe('SolPod — _promptAddPod', () => {
+  test('a new pod URL is added and fires sol-pod-add', async () => {
+    mockFetchContainer = async () => [];
+    const el = mkPod();
+    const realPrompt = window.prompt;
+    window.prompt = () => 'https://newpod.example';
+    try {
+      let added = null;
+      el.addEventListener('sol-pod-add', (e) => { added = e.detail.url; });
+      await el._promptAddPod();
+      expect(added).toBe('https://newpod.example/');     // normalised with trailing slash
+      expect(el.storages).toContain('https://newpod.example/');
+    } finally {
+      window.prompt = realPrompt;
+    }
+  });
+
+  test('a cancelled prompt adds nothing', async () => {
+    const el = mkPod();
+    const realPrompt = window.prompt;
+    window.prompt = () => null;
+    try {
+      let fired = false;
+      el.addEventListener('sol-pod-add', () => { fired = true; });
+      await el._promptAddPod();
+      expect(fired).toBe(false);
+    } finally {
+      window.prompt = realPrompt;
+    }
+  });
+});
