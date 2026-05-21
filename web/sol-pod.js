@@ -256,7 +256,7 @@ class SolPod extends HTMLElement {
       <div class="breadcrumb"></div>
       <div class="pod-filter-row">
         <input class="pod-filter" type="search"
-               placeholder="Filter (press / to focus, Esc to clear)"
+               placeholder="Filter (type to search, esc to clear)"
                aria-label="Filter items in this container" />
       </div>
       <div class="tree-wrapper" tabindex="0">
