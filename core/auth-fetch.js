@@ -21,12 +21,19 @@
  * @param {string} url — the URL the caller is about to fetch
  * @param {object} [opts]
  * @param {Element} [opts.element] — explicit sol-login element (overrides lookup)
- * @param {string}  [opts.tag]     — session tag (default 'default')
+ * @param {string}  [opts.tag]     — session tag; defaults to the targeted
+ *                                   element's `side`, else 'default'
  * @returns {(input: RequestInfo, init?: RequestInit) => Promise<Response>}
  */
 export function getAuthFetch(url, opts = {}) {
-  const tag    = opts.tag || 'default';
-  const login  = opts.element || findFirstSolLogin();
+  const login = opts.element || findFirstSolLogin();
+  // Sessions are keyed by tag — a <sol-login>'s `side`. An explicitly
+  // targeted element selects its own session by that side; auto-discovered
+  // or side-less logins use the 'default' tag.
+  const tag = opts.tag
+    || (opts.element && typeof opts.element.getAttribute === 'function'
+        && opts.element.getAttribute('side'))
+    || 'default';
   if (login && typeof login.fetchFor === 'function') {
     try {
       const f = login.fetchFor(url, tag);
