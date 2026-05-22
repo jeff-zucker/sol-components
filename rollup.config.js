@@ -138,6 +138,23 @@ export default [
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
     },
   },
+  // ── sol-feed (RSS/Atom viewer; rdflib stays external, only needed for ──────
+  //    RDF source lists) ────────────────────────────────────────────────────
+  {
+    input:    'web/sol-feed.js',
+    external,
+    plugins,
+    output: {
+      file:    minify ? 'dist/sol-feed.umd.min.js' : 'dist/sol-feed.umd.js',
+      format:  'umd',
+      name:    'SolFeed',
+      exports: 'named',
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+      // feed-fetch.js lazily import()s the rdflib wrapper for RDF source
+      // lists; inline it so the UMD build stays one self-contained file.
+      inlineDynamicImports: true,
+    },
+  },
   // ── sol-form (generic RDF form renderer, uses solid-ui) ─────────────────────
   {
     input:    'web/sol-form.js',

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Local Test Feed</title>
+    <item>
+      <title>Article One</title>
+      <link>https://example.com/one</link>
+      <description>First test article.</description>
+    </item>
+    <item>
+      <title>Article Two</title>
+      <link>https://example.com/two</link>
+      <description>Second test article.</description>
+    </item>
+  </channel>
+</rss>
