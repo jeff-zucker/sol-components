@@ -374,7 +374,8 @@ describe('SolPod — _populateSelect', () => {
     const el = mkPod();
     el.setStorages(['https://a.pod/', 'https://b.pod/']);
     const login = el.shadowRoot.querySelector('sol-login');
-    expect(login.issuers).toEqual(['https://a.pod/', 'https://b.pod/']);
+    // addIssuer normalises each storage URL to its OIDC issuer origin.
+    expect(login.issuers).toEqual(['https://a.pod', 'https://b.pod']);
   });
 
   test('shows "No pods found" when the storage list is empty', () => {

@@ -37,9 +37,13 @@ import './sol-login.js';   // built-in login button in the pod header
  * @extends HTMLElement
  * @attr {string} source - pod storage URL, or comma/space-separated list of URLs (discovers from origin if omitted)
  * @attr {string} login - CSS selector for a sol-login element
+ * @attr {string} login-mode - forwarded to the built-in sol-login as its `mode` ("redirect" | "popup")
+ * @attr {string} login-callback - forwarded to the built-in sol-login as its `popup-callback`
+ * @attr {string} issuers - comma-separated OIDC issuer origins, forwarded to the built-in sol-login
+ * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
  * @attr {string} handler - default sol-* component for file viewing
- * @property {Object} login - SolLogin element reference
+ * @property {Object} login - SolLogin element reference (external if given, else the built-in one)
  * @property {string} currentPath - current container URL
  * @property {Array} items - current directory listing
  * @fires sol-navigate - detail: { url }
@@ -47,6 +51,7 @@ import './sol-login.js';   // built-in login button in the pod header
  * @fires sol-drag-end
  * @fires sol-auth-needed - detail: { url }
  * @fires sol-status - detail: { message, type }
+ * @fires sol-prefs-change - detail: { prefs } — a hide-pattern filter was toggled
  */
 class SolPod extends HTMLElement {
   static get observedAttributes() { return ['source', 'login', 'pod-click-action', 'handler', 'side']; }
@@ -55,6 +60,7 @@ class SolPod extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this._login = null;
+    this._loginEl = null;
     this._side = null;
     this._currentPath = '';
     this._rootUrl = '';
@@ -74,7 +80,7 @@ class SolPod extends HTMLElement {
     this._prefs = { hideDot: true, hideHash: true, hideTilde: true };
   }
 
-  get login() { return this._login; }
+  get login() { return this._login || this._loginEl; }
   set login(el) {
     if (typeof el === 'string') el = document.querySelector(el);
     this._login = el;
@@ -143,6 +149,16 @@ class SolPod extends HTMLElement {
         embeddedLogin.remove();
       } else {
         this._loginEl = embeddedLogin;
+        // Forward this pod's login config to the built-in <sol-login> so a
+        // host can opt into popup mode / a side tag / a callback page /
+        // a starting issuer list.
+        const lm = this.getAttribute('login-mode');
+        if (lm) embeddedLogin.setAttribute('mode', lm);
+        if (sideAttr) embeddedLogin.setAttribute('side', sideAttr);
+        const lc = this.getAttribute('login-callback');
+        if (lc) embeddedLogin.setAttribute('popup-callback', lc);
+        const iss = this.getAttribute('issuers');
+        if (iss) embeddedLogin.setAttribute('issuers', iss);
         const reload = () => { if (this._currentPath) this.loadContainer(this._currentPath); };
         this._loginEl.addEventListener('sol-login', reload);
         this._loginEl.addEventListener('sol-logout', reload);
@@ -359,6 +375,10 @@ class SolPod extends HTMLElement {
       if (!cb?.dataset?.pref) return;
       this._prefs[cb.dataset.pref] = cb.checked;
       this._reapplyPrefs();
+      // Let a host persist the change — the panel itself keeps no storage.
+      this.dispatchEvent(new CustomEvent('sol-prefs-change', {
+        bubbles: true, composed: true, detail: { prefs: { ...this._prefs } }
+      }));
     });
     // Close the panel on any click outside it. composedPath() crosses the
     // shadow boundary, so this also catches clicks elsewhere in the pod.
@@ -394,10 +414,10 @@ class SolPod extends HTMLElement {
     addOpt.value = '__add__'; addOpt.textContent = '\uFF0B Add a Pod...';
     sel.appendChild(addOpt);
 
-    // The built-in login carries no issuers of its own \u2014 offer the pod
-    // storages (which double as OIDC issuers) as its login choices, so
-    // clicking the login button drops down the pod list.
-    if (this._loginEl) this._loginEl.issuers = [...storages];
+    // Offer the pod storages (which double as OIDC issuers) as login
+    // choices, so clicking the login button drops down the pod list.
+    // Merge rather than replace \u2014 any host-configured issuers survive.
+    if (this._loginEl) storages.forEach(u => this._loginEl.addIssuer(u));
   }
 
   async _promptAddPod() {
