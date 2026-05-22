@@ -70,7 +70,11 @@ function mapResources(resourceUrls) {
     const isContainer = url.endsWith('/');
     const name = isContainer ? url.split('/').slice(-2)[0] : url.split('/').pop();
     const displayName = tryDecode(name);
-    return { url, name, displayName, isContainer };
+    // Inferred from the extension (containers are turtle). It's a guess —
+    // an extensionless file is 'application/octet-stream'; HEAD the url for
+    // the server's authoritative Content-Type.
+    const contentType = isContainer ? 'text/turtle' : contentTypeFor(name);
+    return { url, name, displayName, isContainer, contentType };
   }).sort((a, b) => {
     if (a.isContainer === b.isContainer) return a.displayName.localeCompare(b.displayName);
     return a.isContainer ? -1 : 1;

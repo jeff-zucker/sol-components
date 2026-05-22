@@ -264,6 +264,14 @@ describe('fetchContainer', () => {
     await expect(fetchContainer(CU, async () => res('', { ok: false, status: 404 })))
       .rejects.toThrow(/404/);
   });
+
+  test('infers a contentType from the extension (turtle for containers)', async () => {
+    const items = await fetchContainer(CU, async () => res(listing));
+    const byName = Object.fromEntries(items.map(i => [i.name, i]));
+    expect(byName['sub'].contentType).toBe('text/turtle');
+    expect(byName['notes.txt'].contentType).toBe('text/plain');
+    expect(byName['a%20b.md'].contentType).toBe('text/markdown');
+  });
 });
 
 // ── copyFile ────────────────────────────────────────────────────────────────

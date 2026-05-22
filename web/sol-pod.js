@@ -1,8 +1,10 @@
 /**
  * <sol-pod> — Solid pod file browser web component.
- * Attributes: source (pod storage URL — if omitted, discovers from current origin)
- *             gear-action (Function|string — custom callback when gear icon is clicked;
- *                          if omitted, opens the default pod-ops modal)
+ * Attributes: source (one pod storage URL, or a comma/space-separated list;
+ *             if omitted, discovers from current origin)
+ *             pod-click-action (Function|string — callback when an item is activated
+ *                          (gear icon, Enter, or double-click); if omitted, opens
+ *                          the default pod-ops modal)
  * Properties: login (SolLogin element ref), currentPath, items
  * Events: sol-navigate({url}), sol-drag-start({item}), sol-drag-end(), sol-status({message,type})
  *
@@ -20,6 +22,7 @@ import {
   fetchContainer,
   discoverOwnerWebIds, getStoragesFromWebIds,
 } from '../core/pod-ops.js';
+import './sol-modal.js';   // modal shell is part of sol-pod's own UX
 
 // ── SolPod component ──────────────────────────────────────────────────
 
@@ -31,9 +34,9 @@ import {
  *
  * @class SolPod
  * @extends HTMLElement
- * @attr {string} source - pod storage URL (discovers from origin if omitted)
+ * @attr {string} source - pod storage URL, or comma/space-separated list of URLs (discovers from origin if omitted)
  * @attr {string} login - CSS selector for a sol-login element
- * @attr {string} gear-action - custom callback when gear icon is clicked
+ * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
  * @attr {string} handler - default sol-* component for file viewing
  * @property {Object} login - SolLogin element reference
  * @property {string} currentPath - current container URL
@@ -45,7 +48,7 @@ import {
  * @fires sol-status - detail: { message, type }
  */
 class SolPod extends HTMLElement {
-  static get observedAttributes() { return ['source', 'login', 'gear-action', 'handler', 'side']; }
+  static get observedAttributes() { return ['source', 'login', 'pod-click-action', 'handler', 'side']; }
 
   constructor() {
     super();
@@ -60,7 +63,7 @@ class SolPod extends HTMLElement {
     this._modal = null;
     this._toastTimer = null;
     this._draggedItem = null;
-    this._gearAction = null;
+    this._podClickAction = null;
     this._selected = new Set();
     this._lastSelectedIndex = -1;
     this._currentItems = [];
@@ -106,11 +109,19 @@ class SolPod extends HTMLElement {
   get source() { return this.getAttribute('source') || ''; }
   set source(v) { this.setAttribute('source', v); }
 
-  get gearAction() { return this._gearAction; }
-  set gearAction(v) {
-    if (typeof v === 'function') { this._gearAction = v; return; }
-    if (typeof v === 'string' && v) { this._gearAction = v; return; }
-    this._gearAction = null;
+  // The `source` attribute may be one URL or a comma/space-separated list;
+  // each becomes a pod-selector entry. Every URL is normalised to end '/'.
+  _sources() {
+    return (this.getAttribute('source') || '')
+      .split(/[,\s]+/).map(s => s.trim()).filter(Boolean)
+      .map(u => (u.endsWith('/') ? u : u + '/'));
+  }
+
+  get podClickAction() { return this._podClickAction; }
+  set podClickAction(v) {
+    if (typeof v === 'function') { this._podClickAction = v; return; }
+    if (typeof v === 'string' && v) { this._podClickAction = v; return; }
+    this._podClickAction = null;
   }
 
   connectedCallback() {
@@ -121,21 +132,21 @@ class SolPod extends HTMLElement {
       if (loginAttr) this.login = loginAttr;
       const sideAttr = this.getAttribute('side');
       if (sideAttr) this._side = sideAttr;
-      const gearAttr = this.getAttribute('gear-action') || this.getAttribute('handler');
-      if (gearAttr) this.gearAction = gearAttr;
+      const clickAttr = this.getAttribute('pod-click-action') || this.getAttribute('handler');
+      if (clickAttr) this.podClickAction = clickAttr;
     }
   }
 
   attributeChangedCallback(name, oldV, newV) {
     if (oldV === newV) return;
     if (name === 'source' && this._initialized) {
-      this._setSource(newV);
+      this._setSource();
     }
     if (name === 'login' && this._initialized) {
       this.login = newV;
     }
-    if (name === 'gear-action' || name === 'handler') {
-      this.gearAction = newV;
+    if (name === 'pod-click-action' || name === 'handler') {
+      this.podClickAction = newV;
     }
     if (name === 'side') {
       this._side = newV || null;
@@ -144,14 +155,8 @@ class SolPod extends HTMLElement {
 
   /** Initialize the component — discovers pods and loads initial view. */
   async initialize() {
-    const source = this.source;
-    if (source) {
-      this._rootUrl = source.endsWith('/') ? source : source + '/';
-      if (!this._storages.includes(this._rootUrl)) this._storages.push(this._rootUrl);
-      this._populateSelect(this._storages);
-      const sel = this.shadowRoot.querySelector('.pod-select');
-      if (sel) sel.value = this._rootUrl;
-      await this.loadContainer(this._rootUrl);
+    if (this._sources().length) {
+      await this._setSource();
     } else if (this._storages.length > 0) {
       // Storages were provided externally (e.g. via setStorages) — use them.
       this._rootUrl = this._storages[0];
@@ -184,13 +189,14 @@ class SolPod extends HTMLElement {
     return fetch;
   }
 
-  async _setSource(url) {
-    if (!url) return;
-    this._rootUrl = url.endsWith('/') ? url : url + '/';
-    if (!this._storages.includes(this._rootUrl)) {
-      this._storages.push(this._rootUrl);
-      this._populateSelect(this._storages);
+  async _setSource() {
+    const sources = this._sources();
+    if (!sources.length) return;
+    for (const url of sources) {
+      if (!this._storages.includes(url)) this._storages.push(url);
     }
+    this._populateSelect(this._storages);
+    this._rootUrl = sources[0];
     const sel = this.shadowRoot.querySelector('.pod-select');
     if (sel) sel.value = this._rootUrl;
     await this.loadContainer(this._rootUrl);
@@ -515,14 +521,26 @@ class SolPod extends HTMLElement {
     return p.startsWith(this._rootUrl) ? p : this._rootUrl;
   }
 
-  _activateItem(item) {
-    if (typeof this._gearAction === 'function') {
-      this._gearAction(item, this);
-    } else if (typeof this._gearAction === 'string') {
-      this._openNamedHandler(this._gearAction, item);
+  async _activateItem(item) {
+    if (typeof this._podClickAction === 'function') {
+      this._podClickAction(await this._withContentType(item), this);
+    } else if (typeof this._podClickAction === 'string') {
+      this._openNamedHandler(this._podClickAction, item);
     } else {
       this._openItemModal(item);
     }
+  }
+
+  // HEAD the clicked resource so a function podClickAction receives the
+  // server's real Content-Type rather than the extension-inferred guess.
+  // One request, only for the clicked item; on failure the guess stands.
+  async _withContentType(item) {
+    try {
+      const resp = await this._fetchFor(item.url)(item.url, { method: 'HEAD' });
+      const ct = (resp.headers.get('Content-Type') || '').split(';')[0].trim();
+      if (ct) return { ...item, contentType: ct };
+    } catch (e) { /* keep the inferred contentType */ }
+    return item;
   }
 
   _createTreeItem(item, idx) {
@@ -540,13 +558,7 @@ class SolPod extends HTMLElement {
     const openItemAction = (e) => {
       e.stopPropagation();
       e.preventDefault();
-      if (typeof this._gearAction === 'function') {
-        this._gearAction(item, this);
-      } else if (typeof this._gearAction === 'string') {
-        this._openNamedHandler(this._gearAction, item);
-      } else {
-        this._openItemModal(item);
-      }
+      this._activateItem(item);
     };
 
     const gear = document.createElement('button');
@@ -622,11 +634,12 @@ class SolPod extends HTMLElement {
     }
   }
 
-  // ── Item modal (delegates to <sol-pod-ops>) ─────────────────────────
+  // ── Item modal — delegates to <sol-pod-ops> when it is loaded ───────
 
-  async _openItemModal(item) {
-    await import('./sol-modal.js');
-    await import('./sol-pod-ops.js');
+  _openItemModal(item) {
+    // sol-pod-ops is an optional add-on. Without it — and with no
+    // podClickAction wired up — show a short how-to instead.
+    if (!customElements.get('sol-pod-ops')) { this._openHelpModal(item); return; }
 
     const modal = document.createElement('sol-modal');
     modal.modalTitle = item.isContainer ? `Folder: ${item.displayName || item.name}` : (item.displayName || item.name);
@@ -651,6 +664,27 @@ class SolPod extends HTMLElement {
     this._modal = modal;
   }
 
+  // Shown when an item is activated but nothing is set up to handle it —
+  // no podClickAction, and <sol-pod-ops> has not been loaded.
+  _openHelpModal(item) {
+    const modal = document.createElement('sol-modal');
+    modal.modalTitle = item.displayName || item.name;
+    modal.setAttribute('size', 'large');
+    modal.handler = (body) => {
+      body.style.padding = '16px 20px';
+      body.innerHTML =
+        '<p>Nothing is wired up to handle this item.</p>' +
+        '<p>Set a <code>podClickAction</code> on the &lt;sol-pod&gt; element ' +
+        'to receive item clicks and render the info into your page:</p>' +
+        '<pre>document.querySelector(\'sol-pod\').podClickAction =\n' +
+        '  (item) =&gt; { /* item: url, name, displayName, isContainer, contentType */ };</pre>' +
+        '<p>Or load the <code>sol-pod-ops</code> script for the built-in ' +
+        'file-operations panel.</p>';
+    };
+    modal.open();
+    this._modal = modal;
+  }
+
   // ── Named gear handlers ─────────────────────────────────────────────
 
   async _openNamedHandler(name, item) {
@@ -660,9 +694,9 @@ class SolPod extends HTMLElement {
     }
   }
 
-  async _openSolidosModal(item) {
-    await import('./sol-modal.js');
-    await import('./sol-solidos.js');
+  _openSolidosModal(item) {
+    // sol-solidos is optional too — fall back to the item modal without it.
+    if (!customElements.get('sol-solidos')) { this._openItemModal(item); return; }
 
     const modal = document.createElement('sol-modal');
     modal.modalTitle = item.displayName || item.name;

@@ -29,6 +29,7 @@ export const CSS = BTN_CSS + `
     overflow: hidden;
   }
   :host([size="small"]) .modal { max-width: 460px; height: auto; min-height: 0; }
+  :host([size="large"]) .modal { max-width: 820px; height: auto; min-height: 0; }
 
   .modal-header {
     display: flex; align-items: center;

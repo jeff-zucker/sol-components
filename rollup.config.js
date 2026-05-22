@@ -151,6 +151,36 @@ export default [
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked', n3: 'N3', 'rdf-validate-shacl': 'SHACLValidator' },
     },
   },
+  // ── sol-pod (standalone pod browser; sol-pod-ops is an optional add-on) ────
+  {
+    input:    'web/sol-pod.js',
+    external,
+    plugins,
+    output: {
+      file:    minify ? 'dist/sol-pod.umd.min.js' : 'dist/sol-pod.umd.js',
+      format:  'umd',
+      name:    'SolPod',
+      exports: 'named',
+      // Bundles sol-modal (its own modal shell); sol-pod-ops / sol-solidos
+      // are reached via customElements.get, so they stay out of this file.
+      inlineDynamicImports: true,
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+    },
+  },
+  // ── sol-pod-ops (optional file-operations panel — load alongside sol-pod) ──
+  {
+    input:    'web/sol-pod-ops.js',
+    external,
+    plugins,
+    output: {
+      file:    minify ? 'dist/sol-pod-ops.umd.min.js' : 'dist/sol-pod-ops.umd.js',
+      format:  'umd',
+      name:    'SolPodOps',
+      exports: 'named',
+      inlineDynamicImports: true,
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+    },
+  },
   // ── sol-wac (WAC/ACL editor, light-DOM) ────────────────────────────────────
   {
     input:    'web/sol-wac.js',

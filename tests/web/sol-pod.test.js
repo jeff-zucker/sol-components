@@ -3,7 +3,7 @@
  *
  * Tests for <sol-pod> — the pod file-browser component:
  *   - shadow-DOM scaffold and observedAttributes
- *   - property accessors (source / side / login / prefs / gearAction / storages)
+ *   - property accessors (source / side / login / prefs / podClickAction / storages)
  *   - _filterItems (prefs) and _applyFilter (search text)
  *   - _parentOf URL math
  *   - loadContainer → sol-navigate, and the auth-error → sol-auth-needed path
@@ -21,6 +21,8 @@ jest.unstable_mockModule('../../core/pod-ops.js', () => ({
 }));
 
 const { SolPod } = await import('../../web/sol-pod.js');
+// sol-pod statically imports sol-modal; same class instance _promptAddPod uses.
+const { SolModal } = await import('../../web/sol-modal.js');
 
 window.__SolSuppressDefineWarn = true;
 
@@ -31,14 +33,16 @@ beforeAll(() => {
   }
 });
 
+const flush = () => new Promise(r => setTimeout(r, 0));
+
 afterEach(() => { document.body.innerHTML = ''; });
 
 // ── scaffold ────────────────────────────────────────────────────────────────
 
 describe('SolPod — scaffold', () => {
-  test('observes source, login, gear-action, handler, side', () => {
+  test('observes source, login, pod-click-action, handler, side', () => {
     expect(SolPod.observedAttributes).toEqual(
-      ['source', 'login', 'gear-action', 'handler', 'side']);
+      ['source', 'login', 'pod-click-action', 'handler', 'side']);
   });
 
   test('connectedCallback renders the select / breadcrumb / filter / tree', () => {
@@ -90,15 +94,15 @@ describe('SolPod — properties', () => {
     expect(el.prefs).toEqual({ hideDot: false, hideHash: true, hideTilde: true });
   });
 
-  test('gearAction accepts a function or string and rejects others', () => {
+  test('podClickAction accepts a function or string and rejects others', () => {
     const el = document.createElement('sol-pod');
     const fn = () => {};
-    el.gearAction = fn;
-    expect(el.gearAction).toBe(fn);
-    el.gearAction = 'doThing';
-    expect(el.gearAction).toBe('doThing');
-    el.gearAction = 123;
-    expect(el.gearAction).toBe(null);
+    el.podClickAction = fn;
+    expect(el.podClickAction).toBe(fn);
+    el.podClickAction = 'doThing';
+    expect(el.podClickAction).toBe('doThing');
+    el.podClickAction = 123;
+    expect(el.podClickAction).toBe(null);
   });
 
   test('setStorages populates the pod <select>', () => {
@@ -393,14 +397,46 @@ describe('SolPod — interaction', () => {
     expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/docs/');
   });
 
-  test('the gear button invokes a function gearAction with the item', () => {
+  test('the gear button invokes a function podClickAction with the item', async () => {
     const el = mkPod();
     const action = jest.fn();
-    el.gearAction = action;
+    el.podClickAction = action;
     const it = item('a.txt');
     el._renderTree([it]);
     fileTreeItems(el)[0].querySelector('.item-gear').click();
-    expect(action).toHaveBeenCalledWith(it, el);
+    await flush();
+    expect(action).toHaveBeenCalledTimes(1);
+    const [passedItem, passedEl] = action.mock.calls[0];
+    expect(passedItem.url).toBe(it.url);
+    expect(passedEl).toBe(el);
+  });
+
+  test('a function podClickAction receives the server Content-Type via a HEAD', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      ok: true, status: 200,
+      headers: { get: (h) => (h.toLowerCase() === 'content-type' ? 'image/png' : null) },
+    });
+    try {
+      const el = mkPod();
+      let received = null;
+      el.podClickAction = (it) => { received = it; };
+      el._renderTree([item('photo')]);          // extensionless — no usable inferred type
+      fileTreeItems(el)[0].querySelector('.item-gear').click();
+      await flush();
+      expect(received.contentType).toBe('image/png');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  test('the gear with no podClickAction and no sol-pod-ops shows a help modal', () => {
+    const el = mkPod();
+    el._renderTree([item('a.txt')]);
+    fileTreeItems(el)[0].querySelector('.item-gear').click();
+    const modal = document.querySelector('sol-modal');
+    expect(modal).toBeTruthy();
+    expect(modal.shadowRoot.textContent).toMatch(/podClickAction/);
   });
 
   test('dragging an item fires sol-drag-start with the dragged items', () => {
@@ -440,6 +476,16 @@ describe('SolPod — initialize', () => {
     expect(el.currentPath).toBe('https://pod.example/');
   });
 
+  test('a comma-separated source populates the dropdown with every pod', async () => {
+    mockFetchContainer = async () => [];
+    const el = document.createElement('sol-pod');
+    el.setAttribute('source', 'https://a.pod/, https://b.pod/');
+    document.body.appendChild(el);
+    await el.initialize();
+    expect(el.storages).toEqual(expect.arrayContaining(['https://a.pod/', 'https://b.pod/']));
+    expect(el.rootUrl).toBe('https://a.pod/');
+  });
+
   test('with no source but preset storages, loads the first storage', async () => {
     mockFetchContainer = async () => [];
     const el = mkPod();
@@ -453,8 +499,8 @@ describe('SolPod — _promptAddPod', () => {
   test('a new pod URL is added and fires sol-pod-add', async () => {
     mockFetchContainer = async () => [];
     const el = mkPod();
-    const realPrompt = window.prompt;
-    window.prompt = () => 'https://newpod.example';
+    const realPrompt = SolModal.prompt;
+    SolModal.prompt = async () => 'https://newpod.example';
     try {
       let added = null;
       el.addEventListener('sol-pod-add', (e) => { added = e.detail.url; });
@@ -462,21 +508,21 @@ describe('SolPod — _promptAddPod', () => {
       expect(added).toBe('https://newpod.example/');     // normalised with trailing slash
       expect(el.storages).toContain('https://newpod.example/');
     } finally {
-      window.prompt = realPrompt;
+      SolModal.prompt = realPrompt;
     }
   });
 
   test('a cancelled prompt adds nothing', async () => {
     const el = mkPod();
-    const realPrompt = window.prompt;
-    window.prompt = () => null;
+    const realPrompt = SolModal.prompt;
+    SolModal.prompt = async () => null;
     try {
       let fired = false;
       el.addEventListener('sol-pod-add', () => { fired = true; });
       await el._promptAddPod();
       expect(fired).toBe(false);
     } finally {
-      window.prompt = realPrompt;
+      SolModal.prompt = realPrompt;
     }
   });
 });
@@ -518,12 +564,13 @@ describe('SolPod — keyboard navigation', () => {
     expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/docs/');
   });
 
-  test('Enter on a file activates it through gearAction', () => {
+  test('Enter on a file activates it through podClickAction', async () => {
     const { el, press } = tree([item('a.txt')]);
     const action = jest.fn();
-    el.gearAction = action;
+    el.podClickAction = action;
     press('ArrowDown');
     press('Enter');
+    await flush();
     expect(action).toHaveBeenCalled();
   });
 
