@@ -22,6 +22,7 @@ import {
   fetchContainer,
   discoverOwnerWebIds, getStoragesFromWebIds,
 } from '../core/pod-ops.js';
+import { getRegistry } from '../core/pod-registry.js';
 import './sol-modal.js';   // modal shell is part of sol-pod's own UX
 import './sol-login.js';   // built-in login button in the pod header
 
@@ -43,15 +44,21 @@ import './sol-login.js';   // built-in login button in the pod header
  * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
  * @attr {string} handler - default sol-* component for file viewing
+ * @attr {string} pods-group - shared pod-list scope; absent = the default shared
+ *                 group, 'none' = a standalone unshared registry
  * @property {Object} login - SolLogin element reference (external if given, else the built-in one)
  * @property {string} currentPath - current container URL
  * @property {Array} items - current directory listing
+ * @property {Array} storages - known pod URLs for this pod's group
  * @fires sol-navigate - detail: { url }
  * @fires sol-drag-start - detail: { item, element }
  * @fires sol-drag-end
  * @fires sol-auth-needed - detail: { url }
  * @fires sol-status - detail: { message, type }
  * @fires sol-prefs-change - detail: { prefs } — a hide-pattern filter was toggled
+ * @fires sol-pod-pods-changed - detail: { group, pods } — the group's pod list
+ *                 grew (discovery / add). May fire once per pod in the group;
+ *                 a host listener should treat it idempotently.
  */
 class SolPod extends HTMLElement {
   static get observedAttributes() { return ['source', 'login', 'pod-click-action', 'handler', 'side']; }
@@ -65,7 +72,11 @@ class SolPod extends HTMLElement {
     this._currentPath = '';
     this._rootUrl = '';
     this._items = [];
-    this._storages = [];
+    this._storages = [];          // cache mirror of the group registry
+    this._group = null;
+    this._registry = null;
+    this._onRegistryChange = null;
+    this._pendingSeed = null;
     this._initialized = false;
     this._modal = null;
     this._toastTimer = null;
@@ -98,16 +109,30 @@ class SolPod extends HTMLElement {
   get currentPath() { return this._currentPath; }
   get items() { return this._items; }
   get rootUrl() { return this._rootUrl; }
-  get storages() { return [...this._storages]; }
 
+  /** Known pod URLs for this pod's group (shared across the group). */
+  get storages() { return this._registry ? this._registry.list() : [...this._storages]; }
+
+  /**
+   * Add pod URLs to this pod's group registry and optionally select one.
+   * Additive — it contributes to the shared list rather than replacing it.
+   */
   setStorages(arr, currentUrl) {
-    this._storages = Array.isArray(arr) ? [...arr] : [];
-    this._populateSelect(this._storages);
+    this._registry?.addAll(Array.isArray(arr) ? arr : []);
     const target = currentUrl || this._rootUrl;
-    if (target && this._storages.includes(target)) {
+    if (target && this.storages.includes(target)) {
       const sel = this.shadowRoot.querySelector('.pod-select');
       if (sel) sel.value = target;
     }
+  }
+
+  /**
+   * Preload known pod URLs (e.g. restored from host persistence) into
+   * this pod's group registry. Silent — does not emit sol-pod-pods-changed.
+   */
+  seedPods(urls) {
+    if (this._registry) this._registry.addAll(urls, { silent: true });
+    else this._pendingSeed = (this._pendingSeed || []).concat(urls || []);
   }
 
   get prefs() { return this._prefs; }
@@ -135,6 +160,19 @@ class SolPod extends HTMLElement {
     if (!this._initialized) {
       this._initialized = true;
       this._render();
+
+      // Join this pod's group registry — the shared set of known pods
+      // that drives the selector. `pods-group` scopes it; absent = the
+      // default shared group; 'none' = a standalone, unshared registry.
+      this._group = this.getAttribute('pods-group') || '__default__';
+      this._registry = getRegistry(this._group);
+      this._onRegistryChange = (pods, silent) => this._applyRegistry(pods, silent);
+      this._registry.subscribe(this._onRegistryChange);
+      if (this._pendingSeed) {
+        this._registry.addAll(this._pendingSeed, { silent: true });
+        this._pendingSeed = null;
+      }
+
       const loginAttr = this.getAttribute('login');
       if (loginAttr) this.login = loginAttr;
       const sideAttr = this.getAttribute('side');
@@ -160,7 +198,12 @@ class SolPod extends HTMLElement {
         const iss = this.getAttribute('issuers');
         if (iss) embeddedLogin.setAttribute('issuers', iss);
         const reload = () => { if (this._currentPath) this.loadContainer(this._currentPath); };
-        this._loginEl.addEventListener('sol-login', reload);
+        // A login can reveal pods the logged-out session could not see —
+        // re-discover, then reload the current container.
+        this._loginEl.addEventListener('sol-login', () => {
+          this.discover().catch(() => {});
+          reload();
+        });
         this._loginEl.addEventListener('sol-logout', reload);
         this._loginEl.initialize().catch(() => {});
       }
@@ -171,6 +214,26 @@ class SolPod extends HTMLElement {
     if (this._onDocClick) {
       document.removeEventListener('click', this._onDocClick);
       this._onDocClick = null;
+    }
+    if (this._registry && this._onRegistryChange) {
+      this._registry.unsubscribe(this._onRegistryChange);
+    }
+  }
+
+  /**
+   * Group-registry subscriber: a pod was added by this or a sibling
+   * <sol-pod>. Refresh the selector; on a non-silent change, let the
+   * host persist the new list via the sol-pod-pods-changed event.
+   */
+  _applyRegistry(pods, silent) {
+    this._storages = pods;
+    this._populateSelect(pods);
+    const sel = this.shadowRoot.querySelector('.pod-select');
+    if (sel && this._rootUrl && pods.includes(this._rootUrl)) sel.value = this._rootUrl;
+    if (!silent) {
+      this.dispatchEvent(new CustomEvent('sol-pod-pods-changed', {
+        bubbles: true, composed: true, detail: { group: this._group, pods },
+      }));
     }
   }
 
@@ -194,31 +257,40 @@ class SolPod extends HTMLElement {
   async initialize() {
     if (this._sources().length) {
       await this._setSource();
-    } else if (this._storages.length > 0) {
-      // Storages were provided externally (e.g. via setStorages) — use them.
-      this._rootUrl = this._storages[0];
-      this._populateSelect(this._storages);
+      return;
+    }
+    // No explicit source: use whatever the group registry already holds
+    // (seeded by the host, or discovered by a sibling pod); otherwise
+    // discover for this session/origin.
+    if (this.storages.length === 0) {
+      await this.discover();
+    }
+    const pods = this.storages;
+    if (pods.length > 0) {
+      this._rootUrl = pods[0];
+      this._populateSelect(pods);
       const sel = this.shadowRoot.querySelector('.pod-select');
       if (sel) sel.value = this._rootUrl;
       await this.loadContainer(this._rootUrl);
-    } else {
-      // Discover from current origin
-      try {
-        const webIds = await discoverOwnerWebIds();
-        this._storages = await getStoragesFromWebIds(webIds);
-      } catch (e) {
-        console.warn('[sol-pod] Discovery failed:', e);
-        // Fall back to current origin root
-        this._storages = [window.location.origin + '/'];
-      }
-      this._populateSelect(this._storages);
-      if (this._storages.length > 0) {
-        this._rootUrl = this._storages[0];
-        const sel = this.shadowRoot.querySelector('.pod-select');
-        if (sel) sel.value = this._rootUrl;
-        await this.loadContainer(this._rootUrl);
-      }
     }
+  }
+
+  /**
+   * Discover pod storages for the current session/origin (WebID-based,
+   * falling back to the current origin) and add them to this pod's
+   * group registry. Returns the group's full pod list.
+   */
+  async discover() {
+    let found;
+    try {
+      const webIds = await discoverOwnerWebIds();
+      found = await getStoragesFromWebIds(webIds);
+    } catch (e) {
+      console.warn('[sol-pod] Discovery failed:', e);
+      found = [window.location.origin + '/'];
+    }
+    this._registry?.addAll(found);
+    return this.storages;
   }
 
   _fetchFor(url) {
@@ -230,11 +302,9 @@ class SolPod extends HTMLElement {
   async _setSource() {
     const sources = this._sources();
     if (!sources.length) return;
-    for (const url of sources) {
-      if (!this._storages.includes(url)) this._storages.push(url);
-    }
-    this._populateSelect(this._storages);
+    this._registry?.addAll(sources);
     this._rootUrl = sources[0];
+    this._populateSelect(this.storages);
     const sel = this.shadowRoot.querySelector('.pod-select');
     if (sel) sel.value = this._rootUrl;
     await this.loadContainer(this._rootUrl);
@@ -439,10 +509,8 @@ class SolPod extends HTMLElement {
       return;
     }
     const normalized = url.endsWith('/') ? url : url + '/';
-    if (!this._storages.includes(normalized)) {
-      this._storages.push(normalized);
-      this._populateSelect(this._storages);
-    }
+    // Adding to the registry repopulates the selector(s) for the group.
+    this._registry?.add(normalized);
     sel.value = normalized;
     this._rootUrl = normalized;
     this.dispatchEvent(new CustomEvent('sol-pod-add', {

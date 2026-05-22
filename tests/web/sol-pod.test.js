@@ -12,17 +12,23 @@
 import { jest } from '@jest/globals';
 
 // core/pod-ops.js does real network discovery + container fetches; mock it.
+// All three are reassignable so a test can stage its own response.
 let mockFetchContainer = async () => [];
+let mockWebIds        = async () => [];
+let mockStorages      = async () => [];
 jest.unstable_mockModule('../../core/pod-ops.js', () => ({
   fileIcon: () => 'I',
-  fetchContainer: (...a) => mockFetchContainer(...a),
-  discoverOwnerWebIds: async () => [],
-  getStoragesFromWebIds: async () => [],
+  fetchContainer:        (...a) => mockFetchContainer(...a),
+  discoverOwnerWebIds:   (...a) => mockWebIds(...a),
+  getStoragesFromWebIds: (...a) => mockStorages(...a),
 }));
 
 const { SolPod } = await import('../../web/sol-pod.js');
 // sol-pod statically imports sol-modal; same class instance _promptAddPod uses.
 const { SolModal } = await import('../../web/sol-modal.js');
+// pod-registry is the real module (not mocked) — reset its shared state
+// between tests so the module-level registries don't leak across them.
+const { _resetRegistries } = await import('../../core/pod-registry.js');
 
 window.__SolSuppressDefineWarn = true;
 
@@ -35,7 +41,12 @@ beforeAll(() => {
 
 const flush = () => new Promise(r => setTimeout(r, 0));
 
-afterEach(() => { document.body.innerHTML = ''; });
+beforeEach(() => {
+  mockFetchContainer = async () => [];
+  mockWebIds        = async () => [];
+  mockStorages      = async () => [];
+});
+afterEach(() => { document.body.innerHTML = ''; _resetRegistries(); });
 
 // ── scaffold ────────────────────────────────────────────────────────────────
 
@@ -383,6 +394,100 @@ describe('SolPod — _populateSelect', () => {
     el._populateSelect([]);
     const opts = [...el.shadowRoot.querySelectorAll('.pod-select option')];
     expect(opts[0].textContent).toBe('No pods found');
+  });
+});
+
+// ── pod registry: discovery + the shared group list ─────────────────────────
+
+describe('SolPod — pod registry', () => {
+  test('discover() adds session storages to the group registry', async () => {
+    mockWebIds   = async () => ['https://me.example/card#me'];
+    mockStorages = async () => ['https://disc.pod/'];
+    const el = mkPod();
+
+    const found = await el.discover();
+    expect(el.storages).toContain('https://disc.pod/');
+    expect(found).toContain('https://disc.pod/');
+  });
+
+  test('discovery falls back to the current origin on failure', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockWebIds = async () => { throw new Error('network down'); };
+    const el = mkPod();
+
+    await el.discover();
+    expect(el.storages.length).toBeGreaterThan(0);
+    console.warn.mockRestore();
+  });
+
+  test('two pods in the default group share one pod list', () => {
+    const a = mkPod();
+    const b = mkPod();
+    a.setStorages(['https://shared.pod/']);
+    expect(b.storages).toContain('https://shared.pod/');
+  });
+
+  test("a sibling pod's selector reflects a pod added elsewhere", () => {
+    const a = mkPod();
+    const b = mkPod();
+    a.setStorages(['https://shared.pod/']);
+    const bOpts = [...b.shadowRoot.querySelectorAll('.pod-select option')].map(o => o.value);
+    expect(bOpts).toContain('https://shared.pod/');
+  });
+
+  test('pods-group isolates a pod from the default group', () => {
+    const a = mkPod();
+    const b = document.createElement('sol-pod');
+    b.setAttribute('pods-group', 'other');
+    document.body.appendChild(b);
+
+    a.setStorages(['https://a-only.pod/']);
+    expect(b.storages).not.toContain('https://a-only.pod/');
+  });
+
+  test('pods-group="none" gives each pod a standalone registry', () => {
+    const mk = () => {
+      const el = document.createElement('sol-pod');
+      el.setAttribute('pods-group', 'none');
+      document.body.appendChild(el);
+      return el;
+    };
+    const a = mk();
+    const b = mk();
+    a.setStorages(['https://x.pod/']);
+    expect(b.storages).not.toContain('https://x.pod/');
+  });
+
+  test('seedPods loads pods without emitting sol-pod-pods-changed', () => {
+    const el = mkPod();
+    let fired = false;
+    el.addEventListener('sol-pod-pods-changed', () => { fired = true; });
+
+    el.seedPods(['https://seed.pod/']);
+    expect(el.storages).toContain('https://seed.pod/');
+    expect(fired).toBe(false);
+  });
+
+  test('a non-silent change emits sol-pod-pods-changed with the new list', () => {
+    const el = mkPod();
+    let detail = null;
+    el.addEventListener('sol-pod-pods-changed', (e) => { detail = e.detail; });
+
+    el.setStorages(['https://new.pod/']);
+    expect(detail).toMatchObject({
+      group: '__default__',
+      pods: expect.arrayContaining(['https://new.pod/']),
+    });
+  });
+
+  test('discover() emits sol-pod-pods-changed', async () => {
+    mockStorages = async () => ['https://disc.pod/'];
+    const el = mkPod();
+    let detail = null;
+    el.addEventListener('sol-pod-pods-changed', (e) => { detail = e.detail; });
+
+    await el.discover();
+    expect(detail.pods).toContain('https://disc.pod/');
   });
 });
 
