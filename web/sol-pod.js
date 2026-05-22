@@ -266,9 +266,11 @@ class SolPod extends HTMLElement {
       await this.discover();
     }
     const pods = this.storages;
+    // Always render the selector — an empty list must show "No pods
+    // found" rather than leave the initial "Loading pods..." placeholder.
+    this._populateSelect(pods);
     if (pods.length > 0) {
       this._rootUrl = pods[0];
-      this._populateSelect(pods);
       const sel = this.shadowRoot.querySelector('.pod-select');
       if (sel) sel.value = this._rootUrl;
       await this.loadContainer(this._rootUrl);

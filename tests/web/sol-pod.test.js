@@ -617,6 +617,15 @@ describe('SolPod — initialize', () => {
     await el.initialize();
     expect(el.rootUrl).toBe('https://first.pod/');
   });
+
+  test('with nothing discovered, the selector shows "No pods found"', async () => {
+    mockWebIds   = async () => [];
+    mockStorages = async () => [];
+    const el = mkPod();
+    await el.initialize();
+    const opts = [...el.shadowRoot.querySelectorAll('.pod-select option')];
+    expect(opts[0].textContent).toBe('No pods found');
+  });
 });
 
 describe('SolPod — _promptAddPod', () => {

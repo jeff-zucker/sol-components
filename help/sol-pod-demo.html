@@ -10,7 +10,10 @@
 <div class="container">
   <h1> sol-pod component </h1>
 
-  <sol-pod source="https://solidproject.solidcommunity.net/,https://solidos.solidcommunity.net/"></sol-pod>
+  <!-- No `source` — sol-pod discovers pods from the current origin
+       (and again on login). Discovery only finds pods when this page is
+       served from a Solid origin. -->
+  <sol-pod></sol-pod>
   <div id="results"></div>
 
   <script src="../dist/vendor/rdflib.umd.js"></script>
