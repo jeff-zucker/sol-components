@@ -595,16 +595,15 @@ _updateUI() {
   const session = this._mode === 'popup'
     ? this._sideSession()
     : this._auth.getFirstLoggedIn();
+  // The WebID is surfaced only as the button's hover title, never as
+  // visible page text.
+  status.textContent = '';
   if (session && session.info && session.info.isLoggedIn) {
-    const webId = session.info.webId || '';
-    const displayName = webId.replace(/^https?:\/\//, '').replace(/\/profile.*$/, '');
-    status.textContent = displayName;
     status.className = 'auth-status logged-in';
     btn.textContent = 'Log out';
-    btn.className = 'sol-btn sol-btn-sm sol-btn-danger auth-btn';
-    btn.title = webId;
+    btn.className = 'sol-btn sol-btn-sm auth-btn logged-in';
+    btn.title = session.info.webId || '';
   } else {
-    status.textContent = '';
     status.className = 'auth-status';
     btn.textContent = 'Log in';
     btn.className = 'sol-btn sol-btn-sm sol-btn-primary auth-btn';

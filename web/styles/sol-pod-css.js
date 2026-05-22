@@ -14,6 +14,9 @@ export const CSS = BTN_CSS + `
     border-radius: 8px;
     box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.1));
     font-family: system-ui, -apple-system, sans-serif;
+    /* Anchor the component to the theme's font token (not the host page's
+       inherited size) so the whole UI — header row included — scales. */
+    font-size: var(--font-size, 20px);
     color: var(--text, #212121);
   }
 
@@ -35,6 +38,8 @@ export const CSS = BTN_CSS + `
     background: var(--surface, #fff); color: var(--text, #212121);
     font-family: inherit;
   }
+
+  .pod-login { flex-shrink: 0; }
 
   .pod-settings-btn {
     flex-shrink: 0;

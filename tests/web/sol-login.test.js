@@ -620,21 +620,22 @@ describe('SolLogin — UI updates', () => {
   });
   afterEach(() => el.remove());
 
-  test('shows log-out button after login', async () => {
+  test('shows a green log-out button after login', async () => {
     const session = el.auth.sessionFor('default', 'https://example.com');
     session.info = { isLoggedIn: true, webId: 'https://alice.example.com/profile/card#me', issuer: 'https://example.com' };
     await el.initialize();
     const btn = el.shadowRoot.querySelector('.auth-btn');
     expect(btn.textContent).toBe('Log out');
-    expect(btn.classList.contains('sol-btn-danger')).toBe(true);
+    expect(btn.classList.contains('logged-in')).toBe(true);
   });
 
-  test('displays truncated webId as status text', async () => {
+  test('exposes the webId as the button title, not as page text', async () => {
     const session = el.auth.sessionFor('default', 'https://example.com');
     session.info = { isLoggedIn: true, webId: 'https://alice.example.com/profile/card#me', issuer: 'https://example.com' };
     await el.initialize();
-    const status = el.shadowRoot.querySelector('.auth-status');
-    expect(status.textContent).toBe('alice.example.com');
+    expect(el.shadowRoot.querySelector('.auth-btn').title)
+      .toBe('https://alice.example.com/profile/card#me');
+    expect(el.shadowRoot.querySelector('.auth-status').textContent).toBe('');
   });
 
   test('reverts to log-in button after logout', async () => {

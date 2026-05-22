@@ -23,6 +23,7 @@ import {
   discoverOwnerWebIds, getStoragesFromWebIds,
 } from '../core/pod-ops.js';
 import './sol-modal.js';   // modal shell is part of sol-pod's own UX
+import './sol-login.js';   // built-in login button in the pod header
 
 // ── SolPod component ──────────────────────────────────────────────────
 
@@ -134,6 +135,19 @@ class SolPod extends HTMLElement {
       if (sideAttr) this._side = sideAttr;
       const clickAttr = this.getAttribute('pod-click-action') || this.getAttribute('handler');
       if (clickAttr) this.podClickAction = clickAttr;
+
+      // The header carries a built-in <sol-login>. An external login=
+      // selector, when given, takes its place and the built-in is dropped.
+      const embeddedLogin = this.shadowRoot.querySelector('sol-login');
+      if (this._login) {
+        embeddedLogin.remove();
+      } else {
+        this._loginEl = embeddedLogin;
+        const reload = () => { if (this._currentPath) this.loadContainer(this._currentPath); };
+        this._loginEl.addEventListener('sol-login', reload);
+        this._loginEl.addEventListener('sol-logout', reload);
+        this._loginEl.initialize().catch(() => {});
+      }
     }
   }
 
@@ -192,7 +206,8 @@ class SolPod extends HTMLElement {
   }
 
   _fetchFor(url) {
-    if (this._login?.fetchFor) return this._login.fetchFor(url, this._side);
+    const login = this._login || this._loginEl;
+    if (login?.fetchFor) return login.fetchFor(url, this._side);
     return fetch;
   }
 
@@ -271,6 +286,7 @@ class SolPod extends HTMLElement {
           <select class="pod-select" aria-label="Pod storage">
             <option value="">Loading pods...</option>
           </select>
+          <sol-login class="pod-login"></sol-login>
           <button class="pod-settings-btn" type="button" title="Settings"
                   aria-label="Display settings" aria-expanded="false">⚙</button>
         </div>
@@ -377,6 +393,11 @@ class SolPod extends HTMLElement {
     const addOpt = document.createElement('option');
     addOpt.value = '__add__'; addOpt.textContent = '\uFF0B Add a Pod...';
     sel.appendChild(addOpt);
+
+    // The built-in login carries no issuers of its own \u2014 offer the pod
+    // storages (which double as OIDC issuers) as its login choices, so
+    // clicking the login button drops down the pod list.
+    if (this._loginEl) this._loginEl.issuers = [...storages];
   }
 
   async _promptAddPod() {

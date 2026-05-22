@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="utf-8">
+  <title>sol-pod demo</title>
+  <script src="../web/scripts/prefs.js"></script>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+</head><body>
+
+<div class="container">
+  <h1> sol-pod component </h1>
+
+  <sol-pod source="https://solidproject.solidcommunity.net/,https://solidos.solidcommunity.net/"></sol-pod>
+  <div id="results"></div>
+
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+  <script src="../dist/sol-pod.umd.min.js?v=7"></script>
+  <script>
+    const pod = document.querySelector('sol-pod');
+    pod.podClickAction = (item) => {
+      document.body.querySelector('#results').innerHTML =
+`<div>name : ${item.name}</div>
+ <div>display name : ${item.displayName}</div>
+ <div>resource type : ${item.isContainer ?'Container' :'Resource'}</div>
+ <div>content type : ${item.contentType}</div>
+ <div>url : ${item.url}</div>`
+    };
+    pod.initialize();
+  </script>
+
+</div>
+
+  <style>
+/*    :root { font-size: var(--font-size, 24px); }
+    body { background:darkblue;margin-top:2rem; }
+*/
+    #results { padding:1rem;background:lightgrey; }
+    .container { height:480px;width:840px;margin:auto; }
+    /* prefs.js sets --font-size; the pod's shadow CSS is all em, so this
+       scales the whole component — header row included. */
+    sol-pod { font-size: var(--font-size, 20px); }
+  </style>
+
+</body></html>

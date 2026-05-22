@@ -45,6 +45,17 @@ describe('SolPod — scaffold', () => {
       ['source', 'login', 'pod-click-action', 'handler', 'side']);
   });
 
+  test('embeds a sol-login button in the header row', () => {
+    const el = document.createElement('sol-pod');
+    document.body.appendChild(el);
+    const row = el.shadowRoot.querySelector('.pod-header-row');
+    const login = row.querySelector('sol-login');
+    expect(login).toBeTruthy();
+    // ...sitting between the pod select and the settings gear.
+    const kids = [...row.children].map(c => c.className || c.tagName.toLowerCase());
+    expect(kids).toEqual(['pod-select', 'pod-login', 'pod-settings-btn']);
+  });
+
   test('connectedCallback renders the select / breadcrumb / filter / tree', () => {
     const el = document.createElement('sol-pod');
     document.body.appendChild(el);
@@ -357,6 +368,13 @@ describe('SolPod — _populateSelect', () => {
     el._populateSelect(['https://a.pod/', 'https://b.pod/']);
     const opts = [...el.shadowRoot.querySelectorAll('.pod-select option')];
     expect(opts.map(o => o.value)).toEqual(['https://a.pod/', 'https://b.pod/', '__add__']);
+  });
+
+  test('feeds the pod storages to the embedded login as issuers', () => {
+    const el = mkPod();
+    el.setStorages(['https://a.pod/', 'https://b.pod/']);
+    const login = el.shadowRoot.querySelector('sol-login');
+    expect(login.issuers).toEqual(['https://a.pod/', 'https://b.pod/']);
   });
 
   test('shows "No pods found" when the storage list is empty', () => {

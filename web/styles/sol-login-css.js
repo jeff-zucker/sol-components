@@ -7,6 +7,8 @@ export const CSS = BTN_CSS + `
     align-items: center;
     gap: 8px;
     font-family: system-ui, -apple-system, sans-serif;
+    /* Anchor to the theme font token so the button scales with it. */
+    font-size: var(--font-size, 20px);
   }
 
   .auth-status {
@@ -19,7 +21,22 @@ export const CSS = BTN_CSS + `
   }
   .auth-status.logged-in { color: var(--success, #388e3c); }
 
-  /* Login/logout buttons use .sol-btn .sol-btn-sm with .sol-btn-primary / .sol-btn-danger. */
+  /* Match the padding of the pod header controls (select / gear) it
+     sits between, so the row reads as one set of controls. */
+  .auth-btn { padding: 6px 10px; }
+
+  /* Logged in: the button turns green (green = connected). */
+  .auth-btn.logged-in {
+    background: var(--success, #388e3c);
+    border-color: var(--success, #388e3c);
+    color: #fff;
+  }
+  .auth-btn.logged-in:hover {
+    background: var(--success-dark, #2e7d32);
+    border-color: var(--success-dark, #2e7d32);
+  }
+
+  /* Login button uses .sol-btn .sol-btn-sm; .sol-btn-primary when logged out. */
 
   .dropdown {
     position: fixed; z-index: 9999;
@@ -28,7 +45,10 @@ export const CSS = BTN_CSS + `
     border-radius: 6px;
     box-shadow: 0 6px 18px var(--shadow, rgba(0,0,0,0.1));
     padding: 8px;
-    min-width: 240px; max-width: 340px;
+    /* Size to the widest issuer so every entry fits on one line; cap to
+       the viewport so it can't run off-screen. */
+    width: max-content;
+    min-width: 44ch; max-width: 90vw;
     display: none;
   }
   .dropdown.open { display: block; }
@@ -41,15 +61,17 @@ export const CSS = BTN_CSS + `
     padding: 5px 8px; border-radius: 4px;
     cursor: pointer; font-size: 0.84em;
     color: var(--text, #212121);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: inherit;
   }
   .issuer-item:hover { background: var(--hover, #f0f0f0); color: var(--accent, #2196f3); }
 
   .custom-row { display: flex; gap: 4px; }
-  .custom-row .sol-btn { padding: 3px 8px; font-size: 0.82em; }
+  .custom-row .sol-btn { padding: 6px 8px; font-size: 0.82em; }
   .custom-row .issuer-input {
-    flex: 1; min-width: 0; font-size: 0.82em; padding: 3px 6px;
+    /* 44ch floor so a full issuer URL is visible; this also drives the
+       dropdown's max-content width, so the panel grows to fit it. */
+    flex: 1; min-width: 44ch; font-size: 0.82em; padding: 6px 8px;
     background: var(--bg, #f5f5f5);
   }
 `;
