@@ -142,11 +142,19 @@ class SolPod extends HTMLElement {
   set source(v) { this.setAttribute('source', v); }
 
   // The `source` attribute may be one URL or a comma/space-separated list;
-  // each becomes a pod-selector entry. Every URL is normalised to end '/'.
+  // each becomes a pod-selector entry. Every URL is normalised to end '/'
+  // and the list is de-duplicated (after normalisation, so 'x' and 'x/'
+  // collapse to one).
   _sources() {
-    return (this.getAttribute('source') || '')
-      .split(/[,\s]+/).map(s => s.trim()).filter(Boolean)
-      .map(u => (u.endsWith('/') ? u : u + '/'));
+    const seen = new Set();
+    const out = [];
+    for (const raw of (this.getAttribute('source') || '').split(/[,\s]+/)) {
+      const s = raw.trim();
+      if (!s) continue;
+      const u = s.endsWith('/') ? s : s + '/';
+      if (!seen.has(u)) { seen.add(u); out.push(u); }
+    }
+    return out;
   }
 
   get podClickAction() { return this._podClickAction; }
@@ -256,6 +264,8 @@ class SolPod extends HTMLElement {
   /** Initialize the component — discovers pods and loads initial view. */
   async initialize() {
     if (this._sources().length) {
+      // An explicit `source` lists exactly the pods to use — skip
+      // discovery. An absent or empty `source` falls through to it.
       await this._setSource();
       return;
     }

@@ -610,6 +610,16 @@ describe('SolPod — initialize', () => {
     expect(el.rootUrl).toBe('https://a.pod/');
   });
 
+  test('a source list with duplicates is de-duplicated', async () => {
+    mockFetchContainer = async () => [];
+    const el = document.createElement('sol-pod');
+    // 'a.pod' and 'a.pod/' normalise to the same entry.
+    el.setAttribute('source', 'https://a.pod/, https://a.pod, https://b.pod/');
+    document.body.appendChild(el);
+    await el.initialize();
+    expect(el.storages).toEqual(['https://a.pod/', 'https://b.pod/']);
+  });
+
   test('with no source but preset storages, loads the first storage', async () => {
     mockFetchContainer = async () => [];
     const el = mkPod();
