@@ -611,6 +611,58 @@ describe('SolPod — filter input', () => {
   });
 });
 
+describe('SolPod — settings UI', () => {
+  test('the settings button toggles the prefs panel', () => {
+    const el = mkPod();
+    const btn = el.shadowRoot.querySelector('.pod-settings-btn');
+    const panel = el.shadowRoot.querySelector('.pod-settings');
+    expect(panel.classList.contains('open')).toBe(false);
+    btn.click();
+    expect(panel.classList.contains('open')).toBe(true);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    btn.click();
+    expect(panel.classList.contains('open')).toBe(false);
+  });
+
+  test('clicking outside the panel closes it', () => {
+    const el = mkPod();
+    const btn = el.shadowRoot.querySelector('.pod-settings-btn');
+    const panel = el.shadowRoot.querySelector('.pod-settings');
+    btn.click();
+    expect(panel.classList.contains('open')).toBe(true);
+    document.body.click();                       // a click outside the pod
+    expect(panel.classList.contains('open')).toBe(false);
+  });
+
+  test('opening the panel reflects the current prefs in the checkboxes', () => {
+    const el = mkPod();
+    el.prefs = { hideHash: false };
+    el.shadowRoot.querySelector('.pod-settings-btn').click();
+    const state = {};
+    el.shadowRoot.querySelectorAll('.pod-settings input[data-pref]')
+      .forEach(cb => { state[cb.dataset.pref] = cb.checked; });
+    expect(state).toEqual({ hideDot: true, hideHash: false, hideTilde: true });
+  });
+
+  test('toggling a checkbox re-filters the listing without a refetch', async () => {
+    mockFetchContainer = async () => [
+      { name: 'a.txt', url: 'https://pod.example/a.txt', isContainer: false },
+      { name: '.acl', url: 'https://pod.example/.acl', isContainer: false },
+    ];
+    const el = mkPod();
+    await el.loadContainer('https://pod.example/');
+    expect(el.items.map(i => i.name)).toEqual(['a.txt']);          // .acl hidden
+
+    el.shadowRoot.querySelector('.pod-settings-btn').click();
+    const dotCb = el.shadowRoot.querySelector('.pod-settings input[data-pref="hideDot"]');
+    dotCb.checked = false;
+    dotCb.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(el.prefs.hideDot).toBe(false);
+    expect(el.items.map(i => i.name).sort()).toEqual(['.acl', 'a.txt']);
+  });
+});
+
 describe('SolPod — pod selector', () => {
   test('choosing a storage loads that container', () => {
     const el = mkPod();

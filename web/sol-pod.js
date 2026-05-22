@@ -137,6 +137,13 @@ class SolPod extends HTMLElement {
     }
   }
 
+  disconnectedCallback() {
+    if (this._onDocClick) {
+      document.removeEventListener('click', this._onDocClick);
+      this._onDocClick = null;
+    }
+  }
+
   attributeChangedCallback(name, oldV, newV) {
     if (oldV === newV) return;
     if (name === 'source' && this._initialized) {
@@ -207,6 +214,7 @@ class SolPod extends HTMLElement {
     try {
       const fetchFn = this._fetchFor(url);
       const items = await fetchContainer(url, fetchFn);
+      this._rawItems = items;            // unfiltered — kept so prefs can re-apply
       this._currentPath = url;
       this._items = this._filterItems(items);
       this._allItems = this._items;
@@ -247,6 +255,12 @@ class SolPod extends HTMLElement {
     });
   }
 
+  // Re-apply the pattern prefs to the cached listing — no refetch.
+  _reapplyPrefs() {
+    this._items = this._allItems = this._filterItems(this._rawItems || []);
+    this._renderTree(this._allItems, { preserveFocus: false });
+  }
+
   // ── DOM rendering ───────────────────────────────────────────────────
 
   _render() {
@@ -257,6 +271,13 @@ class SolPod extends HTMLElement {
           <select class="pod-select" aria-label="Pod storage">
             <option value="">Loading pods...</option>
           </select>
+          <button class="pod-settings-btn" type="button" title="Settings"
+                  aria-label="Display settings" aria-expanded="false">⚙</button>
+        </div>
+        <div class="pod-settings" role="group" aria-label="Display settings">
+          <label><input type="checkbox" data-pref="hideDot"> Hide dot-files</label>
+          <label><input type="checkbox" data-pref="hideHash"> Hide #-files</label>
+          <label><input type="checkbox" data-pref="hideTilde"> Hide ~ backups</label>
         </div>
       </div>
       <div class="breadcrumb"></div>
@@ -304,6 +325,35 @@ class SolPod extends HTMLElement {
         }
       }
     });
+
+    // Display-settings panel — toggle the pattern prefs (hide dot / # / ~).
+    const settingsBtn = s.querySelector('.pod-settings-btn');
+    const settings = s.querySelector('.pod-settings');
+    settingsBtn.addEventListener('click', () => {
+      const open = settings.classList.toggle('open');
+      settingsBtn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        settings.querySelectorAll('input[data-pref]').forEach(cb => {
+          cb.checked = !!this._prefs[cb.dataset.pref];
+        });
+      }
+    });
+    settings.addEventListener('change', (e) => {
+      const cb = e.target;
+      if (!cb?.dataset?.pref) return;
+      this._prefs[cb.dataset.pref] = cb.checked;
+      this._reapplyPrefs();
+    });
+    // Close the panel on any click outside it. composedPath() crosses the
+    // shadow boundary, so this also catches clicks elsewhere in the pod.
+    this._onDocClick = (e) => {
+      if (!settings.classList.contains('open')) return;
+      const path = e.composedPath();
+      if (path.includes(settings) || path.includes(settingsBtn)) return;
+      settings.classList.remove('open');
+      settingsBtn.setAttribute('aria-expanded', 'false');
+    };
+    document.addEventListener('click', this._onDocClick);
 
     // Keyboard nav at the wrapper level so it works whether the wrapper
     // or an individual li has focus.

@@ -36,6 +36,29 @@ export const CSS = BTN_CSS + `
     font-family: inherit;
   }
 
+  .pod-settings-btn {
+    flex-shrink: 0;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e0e0e0); border-radius: 4px;
+    padding: 5px 9px; cursor: pointer;
+    color: var(--text-muted, #666); font-size: 0.95em;
+  }
+  .pod-settings-btn:hover { background: var(--hover, #f0f0f0); }
+
+  .pod-settings { display: none; flex-direction: column; gap: 5px; }
+  .pod-settings.open {
+    display: flex;
+    align-self: flex-end;          /* fit-width, tucked under the gear button */
+    padding: 8px 10px;
+    border: 1px solid var(--border, #e0e0e0); border-radius: 4px;
+    background: var(--surface-2, #f9f9f9);
+    font-size: 0.85em;
+  }
+  .pod-settings label {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; color: var(--text, #212121);
+  }
+
   .breadcrumb {
     padding: 10px 20px;
     background: var(--surface-2, #f9f9f9);
