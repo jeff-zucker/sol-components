@@ -8,6 +8,7 @@ export const CSS = BTN_CSS + `
   :host {
     display: flex;
     flex-direction: column;
+    height: 100%;
     overflow: hidden;
     background: var(--surface, #fff);
     border-radius: 8px;
