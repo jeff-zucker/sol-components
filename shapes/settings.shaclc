@@ -1,0 +1,23 @@
+# SHACL Compact Syntax for the Settings container subject used by
+# sol-time, sol-weather, and any future component config file under
+# data/. Mirrors the SHACL (Turtle) form in shapes/settings.shacl.
+#
+# Convert with any SHACLC processor, e.g.:
+#   shaclc-convert settings.shaclc settings.shacl
+# (the project keeps both forms so authors who prefer either notation
+# can read the canonical shape directly.)
+
+PREFIX :       <#>
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX schema: <http://schema.org/>
+
+shape :SettingsShape {
+  targetNode <#Settings> ;
+  schema:additionalProperty @:PropertyValueShape ;
+}
+
+shape :PropertyValueShape {
+  schema:name xsd:string [1..1] ;
+  schema:value [1..1] ;
+}

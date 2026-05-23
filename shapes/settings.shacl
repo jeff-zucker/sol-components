@@ -1,0 +1,46 @@
+@prefix :       <#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema: <http://schema.org/> .
+
+# SHACL shape for the <#Settings> container subject used by sol-time,
+# sol-weather, and any future component config file under data/. Each
+# setting is reified as a schema:PropertyValue with a schema:name (the
+# key the component dispatches on) and a schema:value (the actual
+# value). SettingsShape validates the container; PropertyValueShape
+# validates each linked setting.
+#
+# Targets the literal <#Settings> node — every config file uses that
+# exact fragment, so the validator can auto-fire without the data
+# needing to carry an explicit rdf:type.
+
+:SettingsShape
+  a sh:NodeShape ;
+  sh:targetNode <#Settings> ;
+  sh:property [
+    sh:path schema:additionalProperty ;
+    sh:node :PropertyValueShape ;
+    sh:name "additionalProperty" ;
+    sh:description "PropertyValue nodes carrying the settings name/value pairs" ;
+  ] .
+
+# Local definition; structurally the same shape that menu.shacl uses
+# for ui:Component attributes — kept independent so the two files
+# can evolve separately (and validate without cross-file imports).
+:PropertyValueShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path schema:name ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "name" ;
+    sh:description "Setting name — used as the JS-side dispatch key" ;
+  ] ;
+  sh:property [
+    sh:path schema:value ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:name "value" ;
+    sh:description "Setting value — typed from its literal datatype" ;
+  ] .
