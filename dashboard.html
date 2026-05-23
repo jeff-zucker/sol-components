@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solid dashboard — time · weather · calendar · search · feeds</title>
+  <link rel="stylesheet" href="web/styles/root.css">
+  <script src="web/scripts/prefs.js"></script>
+
+  <!-- sol-feed and sol-calendar both need rdflib for RDF source lists;
+       sol-calendar also pulls in ical.js for ICS parsing. The inlined
+       importmap matches dist/importmap-local.json with the paths
+       rewritten relative to the project root, so a single rdflib
+       instance is shared across every component on the page.
+       Transitive bare-spec deps (n3, etc.) are mapped too — rdflib's
+       ESM imports `n3` directly, so it must be reachable. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib":                              "./dist/vendor/rdflib.js",
+      "dompurify":                           "./dist/vendor/dompurify.js",
+      "ical.js":                             "./dist/vendor/ical.js.js",
+      "marked":                              "./dist/vendor/marked.js",
+      "n3":                                  "./dist/vendor/n3.js",
+      "rdf-validate-shacl":                  "./dist/vendor/rdf-validate-shacl.js",
+      "@comunica/query-sparql":              "./dist/vendor/@comunica-query-sparql.js",
+      "solid-ui":                            "./dist/vendor/solid-ui.js",
+      "solid-logic":                         "./dist/vendor/solid-logic.js",
+      "@inrupt/solid-client-authn-browser":  "./dist/vendor/@inrupt-solid-client-authn-browser.js"
+    }
+  }
+  </script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: var(--font-ui, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+      font-size: var(--font-size, 18px);
+      color: var(--text, #212121);
+      background: var(--bg, #f5f5f5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* The header is a two-column strip:
+         left  = weather + time + search stacked (fixed 40rem wide so
+                 the search bar keeps its generous typing width)
+         right = upcoming-events agenda (sol-calendar) — fills the
+                 remaining width.
+       The header is sized vertically by the left column's content (no
+       fixed height): the calendar is absolutely-positioned inside its
+       grid cell so its potentially-tall event list does NOT push the
+       row taller than the time+weather+search stack. The agenda
+       scrolls internally instead. */
+    header.dash {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 40rem minmax(0, 1fr);
+      align-items: stretch;
+      gap: 1rem;
+      /* top, sides, bottom — extra bottom so the search engines row
+         doesn't crowd the border into the feed area below. */
+      padding: .6rem 1rem 1.25rem;
+      /* `transparent` lets the body's --bg show through, so the header
+         strip and the feed area below share one continuous page
+         colour. Individual widgets that paint their own background
+         (sol-calendar's agenda card)
+         still stand out as cards on top of it. The visual divider
+         between the header and the feed area below now lives inside
+         <sol-feed> itself (as its top border) so the component is
+         self-contained when used outside this dashboard too. */
+      background: transparent;
+      overflow: hidden;
+    }
+
+    /* Left column: weather + time + search stacked vertically. Weather
+       and time are horizontally centred over the column (they're
+       compact one-line widgets and read as a centred metric block);
+       search underneath stays stretched to full column width so the
+       input + engines row breathe. */
+    header.dash .info {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: .5rem;
+      min-width: 0;
+    }
+    header.dash .info > sol-weather,
+    header.dash .info > sol-time { align-self: center; }
+    /* Right column: the agenda cell is a positioned containing block
+       for the absolutely-positioned calendar. With sol-calendar out
+       of normal flow, .agenda contributes nothing to the grid row's
+       height — so the explicit `height` set here directly drives both
+       the row and the calendar's height. Tuned to ~4 event rows tall
+       so the calendar shows a useful agenda window without dominating
+       the header strip; rows beyond the 4th scroll inside .cal-agenda. */
+    header.dash .agenda {
+      position: relative;
+      height: 11rem;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    /* Fit-width + flush-right: only the right + top + bottom are
+       pinned; left is free, so the calendar hugs the right edge of
+       its grid cell and `width: max-content` sizes it to its widest
+       row (paired with .cal-row using auto for the body column, so
+       max-content is well-defined). `max-width: 100%` keeps it from
+       overflowing the leftover space on narrow viewports. The whole
+       thing stays absolutely positioned so its content height doesn't
+       push the row taller than the .info column on the left. */
+    header.dash .agenda sol-calendar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      left: auto;
+      width: max-content;
+      max-width: 100%;
+    }
+
+    /* The feed fills the rest of the viewport. <sol-feed> sets
+       :host { height: 100% } and scrolls its article grid internally,
+       so the page itself never grows past the viewport. */
+    main.feed {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: .6rem 1rem 1rem;
+      display: flex;
+    }
+    main.feed sol-feed { flex: 1 1 auto; }
+    /* (The two-tone top-bar + articles tints that used to live here
+       are now sol-feed's defaults — see web/styles/sol-feed-css.js.
+       Override --feed-top-bar-bg / --feed-articles-bg here if this
+       page wants a different palette.) */
+  </style>
+</head>
+<body>
+
+  <header class="dash" aria-label="Dashboard widgets">
+    <div class="info">
+      <!-- Both widgets accept inline attributes OR a `source` TTL. The
+           TTL is the default; any HTML attribute here would override
+           the matching :predicate in the file. Weather sits above
+           time so the more-prominent line (icon + temp) reads first. -->
+      <sol-weather source="data/weather.ttl#Settings"></sol-weather>
+      <sol-time    source="data/time.ttl#Settings"></sol-time>
+    </div>
+    <div class="agenda">
+      <!-- Amalgamated upcoming events from all three Solid-community
+           calendars (Solid CG + Linked Web Storage WG + Extra Solid
+           Events). Each one is fetched in parallel and the merged
+           list is shown sorted by start time. Swap to #SolidCG, #LWS,
+           or #Extra to scope to a single feed. -->
+      <sol-calendar source="data/calendar.ttl#All" hide-header></sol-calendar>
+    </div>
+  </header>
+
+  <main class="feed" aria-label="News feed">
+    <!-- The all-view scopes to the #Feeds topic in data/feeds.ttl and its
+         subtopics (News, SciTech, Culture, …). The proxy matches the
+         localhost CORS proxy used by the rest of the demos; remove the
+         attribute if you don't have one running.
+         `default-selected` controls the auto-check set on first visit
+         (localStorage empty). Case-insensitive substring match against
+         each feed's label OR URL; once the user touches the picker,
+         their selection is remembered and this attribute is ignored. -->
+    <sol-feed view="all"
+              source="data/feeds.ttl#Feeds"
+              default-selected="The Guardian, Truthout, NY Times, Smithsonian, Scientific American, Ars Technica, 404 Media, Cory Doctorow, Boing Boing, XKCD"
+              proxy="http://localhost:3002/proxy?uri="></sol-feed>
+  </main>
+
+  <!-- All four components are plain ES modules. Anything that touches
+       rdflib (sol-time / sol-weather via loadConfig, sol-calendar for
+       its TTL source, sol-feed for its source list) resolves it
+       through the importmap above; the single rdflib instance is
+       shared across every component on the page. -->
+  <script type="module" src="web/sol-time.js"></script>
+  <script type="module" src="web/sol-weather.js"></script>
+  <script type="module" src="web/sol-calendar.js"></script>
+  <script type="module" src="web/sol-feed.js"></script>
+
+</body>
+</html>
