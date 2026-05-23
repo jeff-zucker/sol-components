@@ -1,6 +1,7 @@
-@prefix : <#> .
-@prefix ui: <http://www.w3.org/ns/ui#> .
-@prefix bk: <http://www.w3.org/2002/01/bookmark#> . 
+@prefix :    <#> .
+@prefix ui:  <http://www.w3.org/ns/ui#> .
+@prefix bk:  <http://www.w3.org/2002/01/bookmark#> .
+@prefix rss: <http://purl.org/rss/1.0/> .
 
 <#Feeds> a bk:Topic; ui:label "Feeds" . 
 
@@ -191,6 +192,12 @@
   ui:label "Boing Boing" ;
   bk:recalls <https://boingboing.net/feed> .
 
+:xkcd
+  a ui:Link ;
+  bk:hasTopic <#SciTech> ;
+  ui:label "XKCD" ;
+  bk:recalls <https://xkcd.com/rss.xml> .
+
 :00047
   a ui:Link ;
   bk:hasTopic <#Culture> ;
@@ -301,3 +308,51 @@
   bk:hasTopic <#News> ;
   ui:label "Cultural Survival" ;
   bk:recalls <https://www.culturalsurvival.org/rss.xml> .
+
+###
+# Each feed URL declared as an RSS channel (the bookmark entries above
+# are ui:Link proxies pointing to these channels via bk:recalls).
+###
+<http://feeds.propublica.org/propublica/main> a rss:channel .
+<http://rss.sciam.com/ScientificAmerican-Global> a rss:channel .
+<https://blackagendareport.com/rss.xml> a rss:channel .
+<https://boingboing.net/feed> a rss:channel .
+<https://doctorow.medium.com/feed> a rss:channel .
+<https://fair.org/feed/> a rss:channel .
+<https://feeds.arstechnica.com/arstechnica/index> a rss:channel .
+<https://itsfoss.com/rss/> a rss:channel .
+<https://jacobin.com/feed/> a rss:channel .
+<https://labornotes.org/feed> a rss:channel .
+<https://news.ycombinator.com/rss> a rss:channel .
+<https://opensource.com/feed> a rss:channel .
+<https://rss.nytimes.com/services/xml/rss/nyt/World.xml> a rss:channel .
+<https://slate.com/feeds/all.rss> a rss:channel .
+<https://techcrunch.com/feed/> a rss:channel .
+<https://theconversation.com/us/articles.atom> a rss:channel .
+<https://thegrio.com/feed/> a rss:channel .
+<https://theintercept.com/feed/?lang=en> a rss:channel .
+<https://therealnews.com/feed> a rss:channel .
+<https://wedistribute.org/feed/> a rss:channel .
+<https://www.404media.co/rss/> a rss:channel .
+<https://www.culturalsurvival.org/rss.xml> a rss:channel .
+<https://www.democracynow.org/democracynow.rss> a rss:channel .
+<https://www.eff.org/rss/updates.xml> a rss:channel .
+<https://www.engadget.com/rss.xml> a rss:channel .
+<https://www.motherjones.com/feed/> a rss:channel .
+<https://www.nature.com/nature.rss> a rss:channel .
+<https://www.opb.org/arc/outboundfeeds/rss/?outputType=xml> a rss:channel .
+<https://www.openculture.com/feed/rss2> a rss:channel .
+<https://www.salon.com/feed> a rss:channel .
+<https://www.smithsonianmag.com/rss/latest_articles/> a rss:channel .
+<https://www.telesurenglish.net/feed/> a rss:channel .
+<https://www.theguardian.com/us-news/rss> a rss:channel .
+<https://www.theregister.com/headlines.atom> a rss:channel .
+<https://www.theroot.com/rss> a rss:channel .
+<https://www.theverge.com/rss/index.xml> a rss:channel .
+<https://www.thisamericanlife.org/podcast/rss.xml> a rss:channel .
+<https://www.truth-out.org/feed?format=feed> a rss:channel .
+<https://www.vice.com/en/feed/> a rss:channel .
+<https://www.vox.com/rss/index.xml> a rss:channel .
+<https://www.wired.com/feed/rss> a rss:channel .
+<http://www.aljazeera.com/xml/rss/all.xml> a rss:channel .
+<https://xkcd.com/rss.xml> a rss:channel .

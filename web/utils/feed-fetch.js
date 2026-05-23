@@ -168,26 +168,15 @@ export async function getFeedItems(feedUri, options = {}) {
 
 /* ── source lists ─────────────────────────────────────────────────────── */
 
-/** Build a feed list from the `<a href>` elements of an HTML page. */
-function anchorsFromHtml(html, baseUri) {
-  const doc = domParser.parseFromString(html, 'text/html');
-  const out = [];
-  for (const a of doc.querySelectorAll('a[href]')) {
-    let href = a.getAttribute('href');
-    try { href = new URL(href, baseUri).href; } catch { /* keep raw */ }
-    const label = (a.textContent || '').trim() || a.getAttribute('title') || href;
-    out.push({ label, url: href, topic: '' });
-  }
-  return out;
-}
-
-/* Vocabulary used by the bookmark source list (data/feeds.ttl). */
+/* Vocabularies the source list may use — the parser accepts both the W3C
+ * bookmark ontology (bk:/ui:) and SKOS (skos:/dct:) and treats them as
+ * interchangeable. */
 const NS = {
   rdf:  'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
   ui:   'http://www.w3.org/ns/ui#',
   bk:   'http://www.w3.org/2002/01/bookmark#',
-  rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
-  dc:   'http://purl.org/dc/elements/1.1/',
+  skos: 'http://www.w3.org/2004/02/skos/core#',
+  dct:  'http://purl.org/dc/terms/',
 };
 
 /** Last path / fragment segment of a URI — a readable fallback label. */
@@ -200,92 +189,157 @@ function dedupeFeeds(feeds) {
 }
 
 /**
- * Build a feed list from an RDF/Turtle document. The primary shape is the
- * W3C bookmark ontology used by `data/feeds.ttl`:
+ * Parse a Turtle document and return the feed list scoped to the focus
+ * topic's subtree. Accepts BOTH the W3C bookmark ontology and SKOS, in
+ * either direction (broader/narrower, topConceptOf/hasTopConcept).
  *
- *   <#News>  a bk:Topic ; ui:label "News" .
+ *   # Bookmark form
+ *   <#Feeds> a bk:Topic ; ui:label "Feeds" .
+ *   <#News>  a bk:Topic ; ui:label "News" ; bk:subTopicOf <#Feeds> .
  *   :00012   a ui:Link  ; ui:label "NY Times" ;
  *            bk:recalls <https://…/World.xml> ; bk:hasTopic <#News> .
  *
- * Each `ui:Link` becomes a feed — `ui:label` is the name, `bk:recalls`
- * the feed URL, and `bk:hasTopic` resolves to its topic's `ui:label`.
- * If no `ui:Link` is found the parser falls back to treating any subject
- * with an `rdfs:label`/`dc:title` as a feed. Requires rdflib on the page.
+ *   # SKOS form
+ *   <#Feeds> a skos:ConceptScheme ; skos:prefLabel "Feeds" .
+ *   <#News>  a skos:Concept ; skos:prefLabel "News" ; skos:topConceptOf <#Feeds> .
+ *   <https://…/World.xml> dct:title "NY Times" ; dct:subject <#News> .
+ *
+ * Feeds whose topic falls outside the focus subtree (or isn't a defined
+ * topic) are dropped. Requires rdflib on the page.
  */
-async function feedsFromRdf(sourceUri, text) {
+async function feedsFromRdf(fileUri, focusUri, text) {
   let rdf;
   try { ({ rdf } = await import('../../core/rdf.js')); }
   catch { throw new Error('RDF source lists need rdflib on the page'); }
   if (!rdf.isReady()) throw new Error('rdflib is not available');
 
   const store = rdf.graph();
-  rdf.parse(text, store, sourceUri, 'text/turtle');
+  rdf.parse(text, store, fileUri, 'text/turtle');
 
   const sym = u => rdf.sym(u);
   const valueOf = (subj, pred) => {
     const o = store.any(subj, sym(pred), null);
     return o ? o.value : '';
   };
+  /** Yield every URI-valued child of `t` across all hierarchy predicates
+   *  in both ontologies, in both directions. */
+  const childrenOf = function* (t) {
+    const tNode = sym(t);
+    // <child> rel <t>  — forward
+    for (const pred of [NS.bk + 'subTopicOf', NS.skos + 'broader', NS.skos + 'topConceptOf']) {
+      for (const st of store.statementsMatching(null, sym(pred), tNode)) {
+        if (st.subject.termType === 'NamedNode') yield st.subject.value;
+      }
+    }
+    // <t> rel <child>  — inverse
+    for (const pred of [NS.skos + 'narrower', NS.skos + 'hasTopConcept']) {
+      for (const st of store.statementsMatching(tNode, sym(pred), null)) {
+        if (st.object.termType === 'NamedNode') yield st.object.value;
+      }
+    }
+  };
 
-  // Topic URI → display label.
+  // Topic label table — any defined Topic / Concept / ConceptScheme.
   const topicLabel = new Map();
-  for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.bk + 'Topic'))) {
-    topicLabel.set(
-      st.subject.value,
-      valueOf(st.subject, NS.ui + 'label') || lastSegment(st.subject.value),
-    );
+  const topicTypes = [NS.bk + 'Topic', NS.skos + 'Concept', NS.skos + 'ConceptScheme'];
+  const labelPreds = [NS.ui + 'label', NS.skos + 'prefLabel'];
+  for (const t of topicTypes) {
+    for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(t))) {
+      if (topicLabel.has(st.subject.value)) continue;
+      let label = '';
+      for (const p of labelPreds) {
+        label = valueOf(st.subject, p);
+        if (label) break;
+      }
+      topicLabel.set(st.subject.value, label || lastSegment(st.subject.value));
+    }
   }
 
-  // ui:Link subjects → feeds.
+  // Focus subtree: focus + transitive children across both vocabularies.
+  const subtree = new Set([focusUri]);
+  const queue = [focusUri];
+  while (queue.length) {
+    const t = queue.shift();
+    for (const child of childrenOf(t)) {
+      if (!subtree.has(child)) { subtree.add(child); queue.push(child); }
+    }
+  }
+
   const feeds = [];
+
+  // Bookmark feeds: ui:Link with bk:recalls / bk:hasTopic / ui:label.
   for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.ui + 'Link'))) {
     const subj = st.subject;
     const url = valueOf(subj, NS.bk + 'recalls');
     if (!url) continue;
     const topicUri = (store.any(subj, sym(NS.bk + 'hasTopic'), null) || {}).value || '';
+    if (!topicUri || !subtree.has(topicUri)) continue;
     feeds.push({
       label: valueOf(subj, NS.ui + 'label') || lastSegment(url),
       url,
-      topic: topicUri ? (topicLabel.get(topicUri) || lastSegment(topicUri)) : '',
+      topic: topicLabel.get(topicUri) || lastSegment(topicUri),
+      topicUri,
     });
   }
-  if (feeds.length) return dedupeFeeds(feeds);
 
-  // Fallback for non-bookmark RDF: any labelled subject is a feed.
-  const labelled = [];
-  for (const pred of [NS.rdfs + 'label', NS.dc + 'title', NS.ui + 'label']) {
-    for (const st of store.statementsMatching(null, sym(pred), null)) {
-      if (st.subject.termType === 'NamedNode') {
-        labelled.push({ label: st.object.value, url: st.subject.value, topic: '' });
-      }
-    }
+  // SKOS feeds: any subject with dct:subject pointing into the subtree.
+  // The feed's IRI is its URL; the label is dct:title (fallback rdfs:label).
+  for (const st of store.statementsMatching(null, sym(NS.dct + 'subject'), null)) {
+    const subj = st.subject;
+    if (subj.termType !== 'NamedNode') continue;
+    const topicUri = st.object.value;
+    if (!subtree.has(topicUri)) continue;
+    feeds.push({
+      label: valueOf(subj, NS.dct + 'title')
+        || valueOf(subj, 'http://www.w3.org/2000/01/rdf-schema#label')
+        || lastSegment(subj.value),
+      url: subj.value,
+      topic: topicLabel.get(topicUri) || lastSegment(topicUri),
+      topicUri,
+    });
   }
-  return dedupeFeeds(labelled);
+
+  // Topics in the focus subtree, in BFS order, with their labels — used by
+  // the "add source / add topic" forms in the all view to populate select
+  // dropdowns. Detect which ontology family is in use so writers can mint
+  // new triples in the same shape.
+  const topics = [...subtree].map(uri => ({
+    uri,
+    label: topicLabel.get(uri) || lastSegment(uri),
+  }));
+  const hasBookmark = store
+    .statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.bk + 'Topic')).length > 0;
+
+  const out = dedupeFeeds(feeds);
+  Object.assign(out, {
+    topics,
+    fileUri,
+    focusUri,
+    ontology: hasBookmark ? 'bookmark' : 'skos',
+  });
+  return out;
 }
 
 /**
- * Resolve a "source list" resource into `[{label, url, topic}]` feeds. The
- * resource may be an HTML page (every `<a href>` is a feed) or an
- * RDF/Turtle bookmark document (every `ui:Link` is a feed). `topic` is the
- * empty string when the resource carries no topic grouping.
+ * Resolve a `source` of the form `<rdfFile>#<Topic>` into the feed list
+ * scoped to that topic's `bk:subTopicOf` subtree. The fragment is required
+ * — without it the function throws.
  *
- * @param {string} sourceUri            the source-list URL
- * @param {{proxy?: string}} [options]  CORS proxy pattern
+ * @param {string} sourceUri            `<rdfFile>#<TopicName>`
+ * @param {{proxy?: string}} [options]  CORS proxy pattern (only applied
+ *                                      when the file is cross-origin)
  * @returns {Promise<Array<{label:string,url:string,topic:string}>>}
  */
-export async function parseSourceList(sourceUri, options = {}) {
-  // Resolve to an absolute URL up front: rdflib's parser asserts the
-  // document URI is absolute, and relative IRIs in the document need a
-  // real base to resolve against.
-  const absUri = resolveUrl(sourceUri);
-  const resp = await feedFetch(absUri, options.proxy);
+export async function parseSourceList(sourceUri, { proxy } = {}) {
+  const abs = resolveUrl(sourceUri || '');
+  const hashIdx = abs.indexOf('#');
+  if (hashIdx === -1) {
+    throw new Error(
+      'A topic IRI is required for view="topic" / "all" — e.g. source="feeds.ttl#News"',
+    );
+  }
+  const fileUri = abs.slice(0, hashIdx);
+  const resp = await feedFetch(fileUri, proxy);
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching source list`);
-  const contentType = (resp.headers.get('content-type') || '').toLowerCase();
-  const text = await resp.text();
-
-  const looksHtml = contentType.includes('html') ||
-                    /^\s*<(!doctype|html)/i.test(text);
-  return looksHtml
-    ? anchorsFromHtml(text, absUri)
-    : feedsFromRdf(absUri, text);
+  return feedsFromRdf(fileUri, abs, await resp.text());
 }

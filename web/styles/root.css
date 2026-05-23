@@ -50,6 +50,16 @@
   --radius-sm: 4px;
   --radius-md: 6px;
 
+  /* Project-standard section divider — a muted double rule used between
+     a control / list area and the content area it labels (dashboard
+     header → feed grid, feed top-bar → articles, etc.). Set as a
+     single `border` shorthand so a page can override the whole look
+     with one custom-property assignment, e.g.
+       :root { --divider-line: 1px solid var(--accent); }
+     Custom properties cascade through shadow-DOM boundaries, so this
+     reaches every component without a per-element selector. */
+  --divider-line: 3px double var(--border);
+
   /* component sizing */
   --menu-nav-min-width: 140px;
   --menu-nav-max-width: 260px;
