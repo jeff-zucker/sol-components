@@ -2,6 +2,7 @@
   "imports": {
     "rdflib": "https://esm.sh/rdflib@2",
     "dompurify": "https://esm.sh/dompurify@3",
+    "ical.js": "https://esm.sh/ical.js@2",
     "marked": "https://esm.sh/marked@4",
     "@comunica/query-sparql": "https://esm.sh/@comunica/query-sparql@5",
     "solid-ui": "https://esm.sh/solid-ui@3",

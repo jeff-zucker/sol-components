@@ -3,6 +3,7 @@
   "deps": {
     "rdflib":                                { "version": "^2.3.6", "cdn": "https://esm.sh/rdflib@2", "umd": "$rdf" },
     "dompurify":                             { "version": "^3.4.0", "cdn": "https://esm.sh/dompurify@3" },
+    "ical.js":                               { "version": "^2.2.1", "cdn": "https://esm.sh/ical.js@2", "umd": "ICAL" },
     "marked":                                { "version": "^4",     "cdn": "https://esm.sh/marked@4" },
     "@comunica/query-sparql":                { "version": "^5.1.3", "cdn": "https://esm.sh/@comunica/query-sparql@5", "umd": "Comunica" },
 

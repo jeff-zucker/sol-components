@@ -155,6 +155,22 @@ export default [
       inlineDynamicImports: true,
     },
   },
+  // ── sol-calendar (iCalendar viewer; ical.js is bundled in — pure ESM, no deps) ─
+  {
+    input:    'web/sol-calendar.js',
+    external,
+    plugins,
+    output: {
+      file:    minify ? 'dist/sol-calendar.umd.min.js' : 'dist/sol-calendar.umd.js',
+      format:  'umd',
+      name:    'SolCalendar',
+      exports: 'named',
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+      // calendar-fetch.js may indirectly pull rdflib via rdf-config.js when
+      // source= is a TTL config; inline so the UMD stays one file.
+      inlineDynamicImports: true,
+    },
+  },
   // ── sol-form (generic RDF form renderer, uses solid-ui) ─────────────────────
   {
     input:    'web/sol-form.js',

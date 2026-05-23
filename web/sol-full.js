@@ -27,6 +27,7 @@ import './sol-include.js';
 import './sol-query.js';
 import './sol-login.js';
 import './sol-feed.js';
+import './sol-calendar.js';
 
 // TODO: add the rest as their externals get vendored:
 //   sol-accordion, sol-modal, sol-tabs, sol-rolodex, sol-live-edit, sol-pod,

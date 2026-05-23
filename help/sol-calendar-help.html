@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-calendar Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+<style>
+  /* Same full-height tab layout as the other component help pages
+     (see help/sol-feed-help.html for the canonical version). */
+  html, body { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         margin: 0; padding: 0; max-width: none; color: var(--text, #2c3e50);
+         background: var(--bg, transparent); font-size: var(--font-size, 20px);
+         display: flex; flex-direction: column; overflow: hidden; }
+  h1 { margin: 0 .9rem .2rem; margin-top: 0; }
+  .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
+  h2 { margin-bottom: .5rem; }
+  i { color: var(--success, green); }
+  pre { background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
+        border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: .5rem 0; }
+  code { font-family: 'Fira Code', 'Consolas', monospace; }
+
+  .tabs { display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
+          border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem; }
+  .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
+                 font-size: .95rem; color: var(--text-muted, #7f8c8d);
+                 border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tabs button[aria-selected="true"] { color: var(--text, #2c3e50);
+                 border-bottom-color: var(--accent, #3498db); font-weight: 600; }
+  .tabs button:hover { color: var(--text, #2c3e50); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
+  #tab-attr, #tab-providers, #tab-config,
+  #tab-multi, #tab-meeting, #tab-theme, #tab-a11y { max-width: 960px; }
+
+  /* The agenda demo is a narrow widget — match the sol-feed convention. */
+  .demo-area { border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+               background: var(--surface, #fff); height: 100%; }
+  #tab-agenda .demo-area { width: max-content; max-width: 100%; }
+  #tab-agenda sol-calendar { width: 460px; max-width: 100%; height: 540px; }
+
+  #tab-agenda.tab-panel.active {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  #tab-agenda .demo-code {
+    align-self: flex-start;
+    margin: 0;
+    background: var(--pre-bg, #2c3e50);
+    color: var(--pre-fg, #ecf0f1);
+    border: none;
+  }
+  #tab-agenda .demo-code code { border: none !important; }
+</style>
+</head>
+<body>
+
+  <h1>sol-calendar component</h1>
+  <p class="page-intro">An inline calendar viewer. Point it at any public
+  iCalendar (ICS) feed &mdash; Google Calendar, Apple iCloud, Outlook,
+  Proton Calendar, or a Solid pod &mdash; and it renders the upcoming
+  events as an agenda list that fits whatever container the page gives
+  it. v1 ships the <i>agenda</i> view; <i>mini</i> (today-only card) and
+  <i>month</i> (grid + day popover) are next.</p>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="sol-calendar documentation">
+    <button role="tab" aria-selected="true"  aria-controls="tab-agenda"    id="tabbtn-agenda">Agenda</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-attr"      id="tabbtn-attr"      tabindex="-1">Attributes</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-providers" id="tabbtn-providers" tabindex="-1">Providers</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-config"    id="tabbtn-config"    tabindex="-1">RDF config</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-multi"     id="tabbtn-multi"     tabindex="-1">Multi-source</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-meeting"   id="tabbtn-meeting"   tabindex="-1">Meeting links</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-theme"     id="tabbtn-theme"     tabindex="-1">Theming</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-a11y"      id="tabbtn-a11y"      tabindex="-1">Accessibility</button>
+  </div>
+
+  <!-- ── Demo: agenda ───────────────────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-agenda" role="tabpanel" aria-labelledby="tabbtn-agenda" tabindex="0">
+    <div class="demo-area">
+      <sol-calendar
+        provider="google"
+        calendar-id="en.usa#holiday@group.v.calendar.google.com"
+        window-days="60"
+        proxy="http://localhost:3002/proxy?uri="></sol-calendar>
+    </div>
+    <pre class="demo-code"><code>&lt;script src="dist/sol-calendar.umd.min.js"&gt;&lt;/script&gt;
+
+&lt;sol-calendar
+  <i>provider</i>="google"
+  <i>calendar-id</i>="en.usa#holiday@group.v.calendar.google.com"
+  <i>window-days</i>="60"
+  <i>proxy</i>="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+  </div>
+
+  <!-- ── Attributes ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
+    <div class="api-block">
+      <table class="attr-table">
+        <thead><tr><th>Attribute</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>source</td>
+            <td>one of source or calendar-id</td>
+            <td>An ICS URL, <i>or</i> several whitespace-separated ICS
+                URLs (amalgamated agenda), <i>or</i>
+                <code>file.ttl#Subject</code> pointing at a
+                schema:PropertyValue config block (which may itself
+                declare multiple <code>"source"</code> values). See
+                <b>RDF config</b> and <b>Multi-source</b>.</td>
+          </tr>
+          <tr>
+            <td>provider</td>
+            <td>optional</td>
+            <td><code>google</code> | <code>apple</code> | <code>outlook</code>
+                | <code>proton</code> | <code>ics</code> (default
+                <code>ics</code>). Drives the header label and, for
+                <code>google</code>, lets you supply
+                <code>calendar-id</code> instead of the full URL.</td>
+          </tr>
+          <tr>
+            <td>calendar-id</td>
+            <td>required iff provider="google" without source</td>
+            <td>The calendar's email/id. The component builds the public
+                ICS URL itself.</td>
+          </tr>
+          <tr>
+            <td>view</td>
+            <td>optional</td>
+            <td><code>agenda</code> (v1 default and only value). Other
+                views are planned.</td>
+          </tr>
+          <tr>
+            <td>start</td>
+            <td>optional</td>
+            <td>ISO date <code>YYYY-MM-DD</code>. Defaults to today's
+                local midnight so same-day events still appear.</td>
+          </tr>
+          <tr>
+            <td>window-days</td>
+            <td>optional</td>
+            <td>Agenda lookahead in days (default <code>30</code>).</td>
+          </tr>
+          <tr>
+            <td>max-events</td>
+            <td>optional</td>
+            <td>Cap on rendered events (default <code>100</code>).</td>
+          </tr>
+          <tr>
+            <td>proxy</td>
+            <td>often required</td>
+            <td>CORS proxy pattern; same shape as
+                <code>&lt;sol-feed&gt;</code>'s.</td>
+          </tr>
+          <tr>
+            <td>time-zone</td>
+            <td>optional</td>
+            <td>IANA TZ override (default: the browser's resolved zone).</td>
+          </tr>
+          <tr>
+            <td>locale</td>
+            <td>optional</td>
+            <td>BCP-47 locale for day headers and times.</td>
+          </tr>
+          <tr>
+            <td>hide-header</td>
+            <td>optional (boolean)</td>
+            <td>When present, omits the title + provider strip above the
+                agenda. Useful when the host page already labels the
+                slot (dashboards, sidebars).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>proxy attribute</h3>
+    <p>None of Google, Apple, Outlook, or Proton serve their public
+    ICS endpoints with permissive CORS, so a browser cannot fetch them
+    directly. <code>sol-calendar</code> tries the bare URL first, then
+    retries through the <code>proxy</code> pattern. If the pattern
+    contains the literal token <code>{url}</code> it is replaced with
+    the encoded URL; otherwise the encoded URL is appended to the end
+    of the pattern.</p>
+    <div class="usage-section">
+      Append style (the URL is added to the end):
+      <pre><code>proxy="http://localhost:3002/proxy?uri="</code></pre>
+      Token style (the URL is substituted for <code>{url}</code>):
+      <pre><code>proxy="https://proxy.example/fetch?u={url}"</code></pre>
+    </div>
+    <p>Omit <code>proxy</code> only for endpoints that already send
+    <code>Access-Control-Allow-Origin</code> &mdash; typically a Solid
+    pod or a self-hosted ICS file.</p>
+  </div>
+
+  <!-- ── Providers ──────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-providers" role="tabpanel" aria-labelledby="tabbtn-providers" tabindex="0">
+    <h2>Provider hint</h2>
+    <p>The <code>provider</code> attribute is a small hint &mdash; it
+    labels the header and, for Google, lets the component build the
+    URL itself. Every provider's <i>data</i> arrives in the same ICS
+    format; we never authenticate, so only publicly-shared calendars
+    are reachable today.</p>
+
+    <h3>provider="google"</h3>
+    <p>Give either a full ICS URL or just the calendar id; the component
+    builds
+    <code>https://calendar.google.com/calendar/ical/&lt;id&gt;/public/basic.ics</code>
+    when only the id is supplied.</p>
+    <pre><code>&lt;sol-calendar provider="google"
+  calendar-id="en.usa#holiday@group.v.calendar.google.com"
+  proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>provider="apple"</h3>
+    <p>In Apple Calendar, share a calendar publicly and copy the
+    <code>webcal://</code> or <code>https://</code> link. Pass it as
+    <code>source</code>.</p>
+    <pre><code>&lt;sol-calendar provider="apple"
+  source="https://p01-caldav.icloud.com/published/2/..."
+  proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>provider="outlook"</h3>
+    <p>In outlook.com, publish a calendar and copy the ICS link from the
+    sharing settings.</p>
+    <pre><code>&lt;sol-calendar provider="outlook"
+  source="https://outlook.live.com/owa/calendar/.../calendar.ics"
+  proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>provider="proton"</h3>
+    <p>In Proton Calendar, share a calendar publicly and copy the
+    "Subscribe with calendar app" link.</p>
+    <pre><code>&lt;sol-calendar provider="proton"
+  source="https://calendar.proton.me/api/calendar/v1/url/.../calendar.ics"
+  proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>provider="ics" (default)</h3>
+    <p>Any ICS URL &mdash; a Solid pod, a self-hosted file, any
+    provider not listed above.</p>
+    <pre><code>&lt;sol-calendar source="https://example.org/team.ics"&gt;&lt;/sol-calendar&gt;</code></pre>
+  </div>
+
+  <!-- ── RDF config ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-config" role="tabpanel" aria-labelledby="tabbtn-config" tabindex="0">
+    <h2>Settings from RDF</h2>
+    <p>Instead of inlining every attribute in HTML, point
+    <code>source</code> at a Turtle file with a <code>schema:PropertyValue</code>
+    settings block. Setting names map to the matching HTML attributes
+    (<code>"source"</code>, <code>"provider"</code>,
+    <code>"calendar-id"</code>, <code>"view"</code>,
+    <code>"window-days"</code>, <code>"max-events"</code>,
+    <code>"proxy"</code>, <code>"time-zone"</code>,
+    <code>"locale"</code>). Any HTML attribute still wins, so a page
+    can override one field inline while the rest come from the TTL.</p>
+
+    <pre><code>&lt;sol-calendar source="data/calendar.ttl#Settings"&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <p>And <code>data/calendar.ttl</code>:</p>
+    <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
+
+&lt;#Settings&gt;
+  schema:additionalProperty
+    &lt;#source&gt;, &lt;#provider&gt;, &lt;#view&gt;,
+    &lt;#window-days&gt;, &lt;#proxy&gt; .
+
+&lt;#source&gt;       a schema:PropertyValue ; schema:name "source"@en       ;
+  schema:value "https://calendar.google.com/calendar/ical/.../public/basic.ics" .
+&lt;#provider&gt;     a schema:PropertyValue ; schema:name "provider"@en     ; schema:value "google" .
+&lt;#view&gt;         a schema:PropertyValue ; schema:name "view"@en         ; schema:value "agenda" .
+&lt;#window-days&gt;  a schema:PropertyValue ; schema:name "window-days"@en  ; schema:value 30 .
+&lt;#proxy&gt;        a schema:PropertyValue ; schema:name "proxy"@en        ;
+  schema:value "http://localhost:3002/proxy?uri=" .</code></pre>
+
+    <p>The PropertyValue pattern keeps the file free of invented
+    predicates &mdash; only standard schema.org terms
+    (<code>PropertyValue</code>, <code>name</code>, <code>value</code>,
+    <code>additionalProperty</code>) appear in predicate position. The
+    schema.org namespace is always
+    <code>http://schema.org/</code> &mdash; never the HTTPS form.</p>
+
+    <p>This path needs <code>rdflib</code> on the page (it publishes
+    <code>window.$rdf</code>), the same as <code>&lt;sol-feed&gt;</code>'s
+    topic / all views.</p>
+  </div>
+
+  <!-- ── Multi-source / amalgamated agenda ──────────────────────────── -->
+  <div class="tab-panel" id="tab-multi" role="tabpanel" aria-labelledby="tabbtn-multi" tabindex="0">
+    <h2>Multi-source (amalgamated) agendas</h2>
+    <p>One element can fetch several calendars in parallel and merge
+    their events into a single sorted agenda. A flaky feed doesn't
+    blank the rest &mdash; its error is reported in the status strip
+    and the surviving feeds still render.</p>
+
+    <h3>From HTML</h3>
+    <p>Pass whitespace-separated URLs in <code>source</code>:</p>
+    <pre><code>&lt;sol-calendar
+  source="https://example.org/team.ics
+          https://www.w3.org/groups/cg/solid/calendar/export/"
+  proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>From RDF config</h3>
+    <p>A single settings block can declare the <code>"source"</code>
+    PropertyValue more than once (or once with multiple
+    <code>schema:value</code> statements) &mdash; both forms are
+    equivalent and yield the same multi-source behaviour:</p>
+    <pre><code>&lt;#All&gt;
+  schema:additionalProperty
+    [ a schema:PropertyValue ; schema:name "source"@en ;
+      schema:value "https://www.w3.org/groups/cg/solid/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "source"@en ;
+      schema:value "https://www.w3.org/groups/wg/lws/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "source"@en ;
+      schema:value "https://calendar.google.com/calendar/ical/&lt;id&gt;/public/basic.ics" ],
+    [ a schema:PropertyValue ; schema:name "window-days"@en ; schema:value 60 ] .</code></pre>
+
+    <p>Then point the element at the fragment:</p>
+    <pre><code>&lt;sol-calendar source="data/calendar.ttl#All" hide-header&gt;&lt;/sol-calendar&gt;</code></pre>
+
+    <h3>Failure handling</h3>
+    <p>Each feed is fetched independently via
+    <code>Promise.allSettled</code>. When one or more fail, the live
+    status region shows <i>"Loaded N of M calendars &mdash; K
+    failed"</i> and each failure is logged to the console with its
+    URL. Successful feeds still render.</p>
+
+    <p>Every merged event carries a short <code>calendar</code> label
+    derived from its source URL (e.g. <code>w3.org/solid</code>,
+    <code>google</code>) &mdash; available on the JS event object for
+    callers that want a per-source visual indicator. The current
+    renderer doesn't show it; future versions may.</p>
+  </div>
+
+  <!-- ── Meeting-URL extraction ─────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-meeting" role="tabpanel" aria-labelledby="tabbtn-meeting" tabindex="0">
+    <h2>Meeting links (clickable event titles)</h2>
+    <p>Different calendar publishers put video-meeting URLs in
+    different places. <code>sol-calendar</code> looks for one in
+    priority order and, when found, uses it as the <code>href</code>
+    on the event's summary &mdash; so clicking the title opens the
+    meeting room directly.</p>
+
+    <ol>
+      <li>The standard ICS <code>URL:</code> property of the
+          <code>VEVENT</code>.</li>
+      <li><code>LOCATION:</code>, if the whole field is a URL (common
+          for Jitsi-only calendars like the Solid CG one). The location
+          text-row is suppressed in this case so the same URL doesn't
+          render twice.</li>
+      <li>The first URL inside <code>DESCRIPTION:</code> that matches a
+          known meeting host: <code>meet.jit.si</code>,
+          <code>zoom.us</code>, <code>meet.google.com</code>,
+          <code>teams.microsoft.com</code>, <code>whereby.com</code>.</li>
+      <li>The first URL of any host inside <code>DESCRIPTION:</code>
+          &mdash; falls back to a W3C events-page link, a Google Group
+          link, etc., when no inline meeting URL is published.</li>
+    </ol>
+
+    <p>Trailing sentence punctuation (<code>.</code>, <code>,</code>,
+    <code>;</code>, <code>)</code>) is trimmed off URLs caught from
+    DESCRIPTION text. Mixed LOCATION fields (text plus a URL) stay as
+    plain text &mdash; only fully-URL locations are consumed as the
+    href, to avoid disappearing "Room 4" from a location like
+    <i>"Room 4, also https://meet.jit.si/foo"</i>.</p>
+  </div>
+
+  <!-- ── Theming ────────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-theme" role="tabpanel" aria-labelledby="tabbtn-theme" tabindex="0">
+    <h2>Theming</h2>
+    <p><code>sol-calendar</code> reads from the shared design tokens in
+    <code>web/styles/root.css</code>. Override any of these on
+    <code>:root</code> (global) or on the host element (scoped) to
+    restyle a particular instance.</p>
+
+    <h3>Tokens used</h3>
+    <table class="attr-table">
+      <thead><tr><th>Token</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td><code>--bg</code></td>
+            <td>page background (inherited; the calendar's outer host has no own bg)</td></tr>
+        <tr><td><code>--surface</code></td>
+            <td>background of the agenda card</td></tr>
+        <tr><td><code>--border</code></td>
+            <td>card border and row separators</td></tr>
+        <tr><td><code>--text</code></td>
+            <td>event summary text</td></tr>
+        <tr><td><code>--text-muted</code></td>
+            <td>date column, time column, location text, status strip</td></tr>
+        <tr><td><code>--accent</code></td>
+            <td>"today" row stripe; fallback for <code>--link</code></td></tr>
+        <tr><td><code>--link</code></td>
+            <td>colour of clickable event summaries (meeting links)</td></tr>
+        <tr><td><code>--font-ui</code>, <code>--font-size</code></td>
+            <td>typography on the host</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Scoped override example</h3>
+    <pre><code>/* Make this one calendar's links red */
+sol-calendar.team { --link: #c0392b; }</code></pre>
+  </div>
+
+  <!-- ── Accessibility ──────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-a11y" role="tabpanel" aria-labelledby="tabbtn-a11y" tabindex="0">
+    <h2>Accessibility</h2>
+    <ul>
+      <li>The agenda list is a labelled region; each day's events are
+      grouped under a <code>&lt;section&gt;</code> with the day header
+      as a sticky heading.</li>
+      <li>Event URLs are real <code>&lt;a&gt;</code> elements that open
+      in a new tab with <code>rel="noopener noreferrer"</code>.</li>
+      <li>Loading and error messages are announced through a polite
+      <code>aria-live</code> region.</li>
+      <li>Today's day-header is visually highlighted; the highlight uses
+      the shared <code>--accent</code> token so it inherits the page's
+      light / dark setting.</li>
+      <li>All colours come from shared theme tokens.</li>
+    </ul>
+  </div>
+
+<script>
+  // Tab switching — same pattern as the other help pages.
+  (function () {
+    var tablist = document.getElementById('tabs');
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls'))
+                .classList.toggle('active', on);
+      });
+    }
+
+    tablist.addEventListener('click', function (e) {
+      var tab = e.target.closest('[role="tab"]');
+      if (tab) select(tab);
+    });
+
+    tablist.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (next) { e.preventDefault(); select(next); next.focus(); }
+    });
+  })();
+</script>
+
+<!-- IMPORTED SCRIPTS ------------------------------------------------- -->
+  <!-- rdflib (peer dep) : publishes window.$rdf — needed only when
+       source= points at a TTL config file. -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+
+  <!-- solid-web-components : the standalone <sol-calendar> UMD build.
+       ?v bump = cache-bust; raise it whenever dist/sol-calendar.umd.min.js changes. -->
+  <script src="../dist/sol-calendar.umd.min.js?v=1"></script>
+<!-- ------------------------------------------------------------------ -->
+
+</body>
+</html>

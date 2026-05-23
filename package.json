@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "dompurify": "^3.4.0",
+    "ical.js": "^2.2.1",
     "marked": "^18.0.0",
     "rdflib": "^2.3.6"
   },

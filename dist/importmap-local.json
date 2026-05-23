@@ -2,6 +2,7 @@
   "imports": {
     "rdflib": "./vendor/rdflib.js",
     "dompurify": "./vendor/dompurify.js",
+    "ical.js": "./vendor/ical.js.js",
     "marked": "./vendor/marked.js",
     "@comunica/query-sparql": "./vendor/@comunica-query-sparql.js",
     "solid-ui": "./vendor/solid-ui.js",
