@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-time Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+<style>
+  /* Same full-height tab layout as the other component help pages. */
+  html, body { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         margin: 0; padding: 0; max-width: none; color: var(--text, #2c3e50);
+         background: var(--bg, transparent); font-size: var(--font-size, 20px);
+         display: flex; flex-direction: column; overflow: hidden; }
+  h1 { margin: 0 .9rem .2rem; margin-top: 0; }
+  .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
+  h2 { margin-bottom: .5rem; }
+  i { color: var(--success, green); }
+  pre { background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
+        border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: .5rem 0; }
+  code { font-family: 'Fira Code', 'Consolas', monospace; }
+
+  .tabs { display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
+          border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem; }
+  .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
+                 font-size: .95rem; color: var(--text-muted, #7f8c8d);
+                 border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tabs button[aria-selected="true"] { color: var(--text, #2c3e50);
+                 border-bottom-color: var(--accent, #3498db); font-weight: 600; }
+  .tabs button:hover { color: var(--text, #2c3e50); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
+  #tab-attr, #tab-config, #tab-a11y { max-width: 960px; }
+
+  /* The clock is a single-line widget; show it on a roomy demo card so
+     the typography breathes. */
+  .demo-area { border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+               background: var(--surface, #fff); padding: 1.5rem 2rem; display: inline-block; }
+  #tab-clock.tab-panel.active {
+    display: flex; flex-direction: row; gap: 1rem; align-items: flex-start;
+  }
+  #tab-clock .demo-code {
+    align-self: flex-start;
+    margin: 0;
+    background: var(--pre-bg, #2c3e50);
+    color: var(--pre-fg, #ecf0f1);
+    border: none;
+  }
+  #tab-clock .demo-code code { border: none !important; }
+</style>
+</head>
+<body>
+
+  <h1>sol-time component</h1>
+  <p class="page-intro">A compact clock widget. Always shows <i>local</i>
+  and <i>GMT</i>; optionally adds a third timezone (label + UTC
+  offset). Ticks once a minute &mdash; the seconds aren't displayed so
+  finer updates would be busywork.</p>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="sol-time documentation">
+    <button role="tab" aria-selected="true"  aria-controls="tab-clock"  id="tabbtn-clock">Clock</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-attr"   id="tabbtn-attr"   tabindex="-1">Attributes</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-config" id="tabbtn-config" tabindex="-1">RDF config</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-a11y"   id="tabbtn-a11y"   tabindex="-1">Accessibility</button>
+  </div>
+
+  <!-- ── Demo ──────────────────────────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-clock" role="tabpanel" aria-labelledby="tabbtn-clock" tabindex="0">
+    <div class="demo-area">
+      <sol-time time-label="tokyo" time-offset="9"></sol-time>
+    </div>
+    <pre class="demo-code"><code>&lt;script src="dist/sol-full.umd.min.js"&gt;&lt;/script&gt;
+
+&lt;sol-time
+  <i>time-label</i>="tokyo"
+  <i>time-offset</i>="9"
+&gt;&lt;/sol-time&gt;</code></pre>
+  </div>
+
+  <!-- ── Attributes ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
+    <div class="api-block">
+      <table class="attr-table">
+        <thead><tr><th>Attribute</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>time-label</td>
+            <td>optional</td>
+            <td>Short label for an extra timezone reading (e.g.
+                <code>tokyo</code>, <code>mumbai</code>).</td>
+          </tr>
+          <tr>
+            <td>time-offset</td>
+            <td>required if <code>time-label</code> is set</td>
+            <td>The extra timezone's offset from UTC in hours.
+                Accepts fractional values: <code>5.5</code>,
+                <code>-3.5</code>.</td>
+          </tr>
+          <tr>
+            <td>source</td>
+            <td>optional</td>
+            <td><code>file.ttl#Subject</code> &mdash; a
+                <code>schema:PropertyValue</code> config block (see
+                <b>RDF config</b>). HTML attributes still win over
+                values from the TTL.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Examples</h3>
+    <pre><code>&lt;!-- Local + GMT only --&gt;
+&lt;sol-time&gt;&lt;/sol-time&gt;
+
+&lt;!-- Local + GMT + a third timezone --&gt;
+&lt;sol-time time-label="tokyo" time-offset="9"&gt;&lt;/sol-time&gt;
+
+&lt;!-- Pull settings from a TTL file --&gt;
+&lt;sol-time source="data/time.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+
+    <h3>Theming via CSS parts</h3>
+    <p>Each label / value / separator is exposed as a shadow part:
+    <code>local-label</code>, <code>local-time</code>,
+    <code>utc-label</code>, <code>utc-time</code>,
+    <code>extra-label</code>, <code>extra-time</code>,
+    <code>sep</code>. Style them from the host page:</p>
+    <pre><code>sol-time::part(local-time) { font-variant-numeric: tabular-nums; }
+sol-time::part(extra-label) { color: var(--accent); }</code></pre>
+  </div>
+
+  <!-- ── RDF config ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-config" role="tabpanel" aria-labelledby="tabbtn-config" tabindex="0">
+    <h2>Settings from RDF</h2>
+    <p>Point <code>source</code> at a Turtle file with a
+    <code>schema:PropertyValue</code> block. Setting names map to the
+    HTML attributes:</p>
+    <table class="attr-table">
+      <thead><tr><th>PropertyValue name</th><th>HTML attribute</th></tr></thead>
+      <tbody>
+        <tr><td><code>"timezone"</code></td>        <td><code>time-label</code></td></tr>
+        <tr><td><code>"timezone-offset"</code></td> <td><code>time-offset</code></td></tr>
+      </tbody>
+    </table>
+
+    <pre><code>&lt;sol-time source="data/time.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+
+    <p>And <code>data/time.ttl</code>:</p>
+    <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
+
+&lt;#Settings&gt;
+  schema:additionalProperty &lt;#timezone&gt;, &lt;#timezone-offset&gt; .
+
+&lt;#timezone&gt;
+  a schema:PropertyValue ;
+  schema:name "timezone"@en ;
+  schema:value "tokyo" .
+
+&lt;#timezone-offset&gt;
+  a schema:PropertyValue ;
+  schema:name "timezone-offset"@en ;
+  schema:value 9 .</code></pre>
+
+    <p>The PropertyValue pattern uses only standard schema.org
+    predicates (<code>PropertyValue</code>, <code>name</code>,
+    <code>value</code>, <code>additionalProperty</code>) &mdash; no
+    invented vocabulary. The schema.org namespace is always
+    <code>http://schema.org/</code>, not the HTTPS form.</p>
+
+    <p>This path needs <code>rdflib</code> on the page (it publishes
+    <code>window.$rdf</code>).</p>
+  </div>
+
+  <!-- ── Accessibility ──────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-a11y" role="tabpanel" aria-labelledby="tabbtn-a11y" tabindex="0">
+    <h2>Accessibility</h2>
+    <ul>
+      <li>The clock is a single inline element; no interactive controls.</li>
+      <li>All colours come from shared theme tokens
+          (<code>--text</code>, <code>--text-muted</code>) so the
+          widget follows the page's light / dark setting.</li>
+      <li>Numbers use <code>font-variant-numeric: tabular-nums</code>
+          so each minute-tick keeps the digits aligned (no horizontal
+          shimmer).</li>
+      <li>Each label / value can be styled or hidden via shadow parts
+          (see the <b>Attributes</b> tab).</li>
+    </ul>
+  </div>
+
+<script>
+  // Tab switching — same pattern as the other help pages.
+  (function () {
+    var tablist = document.getElementById('tabs');
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls'))
+                .classList.toggle('active', on);
+      });
+    }
+
+    tablist.addEventListener('click', function (e) {
+      var tab = e.target.closest('[role="tab"]');
+      if (tab) select(tab);
+    });
+
+    tablist.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (next) { e.preventDefault(); select(next); next.focus(); }
+    });
+  })();
+</script>
+
+<!-- IMPORTED SCRIPTS ------------------------------------------------- -->
+  <!-- rdflib (peer dep) : publishes window.$rdf — needed only when
+       source= points at a TTL config file. -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+
+  <!-- sol-time as part of the sol-full bundle.
+       ?v bump = cache-bust; raise it whenever dist/sol-full.umd.min.js changes. -->
+  <script src="../dist/sol-full.umd.min.js?v=1"></script>
+<!-- ------------------------------------------------------------------ -->
+
+</body>
+</html>
