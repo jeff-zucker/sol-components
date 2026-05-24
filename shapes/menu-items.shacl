@@ -1,0 +1,71 @@
+@prefix :    <#> .
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ui:  <http://www.w3.org/ns/ui#> .
+
+:LinkItemShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Link ;
+
+  sh:property [
+    sh:path ui:label ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Label" ;
+  ] ,
+  [
+    sh:path ui:href ;
+    sh:nodeKind sh:IRI ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "URL (href)" ;
+  ] ,
+  [
+    sh:path ui:contents ;
+    sh:datatype xsd:string ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "Inline HTML (contents)" ;
+  ] ,
+  [
+    sh:path ui:icon ;
+    sh:nodeKind sh:IRI ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "Icon URL" ;
+  ] .
+
+:ComponentItemShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Component ;
+
+  sh:property [
+    sh:path ui:label ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Label" ;
+  ] ,
+  [
+    sh:path ui:name ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Element tag" ;
+    sh:description "Custom-element tag name to instantiate (e.g. sol-query)." ;
+  ] ,
+  [
+    sh:path ui:icon ;
+    sh:nodeKind sh:IRI ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "Icon URL" ;
+  ] .
+
+:SubMenuItemShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Menu ;
+
+  sh:property [
+    sh:path ui:label ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Label" ;
+  ] ,
+  [
+    sh:path ui:orientation ;
+    sh:datatype xsd:string ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:in ( "horizontal" "vertical" ) ;
+    sh:name "Orientation" ;
+  ] ,
+  [
+    sh:path ui:icon ;
+    sh:nodeKind sh:IRI ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "Icon URL" ;
+  ] .

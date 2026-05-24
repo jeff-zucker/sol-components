@@ -1,0 +1,15 @@
+@prefix :       <#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema: <http://schema.org/> .
+
+:TimeSettingsShape
+  a sh:NodeShape ;
+  sh:targetSubjectsOf schema:timezone ;
+
+  sh:property [
+    sh:path schema:timezone ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Extra timezone (IANA name)" ;
+    sh:description "An IANA timezone identifier like 'Asia/Kolkata' or 'America/New_York'. sol-time always renders local + UTC; this adds a third clock for the named zone." ;
+  ] .

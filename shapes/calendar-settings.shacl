@@ -1,0 +1,44 @@
+@prefix :       <#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix schema: <http://schema.org/> .
+@prefix time:   <http://www.w3.org/2006/time#> .
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+
+:CalendarSettingsShape
+  a sh:NodeShape ;
+  sh:targetSubjectsOf dct:source ;
+
+  sh:property [
+    sh:path dct:source ;
+    sh:nodeKind sh:IRI ; sh:minCount 1 ;
+    sh:name "Source feed URL" ;
+    sh:description "ICS feed URL. Repeats — one value per feed." ;
+  ] ,
+  [
+    sh:path dct:format ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:in ( "ics" "google" ) ;
+    sh:name "Feed format" ;
+    sh:description "ics or google — selects the parser sol-calendar uses." ;
+  ] ,
+  [
+    sh:path ui:view ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:in ( "agenda" "month" "week" "day" ) ;
+    sh:name "View" ;
+    sh:description "Display mode: agenda, month, week, or day." ;
+  ] ,
+  [
+    sh:path time:days ;
+    sh:datatype xsd:integer ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Window (days)" ;
+    sh:description "How many days of events to fetch and display." ;
+  ] ,
+  [
+    sh:path schema:numberOfItems ;
+    sh:datatype xsd:integer ; sh:minCount 0 ; sh:maxCount 1 ;
+    sh:name "Max events" ;
+    sh:description "Optional cap on rendered events." ;
+  ] .
