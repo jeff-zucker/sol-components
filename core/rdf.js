@@ -24,7 +24,14 @@ class Rdf {
 
   // Term constructors
   sym(uri)                         { return _lib.sym(uri); }
-  literal(value, langOrDatatype)   { return _lib.literal(value, langOrDatatype); }
+  // rdflib.literal accepts either (value, langOrDatatype) — second arg
+  // is the language tag if a string, or the datatype if a NamedNode —
+  // or (value, lang, datatype). Pass through whichever form the caller
+  // used so typed literals like "45.52"^^xsd:decimal survive.
+  literal(value, langOrDatatype, datatype) {
+    if (datatype !== undefined) return _lib.literal(value, langOrDatatype, datatype);
+    return _lib.literal(value, langOrDatatype);
+  }
   blankNode(id)                    { return _lib.blankNode(id); }
 
   // Stores & parsing
@@ -32,9 +39,23 @@ class Rdf {
   parse(text, store, base, type)   { return _lib.parse(text, store, base, type); }
 
   // Shared singleton store — interop point with solid-logic / solid-ui / mashlib.
-  // If one of those sets its own store first, call `useStore(external)` so we
-  // all share the same rdflib graph and cache.
+  // **When solid-logic's singleton is present on `window`, that's THE store**
+  // — every sol-* component, solid-ui module, mashlib, etc. point at the same
+  // rdflib graph, so cross-component reads/writes are coherent and solid-ui's
+  // captured-at-import-time `kb` references work without any swap dance.
+  // Falls back to a freshly created graph in environments without solid-logic
+  // (unit tests, headless scripts without the singleton wired up).
   get store() {
+    // Always re-probe so consumers reach solid-logic's singleton even if
+    // an early access happened before solid-logic finished loading. Once
+    // solid-logic is up, every call returns ITS store; before then, a
+    // local fresh graph is used and persists until the singleton appears.
+    const sl = (typeof window !== 'undefined') &&
+      (window[Symbol.for('solid-logic-singleton')] || window.SolidLogic);
+    if (sl?.store) {
+      this._store = sl.store;
+      return sl.store;
+    }
     if (!this._store) this._store = _lib.graph();
     return this._store;
   }

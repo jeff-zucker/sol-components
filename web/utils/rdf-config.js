@@ -1,33 +1,42 @@
 /**
- * rdf-config.js — read a schema.org PropertyValue config block from a
- * Turtle file as a flat {name: value} JS object.
+ * rdf-config.js — read a subject's direct properties from a Turtle
+ * file as a flat `{ predicateUri: value | value[] }` JS object.
  *
  * Companion to `feed-fetch.js#parseSourceList`. Config files follow
- * the pattern:
+ * the direct-predicate pattern documented in
+ * claude/plans/PLAN-vocab-migration.md:
  *
- *   @prefix schema: <https://schema.org/> .
+ *   @prefix geo:    <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+ *   @prefix schema: <http://schema.org/> .
+ *
  *   <#Settings>
- *     schema:additionalProperty <#latitude>, <#longitude>, <#place> .
+ *     geo:lat 45.52 ;
+ *     geo:long -122.68 ;
+ *     schema:addressLocality "Portland, OR" .
  *
- *   <#latitude>  a schema:PropertyValue ; schema:name "latitude"@en
- *                                       ; schema:value 45.52 .
- *   <#longitude> a schema:PropertyValue ; schema:name "longitude"@en
- *                                       ; schema:value -122.68 .
- *   <#place>     a schema:PropertyValue ; schema:name "place"@en
- *                                       ; schema:value "Portland, OR" .
+ * resolves to:
  *
- * and resolve to:
+ *   {
+ *     'http://www.w3.org/2003/01/geo/wgs84_pos#lat':       45.52,
+ *     'http://www.w3.org/2003/01/geo/wgs84_pos#long':     -122.68,
+ *     'http://schema.org/addressLocality':                "Portland, OR",
+ *   }
  *
- *   { latitude: 45.52, longitude: -122.68, place: "Portland, OR" }
- *
- * The PropertyValue pattern keeps the file free of invented predicates —
- * only standard schema.org terms (PropertyValue, name, value,
- * additionalProperty) appear in predicate position. Setting names are
- * literal strings, so renaming a setting doesn't break the file's URI
- * contract.
+ * Multi-valued predicates (`dct:source <a>, <b>, <c>`) come back as
+ * arrays in document order; single-valued predicates stay scalar.
  *
  * Literal values are typed from their xsd datatype (`true` → boolean,
- * `9` → integer, `45.52` → decimal, anything else → string).
+ * `9` → integer, `45.52` → decimal, anything else → string). NamedNode
+ * objects come back as their URI string.
+ *
+ * Component code is responsible for the predicate URI → its own
+ * internal name mapping. See `sol-weather.js` for the canonical
+ * example. The reader stays component-agnostic.
+ *
+ * The previous PropertyValue indirection pattern (schema:additionalProperty
+ * → PropertyValue node → schema:name + schema:value) was migrated out
+ * in favour of direct predicates. See PLAN-vocab-migration.md for the
+ * predicate choices and the rationale.
  *
  * All RDF goes through `core/rdf.js`, so a page that already has rdflib
  * live (via importmap or vendored ESM) shares it here.
@@ -71,18 +80,12 @@ function typedValue(node) {
   }
 }
 
-/** Schema.org URI builder. Always http:// — the project standardises on
- *  the HTTP form so data, shapes, and code all match by exact string
- *  (IRIs are case-and-scheme-sensitive in RDF). */
-const SCHEMA = 'http://schema.org/';
-const schema = (local) => SCHEMA + local;
-
 /**
- * Fetch a TTL file and return one subject's PropertyValue children as
- * a flat JS object.
+ * Fetch a TTL file and return one subject's direct properties as a
+ * flat JS object keyed by predicate URI.
  *
  * @param  {string} sourceUri  "file.ttl#Subject" — the fragment is required.
- * @return {Promise<Object>}   { name: value, ... }
+ * @return {Promise<Object>}   { predicateUri: value | value[], ... }
  * @throws on HTTP failure, on a missing rdflib, on a missing fragment.
  */
 export async function loadConfig(sourceUri) {
@@ -101,35 +104,20 @@ export async function loadConfig(sourceUri) {
   const store = rdf.graph();
   rdf.parse(text, store, fileUri, 'text/turtle');
 
-  const subject       = rdf.sym(abs);
-  const addProperty   = rdf.sym(schema('additionalProperty'));
-  const schemaName    = rdf.sym(schema('name'));
-  const schemaValue   = rdf.sym(schema('value'));
-
+  const subject = rdf.sym(abs);
   const out = {};
-  // Walk <#Settings> schema:additionalProperty ?pv, then read each
-  // PropertyValue's name + value pair. The PropertyValue rdf:type
-  // isn't enforced — the pattern is implicit from the predicates used.
-  //
-  // Same name allowed more than once. Two TTL shapes are equivalent
-  // and both yield an array on `out`:
-  //   1. Repeated PropertyValues:
-  //        [ schema:name "source" ; schema:value <a> ],
-  //        [ schema:name "source" ; schema:value <b> ]
-  //   2. One PropertyValue with multiple schema:value statements:
-  //        [ schema:name "source" ; schema:value <a>, <b> ]
-  // A single value stays a scalar (preserving the prior contract).
-  const append = (name, value) => {
-    if (Array.isArray(out[name]))   out[name].push(value);
-    else if (name in out)           out[name] = [out[name], value];
-    else                            out[name] = value;
+
+  // Walk every triple with the requested subject. Group by predicate;
+  // arrays accumulate when a predicate has more than one object.
+  const append = (predUri, value) => {
+    if (Array.isArray(out[predUri])) out[predUri].push(value);
+    else if (predUri in out)         out[predUri] = [out[predUri], value];
+    else                             out[predUri] = value;
   };
-  for (const st of store.statementsMatching(subject, addProperty, null)) {
-    const pv = st.object;
-    const nameNode  = store.any(pv, schemaName, null);
-    if (!nameNode) continue;
-    const values = store.each(pv, schemaValue, null);
-    for (const v of values) append(nameNode.value, typedValue(v));
+  for (const st of store.statementsMatching(subject, null, null)) {
+    // Skip rdf:type — it's a class declaration, not a setting value.
+    if (st.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') continue;
+    append(st.predicate.value, typedValue(st.object));
   }
   return out;
 }

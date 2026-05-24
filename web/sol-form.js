@@ -31,6 +31,7 @@ import { adopt }  from '../core/adopt.js';
 import { rdf }    from '../core/rdf.js';
 import { loadRdfStore } from '../core/rdf-utils.js';
 import { UI, RDF, readFormParts, findForm } from '../core/form-utils.js';
+import { parseShape, renderRecordForm } from '../core/shape-to-form.js';
 import { CSS as FORM_CSS, sheet as formSheet } from './styles/sol-form-css.js';
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
@@ -118,7 +119,8 @@ class SolForm extends HTMLElement {
 
   async _load() {
     const source = this.getAttribute('source');
-    if (!source) return;
+    const shape  = this.getAttribute('shape');
+    if (!source && !shape) return;
 
     const body = this.shadowRoot.querySelector('.sol-form-body');
     body.innerHTML = '<div class="sol-form-loading">Loading form…</div>';
@@ -127,9 +129,13 @@ class SolForm extends HTMLElement {
     clearTimeout(this._saveTimer);
 
     try {
-      const formStore = await loadRdfStore(source);
-      const formRoot = findForm(formStore, source);
-      if (!formRoot) throw new Error('No ui:Form found in ' + source);
+      // Form definition (optional in shape-driven mode).
+      let formStore = null, formRoot = null;
+      if (source) {
+        formStore = await loadRdfStore(source);
+        formRoot = findForm(formStore, source);
+        if (!formRoot) throw new Error('No ui:Form found in ' + source);
+      }
 
       const subjectUri = this.getAttribute('subject');
       const saveTo     = this.getAttribute('save-to');
@@ -144,7 +150,8 @@ class SolForm extends HTMLElement {
       } else {
         // Use save-to as the doc URL when given; otherwise a synthetic local
         // base — _docUrl stays null until the user supplies a real location.
-        const baseDoc = saveTo || new URL('_new.ttl', new URL(source, document.baseURI)).href;
+        const baseUri = source || shape;
+        const baseDoc = saveTo || new URL('_new.ttl', new URL(baseUri, document.baseURI)).href;
         dataStore = this._initStore(baseDoc);
         docNode = rdf.sym(baseDoc);
         subjectNode = rdf.blankNode();
@@ -156,14 +163,22 @@ class SolForm extends HTMLElement {
       this._subject  = subjectNode;
       this._docNode  = docNode;
       this._docUrl   = docUrl;
-      this._ordered  = this._hasOrdering(formStore, formRoot);
+      this._ordered  = formStore ? this._hasOrdering(formStore, formRoot) : false;
 
-      this._mergeFormDefs(dataStore, formStore);
-      this._renderForm(body, dataStore, subjectNode, formRoot, docNode);
+      if (formStore) {
+        // Classic form-driven path: parse the ui:Form and hand to solid-ui.
+        this._mergeFormDefs(dataStore, formStore);
+        if (shape) await this._loadShape(shape);
+        this._renderForm(body, dataStore, subjectNode, formRoot, docNode);
+      } else {
+        // Shape-driven path: no form TTL, the SHACL shape IS the schema.
+        // sol-form walks the shape and generates one labelled field per
+        // sh:qualifiedValueShape entry (PropertyValue-style settings).
+        await this._loadShape(shape);
+        this._renderFromShape(body, dataStore, subjectNode, docNode);
+      }
 
       this._showSaveButton(this._ordered);
-
-      if (this.getAttribute('shape')) await this._loadShape(this.getAttribute('shape'));
 
     } catch (err) {
       body.innerHTML = `<div class="sol-form-error">${this._esc(err.message)}</div>`;
@@ -172,20 +187,21 @@ class SolForm extends HTMLElement {
   }
 
   _initStore(docUrl) {
-    const store = rdf.graph();
-    const fetcher = new (rdf.Fetcher)(store);
-    store.fetcher = fetcher;
-    const updater = new (rdf.UpdateManager)(store);
-    store.updater = updater;
+    // Use the shared singleton (solid-logic's when available; otherwise
+    // swc's own lazy graph). That's the same graph solid-ui's modules
+    // captured at import time — see core/rdf.js. Everything we add here
+    // is immediately visible to solid-ui's field renderers.
+    const store = rdf.store;
+    if (!store.fetcher) store.fetcher = new (rdf.Fetcher)(store);
+    if (!store.updater) store.updater = new (rdf.UpdateManager)(store);
 
-    // Mark the doc as editable so solid-ui fields render as inputs, but
-    // intercept solid-ui's PATCH attempts — persistence is handled here so
-    // we can debounce, prompt for a URL, etc.
-    updater.editable = (uri) => {
+    // Mark the doc as editable so solid-ui fields render as inputs.
+    store.updater.editable = (uri) => {
       if (typeof uri === 'object') uri = uri?.value || uri?.uri;
       return true;
     };
-    updater.update = (deletions, insertions, callback) => {
+    // Swallow inline PATCH attempts — persistence is handled by _save.
+    store.updater.update = (deletions, insertions, callback) => {
       if (callback) callback(docUrl, true);
     };
 
@@ -238,37 +254,41 @@ class SolForm extends HTMLElement {
   _renderForm(body, store, subject, form, doc) {
     body.innerHTML = '';
 
-    const fieldFunction = window.UI?.widgets?.forms?.fieldFunction;
+    // Bundled solid-ui exposes fieldFunction at window.UI.widgets.fieldFunction
+    // (flattened). The older API put it at widgets.forms.fieldFunction. Accept
+    // either so sol-form works against both shapes.
+    const fieldFunction =
+      window.UI?.widgets?.fieldFunction ??
+      window.UI?.widgets?.forms?.fieldFunction;
     if (typeof fieldFunction !== 'function') {
       body.innerHTML =
         '<div class="sol-form-error">solid-ui is not loaded — <code>&lt;sol-form&gt;</code> requires it for rendering. Add solid-ui to the page.</div>';
       return;
     }
 
-    const origStore = this._swapSolidLogicStore(store);
-    try {
-      const renderFn = fieldFunction(document, form);
-      if (typeof renderFn !== 'function') {
-        body.innerHTML =
-          '<div class="sol-form-error">solid-ui could not resolve a renderer for the form root (check the form definition reaches solid-logic).</div>';
-        return;
-      }
-      const widget = renderFn(document, body, {}, subject, form, doc, (ok, msg) => {
-        this.dispatchEvent(new CustomEvent('sol-form-change', {
-          bubbles: true, composed: true,
-          detail: { subject: this._subject, ok, message: msg },
-        }));
-        if (ok && !this._ordered) this._scheduleAutoSave();
-      });
-      if (widget && !body.contains(widget)) body.appendChild(widget);
-    } finally {
-      this._restoreSolidLogicStore(origStore);
+    // _initStore returned solid-logic's singleton store when available,
+    // so solid-ui's captured `kb` already IS `store`. Nothing to swap.
+    const renderFn = fieldFunction(document, form);
+    if (typeof renderFn !== 'function') {
+      body.innerHTML =
+        '<div class="sol-form-error">solid-ui could not resolve a renderer for the form root (check the form definition reaches solid-logic).</div>';
+      return;
     }
+    const widget = renderFn(document, body, {}, subject, form, doc, (ok, msg) => {
+      this.dispatchEvent(new CustomEvent('sol-form-change', {
+        bubbles: true, composed: true,
+        detail: { subject: this._subject, ok, message: msg },
+      }));
+      if (ok && !this._ordered) this._scheduleAutoSave();
+    });
+    if (widget && !body.contains(widget)) body.appendChild(widget);
   }
 
   // solid-logic shares state across module copies via a Symbol.for-keyed
-  // singleton on the global object — reach it the same way it does so our
-  // store is what solid-ui's field widgets see.
+  // singleton on the global object — same lookup it uses internally.
+  // When present, this singleton's .store IS sol-form's data store
+  // (see _initStore), so there's no swap/restore dance: every component
+  // shares the same graph.
   _solidLogicSingleton() {
     const win = typeof window !== 'undefined' ? window : null;
     if (!win) return null;
@@ -276,19 +296,47 @@ class SolForm extends HTMLElement {
     return win[sym] || win.SolidLogic || null;
   }
 
-  _swapSolidLogicStore(store) {
-    const sl = this._solidLogicSingleton();
-    if (!sl) return null;
-    const orig = sl.store || null;
-    sl.store = store;
-    if (typeof window !== 'undefined' && window.UI) window.UI.store = store;
-    return { sl, orig };
-  }
+  // ── shape-driven rendering ──
+  //
+  // When sol-form is given a `shape` attribute and no `source` form,
+  // the SHACL shape IS the schema. The heavy lifting (parsing the
+  // SHACL, walking sh:property entries with sh:qualifiedValueShape,
+  // building typed inputs, binding them back to the store) lives in
+  // `core/shape-to-form.js` so it can be reused by sol-tree-edit,
+  // future view-mode renderers, and the standalone shape2form demo.
+  //
+  // sol-form's job here is just: parse + render + wire the onChange
+  // callback to the existing autosave + sol-form-change event flow.
 
-  _restoreSolidLogicStore(saved) {
-    if (!saved) return;
-    if (saved.sl && saved.orig) saved.sl.store = saved.orig;
-    if (typeof window !== 'undefined' && window.UI && saved.orig) window.UI.store = saved.orig;
+  _renderFromShape(body, store, subject, doc) {
+    body.innerHTML = '';
+    let parsed;
+    try {
+      parsed = parseShape(this._shapeText, this.getAttribute('shape') || '');
+    } catch (err) {
+      body.innerHTML = `<div class="sol-form-error">Failed to parse shape: ${this._esc(err.message)}</div>`;
+      return;
+    }
+    if (!parsed.properties.length) {
+      body.innerHTML = '<div class="sol-form-error">Shape declares no qualified properties — nothing to render.</div>';
+      return;
+    }
+    const readOnly = this.hasAttribute('no-edit');
+    this._shapeCleanup?.();
+    this._shapeCleanup = renderRecordForm(body, store, subject, parsed.properties, {
+      doc,
+      readOnly,
+      onChange: () => {
+        this.dispatchEvent(new CustomEvent('sol-form-change', {
+          bubbles: true, composed: true,
+          detail: { subject: this._subject, ok: true, message: '' },
+        }));
+        if (!this._ordered) this._scheduleAutoSave();
+      },
+    });
+    // Hide the save bar entirely when read-only — nothing to save.
+    const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
+    if (saveBar) saveBar.style.display = readOnly ? 'none' : '';
   }
 
   // ── save ──

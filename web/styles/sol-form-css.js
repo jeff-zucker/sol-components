@@ -210,6 +210,154 @@ export const CSS = `
   }
   .sol-form-save-status.ok { color: #16a34a; }
   .sol-form-save-status.err { color: #c00; }
+
+  /* ── shape-driven mode ── */
+  .sol-form-shape-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9em;
+  }
+  .sol-form-shape-key {
+    display: grid;
+    grid-template-columns: minmax(10rem, 14rem) 1fr;
+    gap: 0.65em 1rem;
+    align-items: start;
+  }
+  .sol-form-shape-label {
+    padding-top: 0.4em;
+    font-weight: 600;
+    color: var(--text, #2c3e50);
+    user-select: none;
+  }
+  .sol-form-shape-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    min-width: 0;
+  }
+  .sol-form-shape-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    min-width: 0;
+  }
+  .sol-form-shape-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    font-size: 0.95em;
+    padding: 0.45em 0.55em;
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--surface, #fff);
+    color: var(--text, #000);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .sol-form-shape-input:focus-visible {
+    outline: none;
+    border-color: var(--accent, #1F618D);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #1F618D) 22%, transparent);
+  }
+  .sol-form-shape-input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 1.1em;
+    height: 1.1em;
+    padding: 0;
+  }
+  .sol-form-shape-add,
+  .sol-form-shape-remove {
+    grid-column: 2;
+    align-self: start;
+    font: inherit;
+    font-size: 0.85em;
+    padding: 0.25em 0.6em;
+    border: 1px solid var(--border, #d0d0d0);
+    background: var(--surface, #fff);
+    color: var(--text-muted, #4d4d4d);
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+  }
+  .sol-form-shape-add:hover {
+    border-color: var(--accent, #1F618D);
+    color: var(--accent, #1F618D);
+  }
+  .sol-form-shape-remove {
+    flex: 0 0 auto;
+    width: 1.8em;
+    padding: 0;
+    line-height: 1;
+    color: var(--error, #c00);
+    border-color: color-mix(in srgb, var(--error, #c00) 35%, var(--border, #d0d0d0));
+  }
+  .sol-form-shape-remove:hover {
+    background: color-mix(in srgb, var(--error, #c00) 10%, transparent);
+  }
+
+  /* Lay the whole shape-driven form out as a grid so labels line up
+     in a column across every field, regardless of which solid-ui
+     widget renders the row. Each row container uses display:contents
+     so the widget's emitted label + input become direct grid items. */
+  .sol-form-shape-fields {
+    display: grid;
+    grid-template-columns: minmax(8rem, max-content) 1fr;
+    column-gap: 1rem;
+    row-gap: 0.5rem;
+    align-items: baseline;
+    width: 100%;
+  }
+  .sol-form-shape-fields > .sol-form-shape-key {
+    display: contents;
+  }
+  /* solid-ui's labels: formFieldName for field types, choiceBox-label
+     for Choice. Force right-align + first column. */
+  .sol-form-shape-fields .formFieldName,
+  .sol-form-shape-fields .choiceBox-label {
+    grid-column: 1;
+    justify-self: end;
+    text-align: right;
+    color: var(--accent, #1F618D);
+    font-weight: 500;
+    padding-top: 0.4em;
+  }
+  /* solid-ui's value containers: formFieldValue for fields, choiceBox-
+     selectBox for Choice. Take the input column and stretch. */
+  .sol-form-shape-fields .formFieldValue,
+  .sol-form-shape-fields .choiceBox-selectBox {
+    grid-column: 2;
+    justify-self: stretch;
+    min-width: 0;
+  }
+  .sol-form-shape-fields .formFieldValue > input,
+  .sol-form-shape-fields .formFieldValue > select,
+  .sol-form-shape-fields .formFieldValue > textarea,
+  .sol-form-shape-fields .choiceBox-selectBox select {
+    width: 100%;
+    max-width: 28rem;
+    box-sizing: border-box;
+  }
+  /* solid-ui's Multiple emits a wrapping container with each item as a
+     row; align its label too. */
+  .sol-form-shape-fields .choiceBox {
+    display: contents;
+  }
+
+  /* Read-only ("no-edit") mode: inputs render but the user can't
+     change them. Light cosmetic shift to telegraph the mode. */
+  .sol-form-shape-readonly .sol-form-shape-input[readonly],
+  .sol-form-shape-readonly .sol-form-shape-input:disabled {
+    background: color-mix(in srgb, var(--surface, #fff) 90%, var(--border, #d0d0d0));
+    color: var(--text-muted, #4d4d4d);
+    cursor: default;
+  }
+  .sol-form-shape-readonly .sol-form-shape-input[readonly]:focus-visible,
+  .sol-form-shape-readonly .sol-form-shape-input:disabled:focus-visible {
+    outline: 1px dashed var(--border, #d0d0d0);
+    box-shadow: none;
+  }
+  .sol-form-shape-empty {
+    color: var(--text-muted, #4d4d4d);
+    font-style: italic;
+  }
 `;
 
 export const sheet = sheetFrom(CSS);

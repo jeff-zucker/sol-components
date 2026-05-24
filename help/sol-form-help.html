@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-form Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+
+  <!-- core/shape-to-form.js needs rdflib at runtime. Paths are relative
+       to this file (help/ is one level below project root). -->
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib": "../dist/vendor/rdflib.js",
+      "n3":     "../dist/vendor/n3.js"
+    }
+  }
+  </script>
+
+  <style>
+    /* Same full-height tab layout as the other component help pages
+       (see help/sol-feed-help.html for the canonical version). */
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           margin: 0; padding: 0; max-width: none; color: var(--text, #2c3e50);
+           background: var(--bg, transparent); font-size: var(--font-size, 20px);
+           display: flex; flex-direction: column; overflow: hidden; }
+    h1 { margin: 0 .9rem .2rem; margin-top: 0; }
+    .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
+    h2 { margin-bottom: .5rem; }
+    pre { background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
+          border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
+          overflow-x: auto; font-size: .85rem; line-height: 1.5; margin: .5rem 0; }
+    code { font-family: 'Fira Code', 'Consolas', monospace; }
+
+    .tabs { display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
+            border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem; }
+    .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
+                   font-size: .95rem; color: var(--text-muted, #7f8c8d);
+                   border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tabs button[aria-selected="true"] { color: var(--text, #2c3e50);
+                   border-bottom-color: var(--accent, #3498db); font-weight: 600; }
+    .tabs button:hover { color: var(--text, #2c3e50); }
+    .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
+    #tab-attr, #tab-modes, #tab-mapping, #tab-script { max-width: 960px; }
+
+    /* ── Demo tab ──────────────────────────────────────────────────── */
+    #tab-demo .demo-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+      max-width: 1200px;
+    }
+    @media (max-width: 880px) { #tab-demo .demo-grid { grid-template-columns: 1fr; } }
+
+    #tab-demo .panel {
+      border: 1px solid var(--border, #d0d0d0);
+      border-radius: 6px;
+      background: var(--surface, #fff);
+      overflow: hidden;
+    }
+    #tab-demo .panel-head {
+      padding: .6rem 1rem;
+      border-bottom: 1px solid var(--border, #d0d0d0);
+      background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--accent, #1F618D) 4%, var(--surface, #fff)),
+        var(--surface, #fff));
+      font-weight: 600;
+      font-size: .85rem;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    #tab-demo .panel-head .label { color: var(--accent, #1F618D); }
+    #tab-demo .panel-head .hint  { font-weight: 400; color: var(--text-muted, #4d4d4d); font-size: .75rem; }
+    #tab-demo .panel-body { padding: 1rem 1.25rem 1.25rem; }
+
+    /* Turtle syntax highlight palette — match the sol-query-help style. */
+    pre.shacl {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      font-size: .78rem;
+      line-height: 1.55;
+      background: var(--code-bg, #fdf6e3);
+      color: var(--text, #2c3e50);
+      border: 0;
+      border-radius: 0;
+      max-height: 65vh;
+      overflow: auto;
+    }
+    pre.shacl .kw    { color: #859900; }
+    pre.shacl .uri   { color: #268bd2; }
+    pre.shacl .lit   { color: #cb4b16; }
+    pre.shacl .cmt   { color: #93a1a1; font-style: italic; }
+
+    /* sol-form-shape-* classes are shared with sol-form's shadow CSS;
+       restate them in light DOM so the embedded demo renders without
+       instantiating a <sol-form> element. */
+    .sol-form-shape-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+    .sol-form-shape-key {
+      display: grid;
+      grid-template-columns: minmax(8rem, 12rem) 1fr;
+      gap: 0.5rem 1rem;
+      align-items: start;
+    }
+    .sol-form-shape-label {
+      padding-top: 0.4em;
+      font-weight: 600;
+      color: var(--accent, #1F618D);
+      user-select: none;
+      font-size: 0.92rem;
+    }
+    .sol-form-shape-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+    .sol-form-shape-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-width: 0;
+    }
+    .sol-form-shape-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      font: inherit;
+      font-size: 0.92rem;
+      padding: 0.45em 0.55em;
+      border: 1px solid var(--border, #d0d0d0);
+      border-radius: 4px;
+      background: var(--surface, #fff);
+      color: var(--text, #000);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .sol-form-shape-input:focus-visible {
+      outline: none;
+      border-color: var(--accent, #1F618D);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #1F618D) 22%, transparent);
+    }
+
+    .change-log {
+      margin: 1.25rem 0 0;
+      padding: 0.75rem 1rem;
+      border-left: 3px solid var(--accent, #1F618D);
+      background: color-mix(in srgb, var(--accent, #1F618D) 4%, var(--surface, #fff));
+      font-size: 0.85rem;
+      max-height: 12rem;
+      overflow-y: auto;
+    }
+    .change-log h4 {
+      margin: 0 0 0.4rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted, #4d4d4d);
+    }
+    .change-log .change-entry {
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      font-size: 0.78rem;
+      color: var(--text, #000);
+      margin-bottom: 0.2rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .change-log .empty {
+      color: var(--text-muted, #4d4d4d);
+      font-style: italic;
+    }
+    .loading, .error {
+      padding: 1rem;
+      color: var(--text-muted, #4d4d4d);
+      font-style: italic;
+    }
+    .error { color: var(--error, #c00); }
+
+    /* SHACL-mapping table for the Mapping tab. */
+    table.mapping {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 880px;
+      font-size: 0.92rem;
+    }
+    table.mapping th, table.mapping td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid var(--border-soft, #e0e0e0);
+    }
+    table.mapping th {
+      background: var(--th-bg, #f0f4f8);
+      font-weight: 600;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted, #4d4d4d);
+    }
+    table.mapping td:first-child, table.mapping td:nth-child(2) {
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>sol-form component</h1>
+  <p class="page-intro">A generic editable form bound to RDF data. Two paths:
+    <b>shape-driven</b> &mdash; point it at a SHACL shape and a data document;
+    sol-form generates inputs from the shape and auto-saves edits to the
+    document. Or <b>form-driven</b> (legacy) &mdash; supply a hand-authored
+    <code>ui:Form</code> definition and let solid-ui's form widgets render
+    it. Both store data the same way; the difference is whether the form
+    layout comes from a SHACL shape (computed) or a TTL file (authored).</p>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="sol-form documentation">
+    <button role="tab" aria-selected="true"  aria-controls="tab-demo"    id="tabbtn-demo">Demo</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-attr"    id="tabbtn-attr"    tabindex="-1">Attributes</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-modes"   id="tabbtn-modes"   tabindex="-1">Modes</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-mapping" id="tabbtn-mapping" tabindex="-1">SHACL mapping</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-script"  id="tabbtn-script"  tabindex="-1">CLI</button>
+  </div>
+
+  <!-- ──────────────────────────────  Demo  ────────────────────────── -->
+  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
+    <p style="max-width:960px; margin:0 0 1rem;">
+      A read-only shape-to-form preview. The SHACL shape on the left is
+      the real <code>shapes/weather-settings.shacl</code> file. The form
+      on the right is generated from it by <code>core/shape-to-form.js</code>
+      with the <code>no-edit</code> attribute &mdash; inputs are visible but
+      not editable. To try the editable version, open dk-settings &rarr; Weather.
+    </p>
+    <div class="demo-grid">
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">shapes/weather-settings.shacl</span>
+          <span class="hint">read-only</span>
+        </header>
+        <pre id="shacl-source" class="shacl loading">Loading SHACL…</pre>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated form &mdash; sol-weather settings</span>
+          <span class="hint">no-edit</span>
+        </header>
+        <div class="panel-body">
+          <div id="form-host" class="loading">Loading form…</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────  Attributes  ────────────────────── -->
+  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
+    <h2>Attributes</h2>
+    <table class="mapping">
+      <thead>
+        <tr><th>Attribute</th><th>Type</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>shape</td>
+          <td>URI</td>
+          <td>SHACL shape file URL. When present (and no <code>source</code>) sol-form runs in shape-driven mode: parses the shape and generates inputs from it. The shape's targeting rules find the editable subject in the data document.</td>
+        </tr>
+        <tr>
+          <td>source</td>
+          <td>URI</td>
+          <td>A hand-authored <code>ui:Form</code> TTL describing the field layout. Triggers form-driven mode: solid-ui renders the form definition. Legacy path; new components use <code>shape</code> instead.</td>
+        </tr>
+        <tr>
+          <td>subject</td>
+          <td>URI with optional #fragment</td>
+          <td>The RDF resource being edited. Fragment pins one specific subject; without a fragment, all subjects matching the shape's targets are in scope (multi-subject view modes to come). Data document URL is the part before the <code>#</code>.</td>
+        </tr>
+        <tr>
+          <td>save-to</td>
+          <td>URI</td>
+          <td>Override for the PUT destination. Defaults to <code>subject</code>'s document URL. Useful when reading from one location and saving to another (e.g. read a template, save to a user's pod).</td>
+        </tr>
+        <tr>
+          <td>no-edit</td>
+          <td>boolean (presence)</td>
+          <td>Render the form as a read-only view: inputs show current values but can't be changed (text/number/url get HTML <code>readonly</code>; selects and checkboxes get <code>disabled</code>); no <code>+ Add</code> / <code>−</code> chrome; save bar hidden. The Demo tab above uses this. Useful for documentation surfaces, sharing a deep-link to "look at this configuration," or anywhere the same shape needs both an editor and a viewer.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:1.5rem">Events</h2>
+    <table class="mapping">
+      <thead><tr><th>Event</th><th>Detail</th><th>When</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>sol-form-change</td>
+          <td><code>{ subject, ok, message }</code></td>
+          <td>After every field commit (typing, picking from a select, etc.). Fires before the debounced auto-save.</td>
+        </tr>
+        <tr>
+          <td>sol-form-save</td>
+          <td><code>{ subject, turtle, target }</code></td>
+          <td>After a successful PUT. <code>turtle</code> is the serialized document; <code>target</code> is the URL it was written to.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ────────────────────────────  Modes  ─────────────────────────── -->
+  <div class="tab-panel" id="tab-modes" role="tabpanel" aria-labelledby="tabbtn-modes" tabindex="0">
+    <h2>Shape-driven vs form-driven</h2>
+    <p>sol-form has two rendering paths. The choice depends on whether you have a SHACL shape (use shape-driven) or a hand-authored <code>ui:Form</code> TTL (form-driven). They produce identical edits to the data file.</p>
+
+    <h2 style="margin-top:1rem">Shape-driven (recommended for new components)</h2>
+    <pre>&lt;sol-form
+  shape="shapes/weather-settings.shacl"
+  subject="data/weather.ttl#Settings"&gt;
+&lt;/sol-form&gt;</pre>
+    <p>sol-form fetches the SHACL shape, calls <code>parseShape()</code> in <code>core/shape-to-form.js</code> to extract a normalized property descriptor list, and renders one input per property. Cardinality, datatype, enum, and nodeKind constraints all come from the shape — no separate form file needed.</p>
+    <p>The SHACL shape is also handed to <code>rdf-validate-shacl</code> before every save. Edits that violate the shape surface as validation errors and the PUT is skipped.</p>
+
+    <h2 style="margin-top:1rem">Form-driven (legacy)</h2>
+    <pre>&lt;sol-form
+  source="data/menu-form.ttl"
+  subject="data/menu.ttl#MainMenu"&gt;
+&lt;/sol-form&gt;</pre>
+    <p>sol-form fetches the <code>ui:Form</code> definition and hands it to solid-ui's form widgets. The form file is hand-authored TTL using the <code>http://www.w3.org/ns/ui#</code> vocabulary (<code>ui:SingleLineTextField</code>, <code>ui:Multiple</code>, <code>ui:Choice</code> + <code>ui:from</code>, etc.). Still used by sol-menu's editor.</p>
+
+    <h2 style="margin-top:1rem">Where the form definition lives</h2>
+    <table class="mapping">
+      <thead><tr><th>Mode</th><th>Shape</th><th>Data</th><th>Form</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Form-driven</td>
+          <td>Optional (validation only)</td>
+          <td>TTL on disk; read &amp; auto-saved</td>
+          <td>TTL on disk; read-only</td>
+        </tr>
+        <tr>
+          <td>Shape-driven</td>
+          <td>TTL on disk; read-only</td>
+          <td>TTL on disk; read &amp; auto-saved</td>
+          <td><i>Doesn't exist as an artifact</i> — runtime DOM only, computed from the shape</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:.8rem">If you need a persistent form-as-an-artifact in shape-driven mode (for docs, code review, or non-solid-ui tooling), use the <a href="#tab-script">CLI</a> to materialise one from any shape file.</p>
+  </div>
+
+  <!-- ──────────────────────────  SHACL mapping  ──────────────────── -->
+  <div class="tab-panel" id="tab-mapping" role="tabpanel" aria-labelledby="tabbtn-mapping" tabindex="0">
+    <h2>SHACL constructs shape2form recognises</h2>
+    <p>The list below covers the shape-driven path. The runtime renderer in <code>core/shape-to-form.js</code> walks each <code>sh:property</code> entry on the <code>NodeShape</code> and matches against this table.</p>
+
+    <table class="mapping">
+      <thead>
+        <tr><th>SHACL</th><th>Renders as</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>sh:targetSubjectsOf</td><td>&mdash;</td><td>Finds the subject(s) to edit by structural match. <code>sh:targetNode &lt;#X&gt;</code> resolves relative URIs against the shape's URL (not the data's), so it almost never matches what you mean — use <code>sh:targetSubjectsOf</code> instead.</td></tr>
+        <tr><td>sh:property + sh:path</td><td>One row in the form</td><td>Each <code>sh:property</code> describes one editable predicate. The <code>sh:path</code> is the real RDF predicate the input binds to (e.g. <code>geo:lat</code>, <code>schema:timezone</code>, <code>dct:source</code>).</td></tr>
+        <tr><td>sh:datatype xsd:string</td><td>text input</td><td>Single-line text input.</td></tr>
+        <tr><td>sh:datatype xsd:integer</td><td>number input</td><td>Whole-number input.</td></tr>
+        <tr><td>sh:datatype xsd:decimal</td><td>number input</td><td>With <code>step="any"</code> for fractional values.</td></tr>
+        <tr><td>sh:datatype xsd:boolean</td><td>checkbox</td><td>Stored as <code>"true"</code>/<code>"false"</code> typed literal.</td></tr>
+        <tr><td>sh:datatype xsd:anyURI</td><td>url input</td><td>Stored as typed literal. Use <code>sh:nodeKind sh:IRI</code> instead to store as a NamedNode.</td></tr>
+        <tr><td>sh:in (literals)</td><td><code>&lt;select&gt;</code> dropdown</td><td>Enumerated allowed values; the shape's list becomes the options.</td></tr>
+        <tr><td>sh:in (IRIs)</td><td><code>&lt;select&gt;</code> dropdown</td><td>For NamedNode enums (e.g. <code>qudt:SI</code>), the select stores the URI but displays an <code>rdfs:label</code> from the shape — author labels next to the URIs (see <code>shapes/weather-settings.shacl</code> for the pattern).</td></tr>
+        <tr><td>sh:nodeKind sh:IRI</td><td>url input</td><td>Value stored as a NamedNode (<code>&lt;url&gt;</code> in turtle), not a literal.</td></tr>
+        <tr><td>sh:minCount 1</td><td>Required (placeholder seeded)</td><td>If the data has no value for the predicate, a blank one is added on render so the user has somewhere to type.</td></tr>
+        <tr><td>sh:maxCount &gt; 1 or absent</td><td>Repeat controls</td><td>The field renders with <code>+ Add another</code> and <code>−</code> buttons for each value.</td></tr>
+        <tr><td>sh:name</td><td>Label text</td><td>Displayed next to the input.</td></tr>
+        <tr><td>sh:description</td><td>Tooltip</td><td>Set as the label's <code>title</code> attribute.</td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:1rem">Constructs <i>not</i> currently recognised (treated as plain text inputs): <code>sh:pattern</code>, <code>sh:minInclusive</code>, <code>sh:maxInclusive</code>, <code>sh:minLength</code>, <code>sh:maxLength</code>. <code>sh:or</code> and <code>sh:and</code> are in the next batch — see <code>claude/plans/PLAN-shape2form-or-and.md</code>. Adding more is additive: new branches in <code>core/shape-to-form.js</code>'s <code>readShapeProperty</code> and <code>buildShapeInput</code>.</p>
+
+    <h2 style="margin-top:1.5rem">Previously: PropertyValue indirection (now removed)</h2>
+    <p>Earlier versions of shape2form recognised the <code>schema:additionalProperty</code> + <code>sh:qualifiedValueShape</code> pattern (every setting reified as a <code>schema:PropertyValue</code> with <code>schema:name</code> + <code>schema:value</code>). That pattern was migrated out in favour of direct predicates — see <code>claude/plans/PLAN-vocab-migration.md</code>. Component settings now bind to standard W3C / Schema.org / Dublin Core / QUDT / OWL-Time predicates directly.</p>
+    <p>The one remaining use of PropertyValue indirection in the codebase is <code>menu items'</code> <code>ui:attribute</code> Multiple — that's deliberate, because menu Component items carry HTML attributes whose names depend on the element being instantiated (an open schema, where indirection is the right tool).</p>
+  </div>
+
+  <!-- ────────────────────────────  CLI  ───────────────────────────── -->
+  <div class="tab-panel" id="tab-script" role="tabpanel" aria-labelledby="tabbtn-script" tabindex="0">
+    <h2>shape2form CLI</h2>
+    <p>A Node script that emits a static <code>ui:Form</code> TTL from a SHACL shape — the persistent "third artifact" mentioned in the <a href="#tab-modes">Modes</a> tab. Useful for documentation, code review, and consumption by tooling that expects a <code>ui:Form</code> file (other than solid-ui's vanilla renderer — see caveat below).</p>
+
+    <h2 style="margin-top:1rem">Usage</h2>
+    <pre>node scripts/shape2form.mjs &lt;input.shacl&gt; [--out &lt;output.ttl&gt;]
+node scripts/shape2form.mjs &lt;input.shacl&gt; --stdout
+node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
+
+    <h2 style="margin-top:1rem">Example</h2>
+    <p>Running it on the weather shape:</p>
+    <pre>$ node scripts/shape2form.mjs shapes/weather-settings.shacl --stdout
+
+# Generated by scripts/shape2form.mjs from weather-settings.shacl.
+@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix dct: &lt;http://purl.org/dc/terms/&gt; .
+@prefix geo: &lt;http://www.w3.org/2003/01/geo/wgs84_pos#&gt; .
+@prefix schema: &lt;http://schema.org/&gt; .
+@prefix time: &lt;http://www.w3.org/2006/time#&gt; .
+
+:WeatherForm a ui:Form ;
+  ui:label "Weather" ;
+  ui:parts ( :lat :long :addressLocality :conformsToMultiple :hours ) .
+
+:conformsToMultiple a ui:Multiple ;
+  ui:property dct:conformsTo ;
+  ui:label "Unit system(s)s" ;
+  ui:part :conformsTo .
+
+:lat a ui:DecimalField ;
+  ui:property geo:lat ;
+  ui:label "Latitude" ;
+  ui:required true ;
+  rdfs:comment "Decimal latitude (-90 to 90)" .
+
+# … one block per shape property …
+
+:ConformsToType a rdfs:Class .
+:ConformsToType-metric a :ConformsToType ;
+  rdfs:label "metric" ; owl:sameAs &lt;http://qudt.org/vocab/sou/SI&gt; .
+:ConformsToType-imperial a :ConformsToType ;
+  rdfs:label "imperial" ; owl:sameAs &lt;http://qudt.org/vocab/sou/USCustomaryUnits&gt; .</pre>
+
+    <h2 style="margin-top:1rem">SHACL → ui:* mapping</h2>
+    <table class="mapping">
+      <thead><tr><th>SHACL</th><th>ui:* field type</th></tr></thead>
+      <tbody>
+        <tr><td>sh:datatype xsd:string</td><td>ui:SingleLineTextField</td></tr>
+        <tr><td>sh:datatype xsd:integer</td><td>ui:IntegerField</td></tr>
+        <tr><td>sh:datatype xsd:decimal</td><td>ui:DecimalField</td></tr>
+        <tr><td>sh:datatype xsd:boolean</td><td>ui:BooleanField</td></tr>
+        <tr><td>sh:datatype xsd:anyURI</td><td>ui:NamedNodeURIField</td></tr>
+        <tr><td>sh:datatype xsd:date</td><td>ui:DateField</td></tr>
+        <tr><td>sh:datatype xsd:dateTime</td><td>ui:DateTimeField</td></tr>
+        <tr><td>sh:nodeKind sh:IRI</td><td>ui:NamedNodeURIField</td></tr>
+        <tr><td>sh:in (literals)</td><td>ui:Choice + auto-generated rdfs:Class with instances</td></tr>
+        <tr><td>sh:in (IRIs)</td><td>ui:Choice + class whose instances are <code>owl:sameAs</code>-linked to the original URIs (labels copied from the shape's <code>rdfs:label</code> declarations)</td></tr>
+        <tr><td>sh:maxCount &gt; 1 or absent</td><td>wrapped in ui:Multiple</td></tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:1rem">After the direct-predicate migration</h2>
+    <p>After the vocab migration (see <code>claude/plans/PLAN-vocab-migration.md</code>), the generated forms point <code>ui:property</code> at the actual editable predicate — <code>geo:lat</code>, <code>dct:source</code>, <code>schema:timezone</code>, etc. — instead of the old <code>schema:additionalProperty</code> placeholder. <b>The generated forms are now solid-ui-renderable</b> for the first time: drop one into <code>&lt;sol-form source="…this-file.ttl" subject="…data.ttl#X"&gt;</code> for the legacy form-driven path, or use <code>&lt;sol-form shape="…" subject="…"&gt;</code> for the same fields rendered via shape-to-form's runtime.</p>
+  </div>
+
+  <script>
+    // Tab switching — same pattern as the other component help pages.
+    (function () {
+      const tabs = document.querySelectorAll('#tabs [role="tab"]');
+      const panels = document.querySelectorAll('.tab-panel');
+      function select(id) {
+        tabs.forEach(t => {
+          const sel = t.getAttribute('aria-controls') === id;
+          t.setAttribute('aria-selected', sel ? 'true' : 'false');
+          t.tabIndex = sel ? 0 : -1;
+        });
+        panels.forEach(p => p.classList.toggle('active', p.id === id));
+      }
+      tabs.forEach(t => {
+        t.addEventListener('click', () => select(t.getAttribute('aria-controls')));
+      });
+      // Deep-link via hash: #tab-mapping etc. (matches the rest of the help system).
+      if (location.hash && /^#tab-[a-z-]+$/.test(location.hash)) {
+        select(location.hash.slice(1));
+      }
+    })();
+  </script>
+
+  <script type="module">
+    // ── shape2form demo (Demo tab) ────────────────────────────────────
+    //
+    // Loads weather-settings.shacl, parses via core/shape-to-form.js,
+    // renders the form into the right panel against an in-memory rdflib
+    // graph seeded with the Portland weather values. No network PUTs.
+    import { rdf } from '../core/rdf.js';
+    import { parseShape, renderRecordForm } from '../core/shape-to-form.js';
+
+    // parseShape needs an absolute base URI; resolve once.
+    const SHAPE_URL = new URL('../shapes/weather-settings.shacl', document.baseURI).href;
+    const DATA_BASE = 'urn:demo:weather#';
+    const SUBJECT_URI = DATA_BASE + 'Settings';
+
+    // Tiny turtle highlighter — comments, prefixed names, IRIs, literals.
+    function highlightTurtle(text) {
+      const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return esc
+        .replace(/(#[^\n]*)/g,                       '<span class="cmt">$1</span>')
+        .replace(/("[^"]*"(?:@[a-zA-Z-]+|\^\^[^\s,;.()]+)?)/g, '<span class="lit">$1</span>')
+        .replace(/(&lt;[^&\s]*&gt;)/g,               '<span class="uri">$1</span>')
+        .replace(/\b(sh|xsd|schema|rdf|rdfs|ui):([A-Za-z][\w-]*)/g,
+                                                     '<span class="kw">$1:$2</span>')
+        .replace(/(\s)(a)(\s)/g,                     '$1<span class="kw">$2</span>$3');
+    }
+
+    async function init() {
+      const shaclEl = document.getElementById('shacl-source');
+      const formEl  = document.getElementById('form-host');
+      try {
+        const shaclResp = await fetch(SHAPE_URL);
+        if (!shaclResp.ok) throw new Error('Failed to load ' + SHAPE_URL + ': ' + shaclResp.status);
+        const shaclText = await shaclResp.text();
+        shaclEl.classList.remove('loading');
+        shaclEl.innerHTML = highlightTurtle(shaclText);
+
+        const { properties } = parseShape(shaclText, SHAPE_URL);
+
+        // Build an in-memory weather settings record using the direct
+        // predicates from the migrated shape. No PropertyValue indirection
+        // here — the data layout mirrors data/weather.ttl as it ships.
+        const store = rdf.graph();
+        const subject = rdf.sym(SUBJECT_URI);
+        const doc = rdf.sym(DATA_BASE);
+        const lit = (v, dt) => dt
+          ? rdf.literal(v, rdf.sym('http://www.w3.org/2001/XMLSchema#' + dt))
+          : rdf.literal(v);
+        const sym = (uri) => rdf.sym(uri);
+        store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#lat'),         lit('45.52',  'decimal'), doc);
+        store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#long'),        lit('-122.68','decimal'), doc);
+        store.add(subject, sym('http://schema.org/addressLocality'),                   lit('Portland, OR'),       doc);
+        store.add(subject, sym('http://purl.org/dc/terms/conformsTo'),                 sym('http://qudt.org/vocab/sou/SI'),                doc);
+        store.add(subject, sym('http://purl.org/dc/terms/conformsTo'),                 sym('http://qudt.org/vocab/sou/USCustomaryUnits'),  doc);
+        store.add(subject, sym('http://www.w3.org/2006/time#hours'),                   lit('12', 'integer'),      doc);
+
+        formEl.classList.remove('loading');
+        formEl.innerHTML = '';
+        // readOnly: true mirrors the sol-form `no-edit` attribute — the
+        // help page is a documentation surface, not an editor. Real edits
+        // happen in dk-settings against the same store + shape.
+        renderRecordForm(formEl, store, subject, properties, { doc, readOnly: true });
+      } catch (err) {
+        formEl.classList.remove('loading');
+        formEl.innerHTML = '<div class="error">' + err.message + '</div>';
+        console.error('sol-form demo init failed:', err);
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

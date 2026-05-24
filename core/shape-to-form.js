@@ -1,0 +1,402 @@
+// shape-to-form — turn a SHACL shape into an editable form.
+//
+// Pure functions; no DOM ownership beyond the rendering layer, which
+// delegates to solid-ui's form widgets. The intended consumer pattern is:
+//
+//   const { targets, properties } = parseShape(shapeText, shapeUri);
+//   const subjects = findSubjects(store, targets, dataDoc);
+//   const cleanup  = renderRecordForm(container, store, subjects[0], properties, {
+//     doc, onChange: (subj) => { /* persist however the host wants */ },
+//   });
+//
+// Rendering goes through solid-ui's `window.UI.widgets.fieldFunction`
+// for consistency with every other form on the page (sol-form's legacy
+// form-driven path, the menu editor when it used menu-form.ttl, etc.).
+// shape-to-form builds a synthetic ui:Form node in the data store per
+// render, hands it to solid-ui, and collects a cleanup function that
+// removes the synthesized triples on teardown.
+//
+// Mapping (SHACL → ui:* field type):
+//   sh:nodeKind sh:IRI            → ui:NamedNodeURIField
+//   sh:datatype xsd:integer       → ui:IntegerField
+//   sh:datatype xsd:decimal       → ui:DecimalField
+//   sh:datatype xsd:boolean       → ui:BooleanField
+//   sh:datatype xsd:date          → ui:DateField
+//   sh:datatype xsd:dateTime      → ui:DateTimeField
+//   sh:datatype xsd:anyURI        → ui:NamedNodeURIField
+//   sh:datatype xsd:string / fallback → ui:SingleLineTextField
+//
+//   sh:in (IRIs with rdfs:label)  → ui:Choice + ui:from pointing at a
+//                                   synthesized rdfs:Class whose
+//                                   instances are the listed URIs;
+//                                   labels propagate via the rdfs:label
+//                                   already declared in the shape.
+//   sh:in (literals)              → ui:SingleLineTextField fallback —
+//                                   solid-ui's Choice doesn't model
+//                                   literal-instance enums. Authors who
+//                                   need a dropdown should declare the
+//                                   options as URIs with rdfs:label.
+//
+//   sh:maxCount > 1 / unbounded   → wrapped in ui:Multiple, with the
+//                                   ui:* field above as ui:part.
+//   sh:name                       → ui:label
+//   sh:minCount 1                 → ui:required true
+//
+// Read-only mode (`opts.readOnly`) is wired via `store.updater.editable`
+// — solid-ui's fields respect that flag and render as non-editable.
+
+import { rdf } from './rdf.js';
+
+const SH       = 'http://www.w3.org/ns/shacl#';
+const RDF_NS   = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+const RDFS_NS  = 'http://www.w3.org/2000/01/rdf-schema#';
+const UI       = 'http://www.w3.org/ns/ui#';
+const XSD      = 'http://www.w3.org/2001/XMLSchema#';
+
+/**
+ * Parse a SHACL document into a normalized descriptor list.
+ * Pure / sync. Throws if the SHACL fails to parse.
+ *
+ * @param {string} shapeText  raw turtle of the SHACL document
+ * @param {string} baseUri    base URI used to resolve relative refs in the doc
+ * @returns {{ targets: Targets, properties: ShapeProp[] }}
+ */
+export function parseShape(shapeText, baseUri) {
+  const shapeStore = rdf.graph();
+  rdf.parse(shapeText, shapeStore, baseUri, 'text/turtle');
+
+  const nodeShape = shapeStore.any(null,
+    rdf.sym(RDF_NS + 'type'),
+    rdf.sym(SH + 'NodeShape'));
+  if (!nodeShape) {
+    return { targets: { nodes: [], classes: [], subjectsOf: [] }, properties: [] };
+  }
+
+  const targets = {
+    nodes:      shapeStore.each(nodeShape, rdf.sym(SH + 'targetNode')),
+    classes:    shapeStore.each(nodeShape, rdf.sym(SH + 'targetClass')),
+    subjectsOf: shapeStore.each(nodeShape, rdf.sym(SH + 'targetSubjectsOf')),
+  };
+
+  const properties = [];
+  for (const prop of shapeStore.each(nodeShape, rdf.sym(SH + 'property'))) {
+    const desc = readShapeProperty(shapeStore, prop);
+    if (desc) properties.push(desc);
+  }
+  return { targets, properties };
+}
+
+function readShapeProperty(shapeStore, prop) {
+  const path = shapeStore.any(prop, rdf.sym(SH + 'path'));
+  if (!path) return null;
+
+  const minCount = parseInt(shapeStore.anyValue(prop, rdf.sym(SH + 'minCount')) ?? '0', 10);
+  const maxRaw   = shapeStore.anyValue(prop, rdf.sym(SH + 'maxCount'));
+  const maxCount = maxRaw == null ? Infinity : parseInt(maxRaw, 10);
+  const label    = shapeStore.anyValue(prop, rdf.sym(SH + 'name')) ?? null;
+  const description = shapeStore.anyValue(prop, rdf.sym(SH + 'description')) ?? null;
+
+  const dt = shapeStore.any(prop, rdf.sym(SH + 'datatype'));
+  const datatype = dt ? dt.value : null;
+
+  const inList = shapeStore.any(prop, rdf.sym(SH + 'in'));
+  let enumOpts = null, enumLabels = null;
+  if (inList) {
+    const items = collectRdfList(shapeStore, inList);
+    enumOpts = items.map(n => ({ value: n.value, termType: n.termType }));
+    enumLabels = items.map(n => {
+      if (n.termType !== 'NamedNode') return n.value;
+      const lbl = shapeStore.anyValue(n, rdf.sym(RDFS_NS + 'label'));
+      return lbl || n.value;
+    });
+  }
+
+  const nk = shapeStore.any(prop, rdf.sym(SH + 'nodeKind'));
+  const nodeKind = nk ? nk.value : null;
+
+  const key = localPart(path.value);
+
+  return { path, key, datatype, enumOpts, enumLabels, nodeKind, minCount, maxCount, label, description };
+}
+
+function localPart(uri) {
+  const i = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
+  return i === -1 ? uri : uri.slice(i + 1);
+}
+
+function collectRdfList(store, head) {
+  if (!head) return [];
+  if (head.termType === 'Collection' && Array.isArray(head.elements)) {
+    return head.elements;
+  }
+  const FIRST = rdf.sym(RDF_NS + 'first');
+  const REST  = rdf.sym(RDF_NS + 'rest');
+  const NIL   = RDF_NS + 'nil';
+  const out = [];
+  let node = head;
+  while (node && node.value !== NIL) {
+    const first = store.any(node, FIRST);
+    if (first) out.push(first);
+    node = store.any(node, REST);
+  }
+  return out;
+}
+
+/**
+ * Resolve a parsed shape's targets against a data graph → list of
+ * subjects the shape covers.
+ */
+export function findSubjects(store, targets, baseDoc = null) {
+  const seen = new Set();
+  const out = [];
+  const add = (n) => { if (n && !seen.has(n.value)) { seen.add(n.value); out.push(n); } };
+
+  for (const node of targets.nodes) add(node);
+  for (const cls of targets.classes) {
+    for (const s of store.each(null, rdf.sym(RDF_NS + 'type'), cls, baseDoc)) add(s);
+  }
+  for (const pred of targets.subjectsOf) {
+    for (const st of store.statementsMatching(null, pred, null, baseDoc)) add(st.subject);
+  }
+  return out;
+}
+
+/**
+ * Render an editable record form for one subject. Builds a synthetic
+ * ui:Form in the store, hands it to solid-ui's fieldFunction, and
+ * returns a cleanup function that removes the synthesized triples and
+ * detaches the rendered widget.
+ *
+ * @param {HTMLElement} container
+ * @param {Object}      store        rdflib graph (typically rdf.store)
+ * @param {Object}      subject      NamedNode being edited
+ * @param {ShapeProp[]} properties   from parseShape().properties
+ * @param {Object}      [opts]
+ * @param {Object?}     [opts.doc]       named-graph for the data (NamedNode)
+ * @param {Function}    [opts.onChange]  called with (subject) after every mutation
+ * @param {boolean}     [opts.readOnly]  render via solid-ui's read-only path
+ * @returns {Function}                   cleanup
+ */
+export function renderRecordForm(container, store, subject, properties, opts = {}) {
+  const doc = opts.doc ?? null;
+  const onChange = typeof opts.onChange === 'function' ? opts.onChange : () => {};
+  const readOnly = !!opts.readOnly;
+
+  const inner = document.createElement('div');
+  inner.className = 'sol-form-shape-fields';
+  if (readOnly) inner.classList.add('sol-form-shape-readonly');
+  container.appendChild(inner);
+
+  const fieldFunction = window.UI?.widgets?.fieldFunction
+                     ?? window.UI?.widgets?.forms?.fieldFunction;
+  if (typeof fieldFunction !== 'function') {
+    inner.innerHTML = '<div class="sol-form-error">solid-ui is not loaded — required for shape-driven forms.</div>';
+    return () => { if (inner.parentNode === container) container.removeChild(inner); };
+  }
+
+  // Solid-ui's editable flag governs whether fields render as inputs
+  // or as read-only text. Save and restore around the render so other
+  // forms aren't affected.
+  const origEditable = store.updater?.editable;
+  if (readOnly && store.updater) store.updater.editable = () => false;
+
+  // Each render synthesises ui:Form triples that live in the store
+  // alongside the data. They're collected here so the cleanup function
+  // can strip them when the form is torn down — no long-term pollution.
+  const synthesized = [];
+  const add = (s, p, o, g = doc) => {
+    store.add(s, p, o, g);
+    synthesized.push(rdf.sym ? { s, p, o, g } : null);
+  };
+
+  // For each descriptor, build a ui:* field node and hand it (or its
+  // ui:Multiple wrapper) to solid-ui. The widgets sit one-per-row in
+  // the same container; mixing solid-ui-rendered widgets in one list
+  // is supported because each fieldFunction call returns an
+  // independent DOM subtree.
+  for (const desc of properties) {
+    const row = document.createElement('div');
+    row.className = 'sol-form-shape-key';
+    row.dataset.key = desc.key;
+    inner.appendChild(row);
+
+    const fieldNode = buildFieldNode(store, desc, synthesized, doc);
+    if (!fieldNode) {
+      row.textContent = '(unrecognised shape for ' + (desc.label || desc.key) + ')';
+      continue;
+    }
+
+    try {
+      const renderFn = fieldFunction(document, fieldNode);
+      if (typeof renderFn !== 'function') {
+        row.textContent = '(no renderer for ' + (desc.label || desc.key) + ')';
+        continue;
+      }
+      const cb = (ok /*, msg */) => {
+        if (ok) onChange(subject);
+      };
+      const widget = renderFn(document, row, {}, subject, fieldNode, doc, cb);
+      if (widget && !row.contains(widget)) row.appendChild(widget);
+    } catch (err) {
+      row.textContent = err.message;
+      console.error('[shape-to-form]', err);
+    }
+  }
+
+  return () => {
+    // Remove every triple we added during this render so the store
+    // doesn't accumulate dead ui:* metadata across renders.
+    for (const st of synthesized) {
+      if (!st) continue;
+      for (const match of store.statementsMatching(st.s, st.p, st.o, st.g).slice()) {
+        store.remove(match);
+      }
+    }
+    if (readOnly && store.updater && origEditable !== undefined) {
+      store.updater.editable = origEditable;
+    }
+    if (inner.parentNode === container) container.removeChild(inner);
+  };
+}
+
+// Build (and add to the store) the ui:* triples for one descriptor.
+// Returns the form-side node solid-ui should render — that's either the
+// field itself for single-valued, or a wrapping ui:Multiple for
+// multi-valued. Returns null if the descriptor is malformed.
+function buildFieldNode(store, desc, synthesized, doc) {
+  const fieldNode = rdf.blankNode();
+  const fieldType = uiTypeForDescriptor(desc, store, synthesized, doc, fieldNode);
+  if (!fieldType) return null;
+
+  addTriple(store, synthesized, doc, fieldNode, rdf.sym(RDF_NS + 'type'), rdf.sym(fieldType));
+  addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'property'), desc.path);
+  if (desc.label) {
+    addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'label'),
+              rdf.literal(desc.label));
+  }
+  // ui:required true (solid-ui doesn't surface this visibly today but
+  // SHACL min/max are recorded for completeness).
+  if (desc.minCount >= 1 && desc.maxCount === 1) {
+    addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'required'),
+              rdf.literal('true', rdf.sym(XSD + 'boolean')));
+  }
+  // Description — solid-ui's basic fields don't render a tooltip from
+  // this, but rdfs:comment is the conventional slot and any future
+  // help-popover would use it.
+  if (desc.description) {
+    addTriple(store, synthesized, doc, fieldNode, rdf.sym(RDFS_NS + 'comment'),
+              rdf.literal(desc.description));
+  }
+
+  // Multi-valued handling:
+  //
+  //   • IRI-enum (sh:in with NamedNode options) → keep ONE ui:Choice and
+  //     mark it ui:multiselect true. Solid-ui's Choice handler reads that
+  //     flag and renders a single multi-select widget showing every
+  //     selected option simultaneously — instead of multiple parallel
+  //     dropdowns that each show the same first-alphabetical option
+  //     (the "Imperial / Imperial" bug we hit with Multiple-wrap).
+  //
+  //   • Other multi-valued: wrap in ui:Multiple. Solid-ui renders one
+  //     row per value with +/− chrome and reorder controls for ordered
+  //     lists.
+  const isMulti = desc.maxCount > 1 || (desc.maxCount === Infinity && desc.minCount >= 0);
+  if (isMulti) {
+    const fieldType = store.anyValue(fieldNode, rdf.sym(RDF_NS + 'type'));
+    if (fieldType === UI + 'Choice') {
+      addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'multiselect'),
+                rdf.literal('true', rdf.sym(XSD + 'boolean')));
+      return fieldNode;
+    }
+    const multi = rdf.blankNode();
+    addTriple(store, synthesized, doc, multi, rdf.sym(RDF_NS + 'type'), rdf.sym(UI + 'Multiple'));
+    addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'property'), desc.path);
+    addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'part'), fieldNode);
+    if (desc.label) {
+      addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'label'), rdf.literal(desc.label));
+    }
+    return multi;
+  }
+  return fieldNode;
+}
+
+function uiTypeForDescriptor(desc, store, synthesized, doc, fieldNode) {
+  // sh:in with IRI options → ui:Choice + synthesized class.
+  if (desc.enumOpts && desc.enumOpts.length > 0 && desc.enumOpts[0].termType === 'NamedNode') {
+    const choiceClass = synthesizeEnumClass(store, synthesized, doc, desc);
+    addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'from'), choiceClass);
+    return UI + 'Choice';
+  }
+  // sh:in with literal options: no faithful ui:* mapping. Fall back to
+  // a text field — solid-ui renders it; users type the value. (Adding
+  // a class-with-instances mapping would change the stored RDF kind to
+  // a URI, which we don't want here.)
+  if (desc.enumOpts && desc.enumOpts.length > 0) {
+    return UI + 'SingleLineTextField';
+  }
+  // IRI-valued single field.
+  if (isIriKind(desc)) return UI + 'NamedNodeURIField';
+
+  switch (desc.datatype) {
+    case XSD + 'integer': return UI + 'IntegerField';
+    case XSD + 'decimal':
+    case XSD + 'double':
+    case XSD + 'float':   return UI + 'DecimalField';
+    case XSD + 'boolean': return UI + 'BooleanField';
+    case XSD + 'date':    return UI + 'DateField';
+    case XSD + 'dateTime':return UI + 'DateTimeField';
+    case XSD + 'anyURI':  return UI + 'NamedNodeURIField';
+    case XSD + 'string':
+    default:              return UI + 'SingleLineTextField';
+  }
+}
+
+function isIriKind(desc) {
+  return desc.nodeKind === SH + 'IRI' ||
+         desc.nodeKind === SH + 'IRIOrLiteral' ||
+         desc.nodeKind === SH + 'BlankNodeOrIRI';
+}
+
+// Build a unique rdfs:Class and declare each enum URI as an instance of
+// it, propagating rdfs:label from the shape so solid-ui's Choice shows
+// human-friendly text in the dropdown.
+function synthesizeEnumClass(store, synthesized, doc, desc) {
+  const cls = rdf.blankNode();
+  addTriple(store, synthesized, doc, cls, rdf.sym(RDF_NS + 'type'), rdf.sym(RDFS_NS + 'Class'));
+  for (let i = 0; i < desc.enumOpts.length; i++) {
+    const opt = desc.enumOpts[i];
+    const node = rdf.sym(opt.value);
+    addTriple(store, synthesized, doc, node, rdf.sym(RDF_NS + 'type'), cls);
+    const label = desc.enumLabels?.[i];
+    if (label && label !== opt.value) {
+      addTriple(store, synthesized, doc, node, rdf.sym(RDFS_NS + 'label'), rdf.literal(label));
+    }
+  }
+  return cls;
+}
+
+function addTriple(store, synthesized, g, s, p, o) {
+  store.add(s, p, o, g);
+  synthesized.push({ s, p, o, g });
+}
+
+/**
+ * @typedef {Object} Targets
+ * @property {Array} nodes       sh:targetNode values
+ * @property {Array} classes     sh:targetClass values
+ * @property {Array} subjectsOf  sh:targetSubjectsOf values
+ */
+
+/**
+ * @typedef {Object} ShapeProp
+ * @property {Object}    path         NamedNode — sh:path (the real predicate)
+ * @property {string}    key          local part of the path URI (display key)
+ * @property {?string}   datatype     xsd: URI string, or null
+ * @property {?Array}    enumOpts     [{value, termType}, ...] from sh:in, or null
+ * @property {?string[]} enumLabels   per-option rdfs:label (NamedNode opts), or null
+ * @property {?string}   nodeKind     sh:nodeKind URI string, or null
+ * @property {number}    minCount     sh:minCount (default 0)
+ * @property {number}    maxCount     sh:maxCount (default Infinity)
+ * @property {?string}   label        sh:name
+ * @property {?string}   description  sh:description
+ */
