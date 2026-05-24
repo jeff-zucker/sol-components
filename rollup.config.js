@@ -17,6 +17,7 @@ const stubMissingDynamic = () => ({
   name: 'externalize-missing-dynamic',
   resolveId(id) {
     if (id.includes('podz-editor')) return { id, external: true };
+    if (id.includes('data/live-edit/')) return { id, external: true };
     // Stub Node built-ins pulled in transitively (e.g. `node:diagnostics_channel`
     // from Comunica's HTTP stack). They're never executed in the browser.
     if (id.startsWith('node:')) return { id: '\0stub:node-builtin', external: false };

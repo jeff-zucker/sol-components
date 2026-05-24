@@ -18,8 +18,8 @@
   to nest components supports robust modular page creation.
   </ul>
 <!-- 
-<sol-include source="../data/sample-html.html"></sol-include>
-<sol-include source="../data/sample-html.html" trusted></sol-include>
+<sol-include source="data/sample-html.html"></sol-include>
+<sol-include source="data/sample-html.html" trusted></sol-include>
 -->
   <div class="api-block">
     <table class="attr-table">
@@ -89,6 +89,15 @@ The <code>trusted</code> attribute disables the DOMPurify sanitizer.  An HTML pa
 <div class="usage-section">
     <pre><code>&lt;sol-include source="script-containing.html" <i>trusted</i>>&lt;/sol-include></code></pre>
 </div>
+<p>
+<code>trusted</code> also switches the rendered content from
+<em>shadow DOM</em> to <em>light DOM</em>, so host stylesheets
+apply to the included markup. A consumer page can put
+<code>.my-class</code> rules in its main stylesheet and they
+reach the trusted content. Untrusted content stays in shadow
+for isolation, where it is reachable only through CSS custom
+properties.
+</p>
 
 <h2 id="components">Including nested components</h2>
 <p>It is possible to sol-include an html document that has its own sol-include statements as well as other web-components.  If, and only if, the document is marked as <code>trusted</code>, these components will be activated on inclusion.</p>

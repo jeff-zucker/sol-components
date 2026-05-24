@@ -126,7 +126,28 @@ class SolInclude extends HTMLElement {
     const div = document.createElement('div');
     div.className = 'si-content';
     div.innerHTML = html;
-    this.shadowRoot.appendChild(div);
+    // When the consumer marked the source as `trusted`, render into
+    // LIGHT DOM rather than shadow DOM. Trusted content is, by
+    // definition, page-authored — it should inherit the host's
+    // stylesheets so .my-class rules apply, custom-element CSS lands,
+    // etc. The shadow root contains a <slot> in trusted mode so the
+    // light-DOM child still gets projected into the host's box.
+    // Untrusted content stays in shadow for isolation.
+    if (this.hasAttribute('trusted')) {
+      this.appendChild(div);
+    } else {
+      this.shadowRoot.appendChild(div);
+    }
+  }
+
+  // Remove any prior trusted-mode light-DOM render so reload swaps
+  // cleanly without piling stale content next to the new. Called from
+  // _initShadow on every state transition; the trusted append path
+  // can assume it starts clean.
+  _clearLightContent() {
+    for (const child of Array.from(this.children)) {
+      if (child.classList?.contains('si-content')) child.remove();
+    }
   }
 
   _showRaw(text) {
@@ -150,8 +171,14 @@ class SolInclude extends HTMLElement {
     this.shadowRoot.appendChild(div);
   }
 
+  // Reset for a fresh render. Drops any prior light-DOM content so
+  // reload doesn't double-stack, then resets the shadow root. In
+  // `trusted` mode the shadow holds a single <slot> so a subsequent
+  // light-DOM append shows through; in untrusted mode there's no
+  // slot, so any light children stay hidden as before.
   _initShadow() {
-    this.shadowRoot.innerHTML = '';
+    this._clearLightContent();
+    this.shadowRoot.innerHTML = this.hasAttribute('trusted') ? '<slot></slot>' : '';
     this.shadowRoot.adoptedStyleSheets = [];
     adopt(this.shadowRoot, { sheet: includeSheet, css: INCLUDE_CSS });
   }
