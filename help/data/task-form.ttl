@@ -1,0 +1,24 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+@prefix ex:     <http://example.org/> .
+
+ex:taskForm a ui:Form ;
+  ui:label "Task" ;
+  ui:parts ( ex:taskNameField ex:taskPriorityField ex:taskStatusField ) .
+
+ex:taskNameField a ui:SingleLineTextField ;
+  ui:label "Task" ;
+  ui:property schema:name ;
+  ui:required true .
+
+ex:taskPriorityField a ui:Choice ;
+  ui:label "Priority" ;
+  ui:property schema:priority ;
+  ui:default "medium" ;
+  ui:option "low", "medium", "high", "critical" .
+
+ex:taskStatusField a ui:Choice ;
+  ui:label "Status" ;
+  ui:property schema:status ;
+  ui:default "pending" ;
+  ui:option "pending", "in-progress", "done" .

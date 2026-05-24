@@ -1,0 +1,37 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix vcard:  <http://www.w3.org/2006/vcard/ns#> .
+@prefix schema: <http://schema.org/> .
+@prefix ex:     <http://example.org/> .
+
+ex:contactForm a ui:Form ;
+  ui:title "Contact Us" ;
+  ui:description "Please fill out this form to get in touch with us." ;
+  ui:parts (
+    ex:nameField
+    ex:emailField
+    ex:subjectField
+    ex:messageField
+  ) .
+
+ex:nameField a ui:SingleLineTextField ;
+  ui:label "Full Name" ;
+  ui:property vcard:fn ;
+  ui:required true ;
+  ui:help "Your full name" .
+
+ex:emailField a ui:EmailField ;
+  ui:label "Email Address" ;
+  ui:property vcard:hasEmail ;
+  ui:required true ;
+  ui:help "We'll use this to respond to you" .
+
+ex:subjectField a ui:SingleLineTextField ;
+  ui:label "Subject" ;
+  ui:property schema:about ;
+  ui:required true .
+
+ex:messageField a ui:TextArea ;
+  ui:label "Message" ;
+  ui:property schema:text ;
+  ui:required true ;
+  ui:help "Tell us what you'd like to say" .

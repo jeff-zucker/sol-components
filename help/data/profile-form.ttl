@@ -1,0 +1,31 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+@prefix ex:     <http://example.org/> .
+
+ex:profileForm a ui:Form ;
+  ui:label "Profile" ;
+  ui:parts ( ex:profileNameField ex:skillsField ) .
+
+ex:profileNameField a ui:SingleLineTextField ;
+  ui:label "Name" ;
+  ui:property schema:name ;
+  ui:required true .
+
+ex:skillsField a ui:Multiple ;
+  ui:label "Skills" ;
+  ui:property schema:knowsAbout ;
+  ui:part ex:skillItem .
+
+ex:skillItem a ui:Group ;
+  ui:parts ( ex:skillNameField ex:skillLevelField ) .
+
+ex:skillNameField a ui:SingleLineTextField ;
+  ui:label "Skill" ;
+  ui:property schema:name ;
+  ui:required true .
+
+ex:skillLevelField a ui:Choice ;
+  ui:label "Level" ;
+  ui:property schema:proficiencyLevel ;
+  ui:default "Intermediate" ;
+  ui:option "Beginner", "Intermediate", "Advanced", "Expert" .

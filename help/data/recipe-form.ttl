@@ -1,0 +1,30 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+@prefix ex:     <http://example.org/> .
+
+ex:recipeForm a ui:Form ;
+  ui:label "Recipe" ;
+  ui:parts ( ex:recipeNameField ex:stepsField ) .
+
+ex:recipeNameField a ui:SingleLineTextField ;
+  ui:label "Recipe name" ;
+  ui:property schema:name ;
+  ui:required true .
+
+ex:stepsField a ui:Multiple ;
+  ui:label "Steps (in order)" ;
+  ui:property schema:recipeInstructions ;
+  ui:ordered true ;
+  ui:part ex:stepItem .
+
+ex:stepItem a ui:Group ;
+  ui:parts ( ex:stepDescField ex:stepDurationField ) .
+
+ex:stepDescField a ui:MultiLineTextField ;
+  ui:label "Description" ;
+  ui:property schema:description ;
+  ui:required true .
+
+ex:stepDurationField a ui:SingleLineTextField ;
+  ui:label "Duration (e.g. PT5M)" ;
+  ui:property schema:totalTime .

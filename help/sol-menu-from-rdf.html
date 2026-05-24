@@ -49,7 +49,7 @@
 
 <div class="tab-panel active" id="tab-demo">
   <div class="demo-area">
-    <sol-menu from-rdf="../data/demo-menu.ttl#MainMenu"></sol-menu>
+    <sol-menu from-rdf="data/demo-menu.ttl#MainMenu"></sol-menu>
   </div>
 </div>
 <div class="tab-panel" id="tab-term">
@@ -64,7 +64,7 @@
 <pre><code>&lt;script src="<i>../dist/vendor/@comunica-query-sparql.umd.js</i>"&gt;&lt;/script&gt;
 &lt;script src="<i>../dist/solid-web-components.bundle.min.js</i>" type="module"&gt;&lt;/script&gt;
 
-&lt;sol-menu from-rdf="<i>../data/demo-menu.ttl#MainMenu</i>"&gt;&lt;/sol-menu&gt;</code></pre>
+&lt;sol-menu from-rdf="<i>data/demo-menu.ttl#MainMenu</i>"&gt;&lt;/sol-menu&gt;</code></pre>
 <p>
 The <i>sol-menu</i> web component can be used with a single <i>from-rdf</i> attribute.
 The value is a URI with a fragment identifier (e.g. <i>menu.ttl#MainMenu</i>) 
@@ -76,7 +76,7 @@ specifies a <i>ui:displayTarget</i>, it will be shown there instead.
 </div>
 
 <div class="tab-panel" id="tab-rdf">
-  <sol-include source="../data/demo-menu.ttl"></sol-include>
+  <sol-include source="data/demo-menu.ttl"></sol-include>
 </div>
 
 <div class="tab-panel" id="tab-vocab">

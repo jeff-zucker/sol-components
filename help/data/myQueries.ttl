@@ -1,0 +1,22 @@
+@prefix sparql: <http://www.w3.org/ns/sparql#> .
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<#MyBasicQuery>
+   a sparql:query ;
+   rdfs:comment """
+     PREFIX schema: <http://schema.org/>
+     SELECT ?name ?gender ?location WHERE {
+       ?person schema:name ?name; schema:gender ?gender; schema:homeLocation ?location.
+     } LIMIT 3
+   """ .
+
+<#MyReplaceAbleQuery>
+   a sparql:query ;
+   rdfs:comment """
+     PREFIX schema: <http://schema.org/>
+     SELECT ?name ?age ?location WHERE {
+       ?person a schema:Person; schema:name ?name; schema:age ?age; schema:location ?location.
+     } LIMIT {{limit}}
+   """ .
+

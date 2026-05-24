@@ -124,14 +124,14 @@
       <sol-query
         endpoint="https://dbpedia.org/sparql"
         sparql="SELECT ?name ?birthDate ?almaMater ?nationality WHERE { VALUES ?person { <http://dbpedia.org/resource/Tim_Berners-Lee> <http://dbpedia.org/resource/Ada_Lovelace> } ?person <http://xmlns.com/foaf/0.1/name> ?name . OPTIONAL { ?person <http://dbpedia.org/ontology/birthDate> ?birthDate } OPTIONAL { ?person <http://dbpedia.org/ontology/almaMater> ?almaMater } OPTIONAL { ?person <http://dbpedia.org/ontology/nationality> ?nationality } FILTER(!isLiteral(?name) || lang(?name) = 'en' || lang(?name) = '') } LIMIT 20"
-        view="../data/card-renderer.js"
+        view="data/card-renderer.js"
       ></sol-query>
     </p>
     <p>The HTML that combines the model with a custom view:</p>
     <pre><code>&lt;sol-query
   endpoint="https://dbpedia.org/sparql"
-  sparql="../data/myQueries#TimAdaQuery"
-  <b>view="../data/card-renderer.js"</b>
+  sparql="data/myQueries#TimAdaQuery"
+  <b>view="data/card-renderer.js"</b>
 &gt;&lt;/sol-query&gt;</code></pre>
    </p>
   <div>
@@ -197,15 +197,15 @@
     OPTIONAL { ?person dbo:nationality ?nationality }
     FILTER(!isLiteral(?name) || lang(?name) = 'en' || lang(?name) = '')
   } LIMIT 20"
-  view="../data/card-renderer.js"
+  view="data/card-renderer.js"
 &gt;&lt;/sol-query&gt;</code></pre>
 
     <h3 style="margin-top:1.5rem">Try your own renderer</h3>
     <p>Enter the URL of an ES module that exports <code>render(container, data)</code>:</p>
     <div style="display:flex;gap:.5rem;margin-bottom:.75rem">
       <input id="renderer-url" type="url" style="flex:1;padding:.5rem;border:1px solid #ddd;border-radius:4px;font-family:monospace"
-             placeholder="../data/card-renderer.js"
-             value="../data/card-renderer.js">
+             placeholder="data/card-renderer.js"
+             value="data/card-renderer.js">
       <button class="button" type="button" onclick="applyRenderer()">Apply</button>
     </div>
     <div id="live-demo-error"></div>

@@ -51,6 +51,7 @@
 
 import { define } from '../core/define.js';
 import { adopt } from '../core/adopt.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
 import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
@@ -80,29 +81,35 @@ class SolMenu extends HTMLElement {
 
   static get observedAttributes() { return ['from-rdf']; }
 
+  /** Form TTL describing how to edit this menu's `from-rdf` subject. */
+  static get editor() {
+    return new URL('../data/menu-form.ttl', import.meta.url).href;
+  }
+
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === 'from-rdf' && oldValue !== newValue && this._rendered) {
       this._loadFromRdf(newValue);
     }
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     if (this._rendered) return;
 
     const fromRdf = this.getAttribute('from-rdf');
     if (fromRdf) {
       this._initShell();
       this._loadFromRdf(fromRdf);
-      return;
+    } else {
+      const declared = this._items.length === 0 ? this._harvestItems(this) : null;
+      this._initShell();
+      if (declared?.length) this._items = declared;
+      this._renderNav();
+
+      const firstLeaf = this._firstLeaf(this._items);
+      if (firstLeaf) this.select(firstLeaf.name);
     }
 
-    const declared = this._items.length === 0 ? this._harvestItems(this) : null;
-    this._initShell();
-    if (declared?.length) this._items = declared;
-    this._renderNav();
-
-    const firstLeaf = this._firstLeaf(this._items);
-    if (firstLeaf) this.select(firstLeaf.name);
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   _initShell() {
@@ -425,6 +432,17 @@ class SolMenu extends HTMLElement {
     this.dispatchEvent(new CustomEvent('sol-menu-change', {
       bubbles: true, composed: true, detail: { name: item.name },
     }));
+  }
+
+  /**
+   * Re-read `from-rdf` and rebuild the menu nav. Public hook used by
+   * external editors (e.g. dk-settings) after the menu TTL changes.
+   * A menu built from declared light-DOM anchors has no source to
+   * re-read; reload is a no-op in that case.
+   */
+  async reload() {
+    const uri = this.getAttribute('from-rdf');
+    if (uri) await this._loadFromRdf(uri);
   }
 
   disconnectedCallback() {

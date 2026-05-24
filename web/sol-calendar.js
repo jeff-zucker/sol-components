@@ -55,21 +55,22 @@ import { CSS as CAL_CSS, sheet as CAL_SHEET } from './styles/sol-calendar-css.js
 import { getCalendarEvents, getMergedCalendarEvents, buildProviderUrl }
   from './utils/calendar-fetch.js';
 import { loadConfig } from './utils/rdf-config.js';
+import { getDefault, onDefaultChange } from '../core/defaults.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 
-/** PropertyValue name → HTML attribute name. The TTL uses the same
- *  spelling as the attribute, so this is a fixed list rather than a
- *  transformation. Mirrors how sol-time / sol-weather declare theirs. */
+/** Predicate URI → HTML attribute name. After the vocab migration
+ *  (see swc/claude/plans/PLAN-vocab-migration.md) calendar settings
+ *  use direct predicates from Dublin Core / Schema.org / OWL-Time / UI.
+ *  `dct:source` is multi-valued; everything else is single. */
+const DCT       = 'http://purl.org/dc/terms/';
+const SCHEMA    = 'http://schema.org/';
+const TIME_NS   = 'http://www.w3.org/2006/time#';
+const UI_NS     = 'http://www.w3.org/ns/ui#';
 const CONFIG_MAP = [
-  ['source',       'source'],
-  ['provider',     'provider'],
-  ['calendar-id',  'calendar-id'],
-  ['view',         'view'],
-  ['start',        'start'],
-  ['window-days',  'window-days'],
-  ['max-events',   'max-events'],
-  ['proxy',        'proxy'],
-  ['time-zone',    'time-zone'],
-  ['locale',       'locale'],
+  [DCT    + 'format',          'provider'],
+  [UI_NS  + 'view',             'view'],
+  [TIME_NS + 'days',            'window-days'],
+  [SCHEMA + 'numberOfItems',    'max-events'],
 ];
 
 /** True iff `source` is a `something.ttl#Subject` PropertyValue pointer
@@ -149,6 +150,16 @@ class SolCalendar extends HTMLElement {
     ];
   }
 
+  /** SHACL shape declaring the fixed schema (predicates + datatypes +
+   *  cardinalities). sol-form's shape-driven mode generates a labelled
+   *  field per property; only `dct:source` is multi-valued. dk-settings
+   *  discovery picks this up. The legacy `editor` (ui:Form TTL) getter
+   *  was dropped in the direct-predicate vocab migration — see
+   *  swc/claude/plans/PLAN-vocab-migration.md. */
+  static get shape() {
+    return new URL('../shapes/calendar-settings.shacl', import.meta.url).href;
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -181,11 +192,29 @@ class SolCalendar extends HTMLElement {
       this._setStatus(e.message || String(e), true);
     }
     this._timer = setInterval(() => this._update().catch(() => {}), this._refreshMs);
+
+    // Re-fetch when <sol-default> changes the proxy at runtime.
+    this._unsubDefaults = onDefaultChange((name) => {
+      if (name === 'proxy') this.reload().catch(() => {});
+    });
+
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
     if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    if (this._unsubDefaults) { this._unsubDefaults(); this._unsubDefaults = null; }
+  }
+
+  /**
+   * Re-read `source` and re-fetch calendar events. Public hook used by
+   * external editors (e.g. dk-settings) after a configuration file
+   * changes.
+   */
+  async reload() {
+    await this._applySource();
+    await this._update();
   }
 
   attributeChangedCallback(_name, oldV, newV) {
@@ -203,21 +232,18 @@ class SolCalendar extends HTMLElement {
     if (!isRdfConfigSource(source)) return;
     try {
       const cfg = await loadConfig(source);
-      for (const [key, attr] of CONFIG_MAP) {
-        // The `source` key is handled separately below — it may be an
-        // array (multi-calendar), which needs the encoded form. Every
-        // other key is a scalar.
-        if (key === 'source') continue;
-        if (cfg[key] != null && !this.hasAttribute(attr)) {
-          this.setAttribute(attr, String(cfg[key]));
+      for (const [predicate, attr] of CONFIG_MAP) {
+        if (cfg[predicate] != null && !this.hasAttribute(attr)) {
+          this.setAttribute(attr, String(cfg[predicate]));
         }
       }
-      // The TTL's "source" overrides the element's source (which was
-      // the TTL itself). It may be a single URL or a list of URLs —
-      // re-encode an array as a whitespace-separated string so
-      // `_sourceUrls()` can split it back out at render time.
-      if (cfg.source != null) {
-        const encoded = Array.isArray(cfg.source) ? cfg.source.join(' ') : String(cfg.source);
+      // dct:source overrides the element's source (which was the TTL
+      // itself). It may be a single URL or a list — re-encode an array
+      // as a whitespace-separated string so `_sourceUrls()` can split
+      // it back out at render time.
+      const dctSource = cfg[DCT + 'source'];
+      if (dctSource != null) {
+        const encoded = Array.isArray(dctSource) ? dctSource.join(' ') : String(dctSource);
         if (encoded && encoded !== source) this.setAttribute('source', encoded);
       }
     } catch (err) {
@@ -253,7 +279,7 @@ class SolCalendar extends HTMLElement {
   get provider()    { return (this.getAttribute('provider') || 'ics').toLowerCase(); }
   get calendarId()  { return this.getAttribute('calendar-id') || ''; }
   get view()        { return (this.getAttribute('view') || 'agenda').toLowerCase(); }
-  get proxy()       { return this.getAttribute('proxy') || ''; }
+  get proxy()       { return this.getAttribute('proxy') || getDefault('proxy') || ''; }
   get locale()      { return this.getAttribute('locale') || ''; }
   get windowDays()  { return Math.max(1, Number(this.getAttribute('window-days')) || 30); }
   get maxEvents()   { return Math.max(1, Number(this.getAttribute('max-events')) || 100); }

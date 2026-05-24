@@ -24,8 +24,39 @@
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as TIME_CSS, sheet as TIME_SHEET } from './styles/sol-time-css.js';
 import { loadConfig } from './utils/rdf-config.js';
+
+/**
+ * Derive the current UTC offset (in hours, possibly fractional) for an
+ * IANA timezone name. Returns null if the name is unrecognised.
+ *
+ * Uses Intl.DateTimeFormat's "shortOffset" timezone name — emitted as
+ * strings like `"GMT+5:30"`, `"GMT-04:00"`, or just `"GMT"`. Parses
+ * the suffix back to a decimal hours value. Honours DST automatically
+ * because the formatter consults the OS / browser's IANA database.
+ */
+function ianaOffsetHours(iana) {
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: iana,
+      timeZoneName: 'shortOffset',
+    });
+    const parts = fmt.formatToParts(new Date());
+    const tz = parts.find(p => p.type === 'timeZoneName')?.value;
+    if (!tz) return null;
+    // tz looks like "GMT", "GMT+5:30", "GMT-04:00", "UTC+11", …
+    if (tz === 'GMT' || tz === 'UTC') return 0;
+    const m = tz.match(/^(?:GMT|UTC)([+-])(\d{1,2})(?::(\d{2}))?$/);
+    if (!m) return null;
+    const sign = m[1] === '-' ? -1 : 1;
+    const hours = parseInt(m[2], 10) + (parseInt(m[3] || '0', 10) / 60);
+    return sign * hours;
+  } catch {
+    return null;
+  }
+}
 
 /** Zero-pad a one- or two-digit clock value to two chars. */
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
@@ -39,6 +70,16 @@ function pad2(n) { return n < 10 ? '0' + n : String(n); }
 class SolTime extends HTMLElement {
   static get observedAttributes() {
     return ['time-label', 'time-offset', 'source'];
+  }
+
+  /** SHACL shape declaring the fixed schema (predicates + datatypes +
+   *  cardinalities). sol-form's shape-driven mode generates a labelled
+   *  field per property; dk-settings discovery picks this up. The
+   *  legacy `editor` (ui:Form TTL) getter was dropped in the
+   *  direct-predicate vocab migration — see
+   *  swc/claude/plans/PLAN-vocab-migration.md. */
+  static get shape() {
+    return new URL('../shapes/time-settings.shacl', import.meta.url).href;
   }
 
   constructor() {
@@ -63,24 +104,38 @@ class SolTime extends HTMLElement {
     // Tick once a minute — the seconds are not shown so a finer tick
     // would be pure busywork.
     this._timer = setInterval(() => this._render(), 60_000);
+
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   /**
    * Apply config from `source` to attributes the component already
-   * observes. Mapping: "timezone" → time-label,
-   * "timezone-offset" → time-offset. Skips any attribute already set
-   * in HTML.
+   * observes. Mapping (predicate URI → HTML attribute):
+   *   schema:timezone  → time-label   (display label = last IANA segment)
+   *                    → time-offset  (UTC offset in hours, derived)
+   *
+   * The IANA name in schema:timezone fully determines both the label
+   * (`"Asia/Kolkata"` → `"Kolkata"`) and the UTC offset (computed via
+   * `Intl.DateTimeFormat`, which honors DST). See
+   * claude/plans/PLAN-vocab-migration.md for the predicate choice and
+   * rationale.
    */
   async _applySource() {
     const source = this.getAttribute('source');
     if (!source) return;
+    const SCHEMA = 'http://schema.org/';
     try {
       const cfg = await loadConfig(source);
-      if (cfg.timezone && !this.hasAttribute('time-label')) {
-        this.setAttribute('time-label', String(cfg.timezone));
+      const iana = cfg[SCHEMA + 'timezone'];
+      if (!iana) return;
+      if (!this.hasAttribute('time-label')) {
+        // Display label = last path segment (the city/place part).
+        const label = String(iana).split('/').pop() || String(iana);
+        this.setAttribute('time-label', label);
       }
-      if (cfg['timezone-offset'] != null && !this.hasAttribute('time-offset')) {
-        this.setAttribute('time-offset', String(cfg['timezone-offset']));
+      if (!this.hasAttribute('time-offset')) {
+        const offset = ianaOffsetHours(String(iana));
+        if (offset != null) this.setAttribute('time-offset', String(offset));
       }
     } catch (err) {
       console.warn(`[sol-time] source ${source}: ${err.message}`);
@@ -89,6 +144,15 @@ class SolTime extends HTMLElement {
 
   disconnectedCallback() {
     if (this._timer) { clearInterval(this._timer); this._timer = null; }
+  }
+
+  /**
+   * Re-read `source` and re-render. Public hook used by external
+   * editors (e.g. dk-settings) after a configuration file changes.
+   */
+  async reload() {
+    await this._applySource();
+    this._render();
   }
 
   attributeChangedCallback() {

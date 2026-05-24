@@ -33,6 +33,7 @@
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as WEATHER_CSS, sheet as WEATHER_SHEET } from './styles/sol-weather-css.js';
 import { loadConfig } from './utils/rdf-config.js';
 
@@ -76,6 +77,16 @@ function cToF(c) { return c * 9 / 5 + 32; }
 class SolWeather extends HTMLElement {
   static get observedAttributes() {
     return ['lat', 'lon', 'place', 'units', 'hours-window', 'source'];
+  }
+
+  /** SHACL shape declaring the fixed schema (predicates + datatypes +
+   *  cardinalities). sol-form's shape-driven mode generates a labelled
+   *  field per property; dk-settings discovery picks this up. The
+   *  legacy `editor` (ui:Form TTL) getter was dropped in the
+   *  direct-predicate vocab migration — see
+   *  swc/claude/plans/PLAN-vocab-migration.md. */
+  static get shape() {
+    return new URL('../shapes/weather-settings.shacl', import.meta.url).href;
   }
 
   constructor() {
@@ -122,34 +133,50 @@ class SolWeather extends HTMLElement {
 
     await this._update();
     this._timer = setInterval(() => this._update(), this._refreshMs);
+
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   /**
    * Apply config from `source` to attributes the component already
-   * observes. Mapping (PropertyValue schema:name → HTML attribute):
-   *   "latitude"         → lat
-   *   "longitude"        → lon
-   *   "place"            → place
-   *   "units"            → units
-   *   "forecast-window"  → hours-window
-   * Skips any attribute already set in HTML.
+   * observes. Mapping (predicate URI → HTML attribute):
+   *   geo:lat                  → lat
+   *   geo:long                 → lon
+   *   schema:addressLocality   → place
+   *   dct:conformsTo (+ QUDT)  → units   ("metric"/"imperial"/"both")
+   *   time:hours               → hours-window
+   * Skips any attribute already set in HTML. See
+   * claude/plans/PLAN-vocab-migration.md for the predicate choices.
    */
   async _applySource() {
     const source = this.getAttribute('source');
     if (!source) return;
+    const GEO    = 'http://www.w3.org/2003/01/geo/wgs84_pos#';
+    const SCHEMA = 'http://schema.org/';
+    const DCT    = 'http://purl.org/dc/terms/';
+    const TIME   = 'http://www.w3.org/2006/time#';
+    const QUDT   = 'http://qudt.org/vocab/sou/';
+
     try {
       const cfg = await loadConfig(source);
-      const map = [
-        ['latitude',         'lat'],
-        ['longitude',        'lon'],
-        ['place',            'place'],
-        ['units',            'units'],
-        ['forecast-window',  'hours-window'],
-      ];
-      for (const [key, attr] of map) {
-        if (cfg[key] != null && !this.hasAttribute(attr)) {
-          this.setAttribute(attr, String(cfg[key]));
+      const setIf = (attr, val) => {
+        if (val != null && !this.hasAttribute(attr)) {
+          this.setAttribute(attr, String(val));
         }
+      };
+      setIf('lat',           cfg[GEO    + 'lat']);
+      setIf('lon',           cfg[GEO    + 'long']);
+      setIf('place',         cfg[SCHEMA + 'addressLocality']);
+      setIf('hours-window',  cfg[TIME   + 'hours']);
+
+      // dct:conformsTo can be one URI or a list — normalize to an array.
+      const ct = cfg[DCT + 'conformsTo'];
+      if (ct != null) {
+        const systems = Array.isArray(ct) ? ct : [ct];
+        const si = systems.includes(QUDT + 'SI');
+        const us = systems.includes(QUDT + 'USCustomaryUnits');
+        const units = (si && us) ? 'both' : si ? 'metric' : us ? 'imperial' : null;
+        if (units) setIf('units', units);
       }
     } catch (err) {
       console.warn(`[sol-weather] source ${source}: ${err.message}`);
@@ -159,6 +186,15 @@ class SolWeather extends HTMLElement {
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
     if (this._timer) { clearInterval(this._timer); this._timer = null; }
+  }
+
+  /**
+   * Re-read `source` and re-fetch weather. Public hook used by external
+   * editors (e.g. dk-settings) after a configuration file changes.
+   */
+  async reload() {
+    await this._applySource();
+    await this._update();
   }
 
   attributeChangedCallback(name, oldV, newV) {

@@ -41,6 +41,7 @@ import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as FEED_CSS, sheet as FEED_SHEET } from './styles/sol-feed-css.js';
 import { getFeedItems, parseSourceList } from './utils/feed-fetch.js';
+import { getDefault, onDefaultChange } from '../core/defaults.js';
 
 /** Human-readable date, or '' when the string is missing / unparseable. */
 function formatDate(s) {
@@ -182,6 +183,14 @@ function openInReader(url) {
  * @extends HTMLElement
  */
 class SolFeed extends HTMLElement {
+  /**
+   * sol-feed's own picker IS the editor — adding/removing feeds and
+   * toggling which sources are shown happens inline in the rendered
+   * UI. `{ inline: true }` signals to discovery surfaces (dk-settings)
+   * and to the editor-self gear helper to skip this component.
+   */
+  static get editor() { return { inline: true }; }
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -190,9 +199,21 @@ class SolFeed extends HTMLElement {
   }
 
   async connectedCallback() {
+    // Reset shadow root on re-entry (e.g. reload() after sol-default change).
+    this.shadowRoot.adoptedStyleSheets = [];
+    this.shadowRoot.innerHTML = '';
+
     const view = (this.getAttribute('view') || 'feed').toLowerCase();
-    this.proxy = this.getAttribute('proxy') || '';
+    this.proxy = this.getAttribute('proxy') || getDefault('proxy') || '';
     this.source = this.getAttribute('source') || '';
+
+    // Re-fetch when <sol-default>'s proxy changes at runtime. Cleaned up
+    // in disconnectedCallback. Guard so reconnects don't stack handlers.
+    if (!this._unsubDefaults) {
+      this._unsubDefaults = onDefaultChange((name) => {
+        if (name === 'proxy') this.reload().catch(() => {});
+      });
+    }
 
     adopt(this.shadowRoot, { sheet: FEED_SHEET, css: FEED_CSS });
 
@@ -214,6 +235,20 @@ class SolFeed extends HTMLElement {
     } catch (e) {
       this.setStatus(e.message || String(e), true);
     }
+  }
+
+  /**
+   * Re-read attributes (including the proxy fallback from <sol-default>)
+   * and rebuild the shadow DOM + refetch. Public hook for external
+   * editors and for default-change reactions.
+   */
+  async reload() {
+    this._cache?.clear();
+    await this.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    if (this._unsubDefaults) { this._unsubDefaults(); this._unsubDefaults = null; }
   }
 
   /** Update the polite live region. Pass `isError` to colour it. */

@@ -46,7 +46,7 @@ document can drive either element.<div>
 
 <div class="tab-panel active" id="tab-demo">
   <div class="demo-area">
-    <sol-tabs from-rdf="../data/demo-tabs.ttl#MainTabs"></sol-tabs>
+    <sol-tabs from-rdf="data/demo-tabs.ttl#MainTabs"></sol-tabs>
   </div>
 </div>
 
@@ -55,7 +55,7 @@ document can drive either element.<div>
 <pre><code>&lt;script src="<i>../dist/vendor/@comunica-query-sparql.umd.js</i>"&gt;&lt;/script&gt;
 &lt;script src="<i>../dist/solid-web-components.bundle.min.js</i>" type="module"&gt;&lt;/script&gt;
 
-&lt;sol-tabs from-rdf="<i>../data/demo-tabs.ttl#MainTabs</i>"&gt;&lt;/sol-tabs&gt;</code></pre>
+&lt;sol-tabs from-rdf="<i>data/demo-tabs.ttl#MainTabs</i>"&gt;&lt;/sol-tabs&gt;</code></pre>
 <p>
 The <i>sol-tabs</i> web component can be used with a single <i>from-rdf</i> attribute.
 The value is a URI with a fragment identifier (e.g. <i>tabs.ttl#MainTabs</i>)
@@ -69,7 +69,7 @@ Each <i>ui:Link</i> or <i>ui:Component</i> part becomes a tab. A nested
 </div>
 
 <div class="tab-panel" id="tab-rdf">
-  <sol-include source="../data/demo-tabs.ttl"></sol-include>
+  <sol-include source="data/demo-tabs.ttl"></sol-include>
 </div>
 
 <div class="tab-panel" id="tab-vocab">

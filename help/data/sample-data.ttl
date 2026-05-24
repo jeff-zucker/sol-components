@@ -1,0 +1,26 @@
+@prefix schema: <http://schema.org/> .
+
+<#1> a schema:Person ;
+  schema:name "Aisha" ;
+  schema:gender  "female";
+  schema:homeLocation "Riyadh".
+
+<#2> a schema:Person ;
+  schema:name "Raj" ;
+  schema:gender  "male";
+  schema:homeLocation "Mumbai".
+
+<#3> a schema:Person ;
+  schema:name "Amara" ;
+  schema:gender  "non-binary";
+  schema:homeLocation "Lagos".
+
+<#4> a schema:Person ;
+  schema:name "Juan" ;
+  schema:gender  "male";
+  schema:homeLocation "Caracas".
+
+<#5> a schema:Person ;
+  schema:name "Alicia" ;
+  schema:gender  "female";
+  schema:homeLocation "Paris".

@@ -45,6 +45,7 @@ import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as SEARCH_CSS, sheet as SEARCH_SHEET } from './styles/sol-search-css.js';
 import { parseSourceList } from './utils/feed-fetch.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 
 /** Sensible defaults; callers can override via `engines` or `source`. */
 const DEFAULT_ENGINES = [
@@ -110,6 +111,15 @@ class SolSearch extends HTMLElement {
   static get observedAttributes() {
     return ['view', 'source', 'engines', 'default-engine', 'placeholder'];
   }
+
+  // No editor form for v0. sol-search's data model uses an inverse
+  // relation (`?link bk:hasTopic <#Topic>`) that doesn't map cleanly
+  // to ui:Form's ui:Multiple over a forward property. Returning null
+  // makes the discovery walk skip this component and the editor-self
+  // gear become a no-op. Revisit when ui:Multiple supports inverse
+  // membership or the search engines data is migrated to a forward
+  // hasMember relation.
+  static get editor() { return null; }
 
   constructor() {
     super();
@@ -214,6 +224,8 @@ class SolSearch extends HTMLElement {
         console.warn(`[sol-search] source ${source}: ${err.message}`);
       }
     }
+
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   disconnectedCallback() {
@@ -224,6 +236,17 @@ class SolSearch extends HTMLElement {
       document.removeEventListener('keydown', this._onDocKeyDown);
     }
     this._built = false;
+  }
+
+  /**
+   * Re-read `source` and rebuild the engines panel. Public hook used by
+   * external editors (e.g. dk-settings) after the engines TTL changes.
+   * sol-search loads its source inline in connectedCallback, so reload
+   * tears down and reconnects to walk the same path.
+   */
+  async reload() {
+    this.disconnectedCallback();
+    await this.connectedCallback();
   }
 
   attributeChangedCallback(name) {

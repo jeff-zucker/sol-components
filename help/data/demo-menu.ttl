@@ -1,0 +1,26 @@
+@prefix ui: <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+
+<#MainMenu> a ui:Menu; ui:label "demo-menu" ;
+  ui:orientation "horizontal" ;
+  ui:parts ( <#Home> <#DataMenu> <#About> ) .
+
+<#Home> a ui:Link; ui:label "Home" ;
+  ui:icon <../help/house.png> ;
+  ui:contents "<h2>Welcome</h2><p>This is the home page, rendered from a <code>ui:contents</code> literal.</p>" .
+
+<#DataMenu> a ui:Menu; ui:label "Data" ;
+  ui:parts ( <#SampleTable> <#SampleTriples> ) .
+
+<#SampleTable> a ui:Component; ui:label "People (table)" ;
+  ui:name "sol-query" ;
+  ui:attribute
+    [ schema:name "endpoint" ; schema:value <./sample-data.ttl> ] ,
+    [ schema:name "sparql" ; schema:value "SELECT ?s ?p ?o WHERE { ?s ?p ?o . }" ] ,
+    [ schema:name "view" ; schema:value "table" ] .
+
+<#SampleTriples> a ui:Link; ui:label "People (raw triples)" ;
+  ui:href <./sample-data.ttl> .
+
+<#About> a ui:Link; ui:label "About" ;
+  ui:contents "<h2>About</h2><p>This menu was generated entirely from RDF using the <code>from-rdf</code> attribute.</p>" .

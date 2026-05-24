@@ -50,6 +50,7 @@
 import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
+import { attachEditorSelfGear } from '../core/editor-self.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
 import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
 
@@ -81,6 +82,15 @@ class SolTabs extends HTMLElement {
   }
 
   static get observedAttributes() { return ['from-rdf']; }
+
+  /**
+   * Form TTL describing how to edit this tabs' `from-rdf` subject.
+   * sol-tabs and sol-menu share the same `ui:Menu` shape, so they
+   * also share the same editor.
+   */
+  static get editor() {
+    return new URL('../data/menu-form.ttl', import.meta.url).href;
+  }
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === 'from-rdf' && oldValue !== newValue && this._rendered) {
@@ -114,15 +124,16 @@ class SolTabs extends HTMLElement {
 
     if (fromRdf) {
       this._loadFromRdf(fromRdf);
-      return;
+    } else {
+      if (declared?.length) {
+        this._tabs = declared;
+      }
+      this._renderBar();
+
+      if (declared?.length) this.switchTab(declared[0].name);
     }
 
-    if (declared?.length) {
-      this._tabs = declared;
-    }
-    this._renderBar();
-
-    if (declared?.length) this.switchTab(declared[0].name);
+    if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
   }
 
   // Fetch a ui:Menu RDF document and render its parts as tabs. This is the
@@ -268,6 +279,17 @@ class SolTabs extends HTMLElement {
     this.dispatchEvent(new CustomEvent('sol-tab-change', {
       bubbles: true, composed: true, detail: { name: tab.name },
     }));
+  }
+
+  /**
+   * Re-read `from-rdf` and rebuild the tab bar. Public hook used by
+   * external editors (e.g. dk-settings) after the tabs TTL changes.
+   * Tabs declared via light-DOM anchors have no source to re-read;
+   * reload is a no-op in that case.
+   */
+  async reload() {
+    const uri = this.getAttribute('from-rdf');
+    if (uri) await this._loadFromRdf(uri);
   }
 
   disconnectedCallback() {
