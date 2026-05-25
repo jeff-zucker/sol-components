@@ -144,8 +144,8 @@
            TTL is the default; any HTML attribute here would override
            the matching :predicate in the file. Weather sits above
            time so the more-prominent line (icon + temp) reads first. -->
-      <sol-weather source="data/weather.ttl#Settings"></sol-weather>
-      <sol-time    source="data/time.ttl#Settings"></sol-time>
+      <sol-weather source="data/weather-settings.ttl#Settings"></sol-weather>
+      <sol-time    source="data/time-settings.ttl#Settings"></sol-time>
     </div>
     <div class="agenda">
       <!-- Amalgamated upcoming events from all three Solid-community
@@ -153,7 +153,7 @@
            Events). Each one is fetched in parallel and the merged
            list is shown sorted by start time. Swap to #SolidCG, #LWS,
            or #Extra to scope to a single feed. -->
-      <sol-calendar source="data/calendar.ttl#All" hide-header></sol-calendar>
+      <sol-calendar source="data/calendar-settings.ttl#All" hide-header></sol-calendar>
     </div>
   </header>
 

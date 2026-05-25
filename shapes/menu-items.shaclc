@@ -1,33 +1,53 @@
-PREFIX :       <#>
-PREFIX sh:     <http://www.w3.org/ns/shacl#>
-PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
-PREFIX ui:     <http://www.w3.org/ns/ui#>
+
 PREFIX schema: <http://schema.org/>
+PREFIX ui: <http://www.w3.org/ns/ui#>
 
-shape :LinkItemShape {
-  targetClass ui:Link ;
-  ui:label     xsd:string [1..1] ;
-  ui:href      IRI        [0..1] ;
-  ui:contents  xsd:string [0..1] ;
-  ui:icon      IRI        [0..1] ;
+shape <#LinkItemShape> -> ui:Link {
+	ui:label xsd:string [1..1] %
+		sh:name "Label"
+	% .
+	ui:href IRI [0..1] %
+		sh:name "URL (href)"
+	% .
+	ui:contents xsd:string [0..1] %
+		sh:name "Inline HTML (contents)"
+	% .
+	ui:icon IRI [0..1] %
+		sh:name "Icon URL"
+	% .
 }
-
-shape :ComponentItemShape {
-  targetClass ui:Component ;
-  ui:label     xsd:string           [1..1] ;
-  ui:name      xsd:string           [1..1] ;
-  ui:icon      IRI                  [0..1] ;
-  ui:attribute @:PropertyValueShape [0..*] ;
+shape <#ComponentItemShape> -> ui:Component {
+	ui:label xsd:string [1..1] %
+		sh:name "Label"
+	% .
+	ui:name xsd:string [1..1] %
+		sh:name "Element tag" ;
+		sh:description "Custom-element tag name to instantiate (e.g. sol-query)."
+	% .
+	ui:icon IRI [0..1] %
+		sh:name "Icon URL"
+	% .
+	ui:attribute @<#PropertyValueShape> %
+		sh:name "Attributes" ;
+		sh:description "HTML attributes passed to the element as schema:PropertyValue pairs (name + value)."
+	% .
 }
-
-shape :PropertyValueShape {
-  schema:name   xsd:string [1..1] ;
-  schema:value  xsd:string [1..1] ;
+shape <#PropertyValueShape> {
+	schema:name xsd:string [1..1] %
+		sh:name "name"
+	% .
+	schema:value xsd:string [1..1] %
+		sh:name "value"
+	% .
 }
-
-shape :SubMenuItemShape {
-  targetClass ui:Menu ;
-  ui:label        xsd:string [1..1] ;
-  ui:orientation  xsd:string in ("horizontal" "vertical") [0..1] ;
-  ui:icon         IRI        [0..1] ;
+shape <#SubMenuItemShape> -> ui:Menu {
+	ui:label xsd:string [1..1] %
+		sh:name "Label"
+	% .
+	ui:orientation xsd:string [0..1] in=["horizontal" "vertical"] %
+		sh:name "Orientation"
+	% .
+	ui:icon IRI [0..1] %
+		sh:name "Icon URL"
+	% .
 }

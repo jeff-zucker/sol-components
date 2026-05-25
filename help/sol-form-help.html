@@ -16,10 +16,11 @@
   <script type="importmap">
   {
     "imports": {
-      "rdflib":       "../dist/vendor/rdflib.js",
-      "n3":           "../dist/vendor/n3.js",
-      "solid-ui":     "../dist/vendor/solid-ui.js",
-      "solid-logic":  "../dist/vendor/solid-logic.js"
+      "rdflib":             "../dist/vendor/rdflib.js",
+      "n3":                 "../dist/vendor/n3.js",
+      "solid-ui":           "../dist/vendor/solid-ui.js",
+      "solid-logic":        "../dist/vendor/solid-logic.js",
+      "rdf-validate-shacl": "../dist/vendor/rdf-validate-shacl.js"
     }
   }
   </script>
@@ -34,44 +35,20 @@
     import * as solidLogic from 'solid-logic';
     if (typeof window !== 'undefined') window.solidLogic = solidLogic;
     import '../web/sol-form.js';
+    import '../web/sol-include.js';
   </script>
 
 </head>
 <body class="tabbed-help">
-
-  <h1>sol-form component</h1>
-  <p class="page-intro">A generic editable form bound to RDF data. Two paths:
-    <b>shape-driven</b> &mdash; point it at a SHACL shape and a data document;
-    sol-form generates inputs from the shape and auto-saves edits to the
-    document. Or <b>form-driven</b> (legacy) &mdash; supply a hand-authored
-    <code>ui:Form</code> definition and let solid-ui's form widgets render
-    it. Both store data the same way; the difference is whether the form
-    layout comes from a SHACL shape (computed) or a TTL file (authored).</p>
-
-  <div class="tabs" id="tabs" role="tablist" aria-label="sol-form documentation">
-    <button role="tab" aria-selected="true"  aria-controls="tab-demo"    id="tabbtn-demo">Demo</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-attr"    id="tabbtn-attr"    tabindex="-1">Attributes</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-modes"   id="tabbtn-modes"   tabindex="-1">Modes</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-mapping" id="tabbtn-mapping" tabindex="-1">SHACL mapping</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-script"  id="tabbtn-script"  tabindex="-1">CLI</button>
-  </div>
-
   <!-- ──────────────────────────────  Demo  ────────────────────────── -->
   <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
-    <p style="max-width:960px; margin:0 0 1rem;">
-      A read-only shape-to-form preview. The SHACL shape on the left is
-      the real <code>shapes/weather-settings.shacl</code> file. The form
-      on the right is generated from it by <code>core/shape-to-form.js</code>
-      with the <code>no-edit</code> attribute &mdash; inputs are visible but
-      not editable. To try the editable version, open dk-settings &rarr; Weather.
-    </p>
     <div class="demo-grid">
       <section class="panel">
         <header class="panel-head">
           <span class="label">shapes/weather-settings.shacl</span>
           <span class="hint">read-only</span>
         </header>
-        <pre id="shacl-source" class="shacl loading">Loading SHACL…</pre>
+        <sol-include class="shacl" source="../shapes/weather-settings.shacl" raw></sol-include>
       </section>
 
       <section class="panel">
@@ -151,7 +128,7 @@
     <h2 style="margin-top:1rem">Shape-driven (recommended for new components)</h2>
     <pre>&lt;sol-form
   shape="shapes/weather-settings.shacl"
-  subject="data/weather.ttl#Settings"&gt;
+  subject="data/weather-settings.ttl#Settings"&gt;
 &lt;/sol-form&gt;</pre>
     <p>sol-form fetches the SHACL shape, calls <code>parseShape()</code> in <code>core/shape-to-form.js</code> to extract a normalized property descriptor list, and renders one input per property. Cardinality, datatype, enum, and nodeKind constraints all come from the shape — no separate form file needed.</p>
     <p>The SHACL shape is also handed to <code>rdf-validate-shacl</code> before every save. Edits that violate the shape surface as validation errors and the PUT is skipped.</p>
@@ -309,38 +286,5 @@ node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
     })();
   </script>
 
-  <script type="module">
-    // Demo tab — left panel shows the SHACL source; right panel is a
-    // real <sol-form no-edit> against a small fixture TTL next to this
-    // page. Using <sol-form> (not a lower-level helper) means anything
-    // that affects production rendering — sol-form-css alignment, the
-    // <select> skin, the shape-to-form pipeline — shows up here too.
-
-    // Tiny turtle highlighter — comments, prefixed names, IRIs, literals.
-    function highlightTurtle(text) {
-      const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return esc
-        .replace(/(#[^\n]*)/g,                       '<span class="cmt">$1</span>')
-        .replace(/("[^"]*"(?:@[a-zA-Z-]+|\^\^[^\s,;.()]+)?)/g, '<span class="lit">$1</span>')
-        .replace(/(&lt;[^&\s]*&gt;)/g,               '<span class="uri">$1</span>')
-        .replace(/\b(sh|xsd|schema|rdf|rdfs|ui):([A-Za-z][\w-]*)/g,
-                                                     '<span class="kw">$1:$2</span>')
-        .replace(/(\s)(a)(\s)/g,                     '$1<span class="kw">$2</span>$3');
-    }
-
-    const SHAPE_URL = new URL('../shapes/weather-settings.shacl', document.baseURI).href;
-    (async () => {
-      const shaclEl = document.getElementById('shacl-source');
-      try {
-        const resp = await fetch(SHAPE_URL);
-        if (!resp.ok) throw new Error('Failed to load ' + SHAPE_URL + ': ' + resp.status);
-        shaclEl.classList.remove('loading');
-        shaclEl.innerHTML = highlightTurtle(await resp.text());
-      } catch (err) {
-        shaclEl.classList.remove('loading');
-        shaclEl.innerHTML = '<div class="error">' + err.message + '</div>';
-      }
-    })();
-  </script>
 </body>
 </html>

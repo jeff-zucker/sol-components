@@ -1,0 +1,54 @@
+@prefix :     <#> .
+@prefix swc:  <urn:swc:shape:data-kitchen-settings:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix wd:   <http://www.wikidata.org/entity/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix ui:   <http://www.w3.org/ns/ui#> .
+
+<>
+  owl:imports <../data/ui-vocab.ttl> .
+
+swc:DataKitchenSettingsFile
+  a rdfs:Class ;
+  rdfs:subClassOf wd:Q1193846 .
+
+:DataKitchenSettingsFileShape
+  a sh:NodeShape ;
+  sh:targetClass swc:DataKitchenSettingsFile ;
+  sh:property [
+    sh:path foaf:primaryTopic ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+    sh:node :DataKitchenSettingsShape ;
+  ] .
+
+:DataKitchenSettingsShape
+  a sh:NodeShape ;
+
+  sh:property [
+    sh:path ui:colorScheme ;
+    sh:class ui:ColorScheme ;
+    sh:maxCount 1 ;
+    sh:name "Color scheme" ;
+  ] ,
+  [
+    sh:path ui:fontSize ;
+    sh:class ui:FontSize ;
+    sh:maxCount 1 ;
+    sh:name "Font size" ;
+  ] ,
+  [
+    sh:path ui:editorKeys ;
+    sh:class ui:EditorKeys ;
+    sh:maxCount 1 ;
+    sh:name "Editor keys" ;
+  ] ,
+  [
+    sh:path ui:proxy ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "CORS proxy" ;
+    sh:description "URL prefix wrapping a target URL for CORS proxying; the target is URI-encoded onto the end." ;
+  ] .

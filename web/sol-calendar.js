@@ -47,7 +47,7 @@
  *   <sol-calendar provider="google" calendar-id="alice@example.org"></sol-calendar>
  *
  *   <!-- Pull every setting from a PropertyValue TTL -->
- *   <sol-calendar source="data/calendar.ttl#Settings"></sol-calendar>
+ *   <sol-calendar source="data/calendar-settings.ttl#Settings"></sol-calendar>
  */
 import { adopt }   from '../core/adopt.js';
 import { define }  from '../core/define.js';

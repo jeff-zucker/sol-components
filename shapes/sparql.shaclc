@@ -1,16 +1,28 @@
-PREFIX sh:     <http://www.w3.org/ns/shacl#>
-PREFIX sparql: <http://www.w3.org/ns/sparql#>
-PREFIX sd:     <http://www.w3.org/ns/sparql-service-description#>
-PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
-PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
-PREFIX schema: <http://schema.org/>
 
-shape <#QueryShape> {
-  targetClass sparql:Query ;
-  rdfs:label        xsd:string   [0..1] ;
-  rdfs:comment      xsd:string   [1..1] ;
-  rdfs:description  xsd:string   [0..1] ;
-  schema:category   skos:Concept [0..*] ;
-  sd:endpoint       IRI          [0..1] ;
+PREFIX schema: <http://schema.org/>
+PREFIX sd: <http://www.w3.org/ns/sparql-service-description#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX sparql: <http://www.w3.org/ns/sparql#>
+
+shape <#QueryShape> -> sparql:Query {
+	rdfs:label xsd:string [0..1] %
+		sh:name "label" ;
+		sh:description "A human-readable label for the query (optional)"
+	% .
+	rdfs:comment xsd:string [1..1] %
+		sh:name "query text" ;
+		sh:description "The SPARQL query as a string (required)"
+	% .
+	rdfs:description xsd:string [0..1] %
+		sh:name "query description" ;
+		sh:description "Description of the query (optional)"
+	% .
+	schema:category skos:Concept [0..*] %
+		sh:name "query category" ;
+		sh:description "Category of the query (optional,may have multiple)"
+	% .
+	sd:endpoint IRI [0..1] %
+		sh:name "endpoint" ;
+		sh:description "A URI of a SPARQL endpoint (optional)"
+	% .
 }

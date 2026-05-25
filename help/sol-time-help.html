@@ -76,7 +76,7 @@
 &lt;sol-time time-label="tokyo" time-offset="9"&gt;&lt;/sol-time&gt;
 
 &lt;!-- Pull settings from a TTL file --&gt;
-&lt;sol-time source="data/time.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+&lt;sol-time source="data/time-settings.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
 
     <h3>Theming via CSS parts</h3>
     <p>Each label / value / separator is exposed as a shadow part:
@@ -102,9 +102,9 @@ sol-time::part(extra-label) { color: var(--accent); }</code></pre>
       </tbody>
     </table>
 
-    <pre><code>&lt;sol-time source="data/time.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+    <pre><code>&lt;sol-time source="data/time-settings.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
 
-    <p>And <code>data/time.ttl</code>:</p>
+    <p>And <code>data/time-settings.ttl</code>:</p>
     <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
 
 &lt;#Settings&gt;

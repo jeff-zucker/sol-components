@@ -75,10 +75,10 @@
 # amalgamated record that merges all three into one agenda. Point
 # `source` at whichever fragment you want the dashboard to show:
 #
-#   source="data/calendar.ttl#All"       All three merged (default for dashboard)
-#   source="data/calendar.ttl#SolidCG"   Solid Community Group (W3C)
-#   source="data/calendar.ttl#LWS"       Linked Web Storage Working Group (W3C)
-#   source="data/calendar.ttl#Extra"     "Extra Solid Events" (Google Calendar)
+#   source="data/calendar-settings.ttl#All"       All three merged (default for dashboard)
+#   source="data/calendar-settings.ttl#SolidCG"   Solid Community Group (W3C)
+#   source="data/calendar-settings.ttl#LWS"       Linked Web Storage Working Group (W3C)
+#   source="data/calendar-settings.ttl#Extra"     "Extra Solid Events" (Google Calendar)
 #
 # Per-record settings live in blank-node PropertyValues so the records
 # don't share / collide on per-setting subject URIs. The proxy URL is

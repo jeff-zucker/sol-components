@@ -15,7 +15,7 @@ following the `web/utils/feed-fetch.js` precedent.
 | `web/sol-calendar.js` | the custom element |
 | `web/styles/sol-calendar-css.js` | `CSS` string + constructable `sheet` |
 | `web/utils/calendar-fetch.js` | fetch + parse ICS (RFC 5545) + parse a registry TTL |
-| `data/calendar.ttl` | single-calendar `<#Settings>` PropertyValue example |
+| `data/calendar-settings.ttl` | single-calendar `<#Settings>` PropertyValue example |
 | `data/calendars.ttl` | (optional, see Q2) multi-calendar registry, schema:Event-style |
 | `help/sol-calendar-help.html` | one focused help page |
 | `claude/smoke-tests/sol-calendar-*.{mjs,html}` | node + browser smoke checks |
@@ -40,7 +40,7 @@ with what `rdflib` already adds for the RDF-using components.
 <sol-calendar provider="google" calendar-id="alice@example.org"></sol-calendar>
 
 <!-- Pull URL + provider + view from a TTL config -->
-<sol-calendar source="data/calendar.ttl#Settings"></sol-calendar>
+<sol-calendar source="data/calendar-settings.ttl#Settings"></sol-calendar>
 ```
 
 Attributes (HTML attribute always wins over RDF config — same convention as
@@ -180,7 +180,7 @@ Container-fit behaviour (matches sol-feed):
 
 ## 5. RDF / data files
 
-### `data/calendar.ttl` (single calendar, sol-weather pattern)
+### `data/calendar-settings.ttl` (single calendar, sol-weather pattern)
 
 ```ttl
 @prefix schema: <http://schema.org/> .
@@ -281,7 +281,7 @@ now, beyond the §4 / §7 v1 scope:
   `Promise.allSettled`, merges + sorts, with per-feed error isolation
   and a "Loaded N of M" status line. Each event carries a short
   `calendar` label derived from the URL host. Driven from
-  `data/calendar.ttl#All` on the dashboard (Solid CG + LWS WG +
+  `data/calendar-settings.ttl#All` on the dashboard (Solid CG + LWS WG +
   Extra Solid Events from solidproject.org/events).
 - **Meeting-URL extraction** — `pickMeetingUrl` derives the summary's
   href in priority order: ICS `URL:` → `LOCATION:` as URL (with

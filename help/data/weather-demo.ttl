@@ -1,12 +1,16 @@
-@prefix geo:    <http://www.w3.org/2003/01/geo/wgs84_pos#> .
-@prefix schema: <http://schema.org/> .
-@prefix time:   <http://www.w3.org/2006/time#> .
-@prefix ui:     <http://www.w3.org/ns/ui#> .
-@prefix :       <#> .
+@prefix : <#>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>.
+@prefix schema: <http://schema.org/>.
+@prefix ui: <http://www.w3.org/ns/ui#>.
+@prefix time: <http://www.w3.org/2006/time#>.
 
-<#Settings>
-  geo:lat 45.52 ;
-  geo:long -122.68 ;
-  schema:addressLocality "Portland, OR" ;
-  ui:temperatureUnit ui:Both ;
-  time:hours 12 .
+<>
+    a <urn:swc:shape:weather-settings:WeatherSettingsFile>;
+    foaf:primaryTopic :Settings.
+:Settings
+    schema:addressLocality "Portland, OR";
+    geo:lat 45.52;
+    geo:long -122.68;
+    time:hours 12;
+    ui:temperatureUnit ui:Celsius.

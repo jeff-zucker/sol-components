@@ -107,7 +107,7 @@
     sh:path dcterms:subject ;
     sh:class skos:Concept ;
     sh:description "Categories associated with the Link" ;
-  ] .
+  ] ;
   sh:xone (
     [ sh:property [ sh:path ui:href ; sh:minCount 1 ] ]
     [ sh:property [ sh:path ui:contents ; sh:minCount 1 ] ]

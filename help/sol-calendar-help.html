@@ -211,9 +211,9 @@
     <code>"locale"</code>). Any HTML attribute still wins, so a page
     can override one field inline while the rest come from the TTL.</p>
 
-    <pre><code>&lt;sol-calendar source="data/calendar.ttl#Settings"&gt;&lt;/sol-calendar&gt;</code></pre>
+    <pre><code>&lt;sol-calendar source="data/calendar-settings.ttl#Settings"&gt;&lt;/sol-calendar&gt;</code></pre>
 
-    <p>And <code>data/calendar.ttl</code>:</p>
+    <p>And <code>data/calendar-settings.ttl</code>:</p>
     <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
 
 &lt;#Settings&gt;
@@ -273,7 +273,7 @@
     [ a schema:PropertyValue ; schema:name "window-days"@en ; schema:value 60 ] .</code></pre>
 
     <p>Then point the element at the fragment:</p>
-    <pre><code>&lt;sol-calendar source="data/calendar.ttl#All" hide-header&gt;&lt;/sol-calendar&gt;</code></pre>
+    <pre><code>&lt;sol-calendar source="data/calendar-settings.ttl#All" hide-header&gt;&lt;/sol-calendar&gt;</code></pre>
 
     <h3>Failure handling</h3>
     <p>Each feed is fetched independently via

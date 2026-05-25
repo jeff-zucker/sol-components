@@ -70,12 +70,22 @@ export async function parseShape(shapeText, baseUri) {
   rdf.parse(shapeText, shapeStore, abs, 'text/turtle');
   await followOwlImports(shapeStore, abs);
 
-  const nodeShape = shapeStore.any(null,
+  // In the file/topic wrapper pattern (file-shape uses sh:node to point
+  // at a topic-shape that carries the actual property constraints), the
+  // topic-shape is what the form should render — it has the concrete
+  // sh:path entries, not just the foaf:primaryTopic wrapper. Prefer a
+  // shape that IS referenced via sh:node by another. For flat
+  // single-shape files (no nesting), nothing is sh:node-referenced and
+  // we fall through to allShapes[0] — behavior unchanged.
+  const allShapes = shapeStore.each(null,
     rdf.sym(RDF_NS + 'type'),
     rdf.sym(SH + 'NodeShape'));
-  if (!nodeShape) {
+  if (!allShapes.length) {
     return { targets: { nodes: [], classes: [], subjectsOf: [] }, properties: [] };
   }
+  const nodeShape =
+    allShapes.find(s => shapeStore.any(null, rdf.sym(SH + 'node'), s)) ||
+    allShapes[0];
 
   const targets = {
     nodes:      shapeStore.each(nodeShape, rdf.sym(SH + 'targetNode')),
@@ -285,13 +295,16 @@ export function renderRecordForm(container, store, subject, properties, opts = {
   const origEditable = store.updater?.editable;
   if (readOnly && store.updater) store.updater.editable = () => false;
 
-  // Each render synthesises ui:Form triples that live in the store
-  // alongside the data. They're collected here so the cleanup function
-  // can strip them when the form is torn down — no long-term pollution.
+  // Each render synthesises ui:Form widget triples. We put them in a
+  // SEPARATE named graph (formGraph) rather than `doc`, so that a
+  // serialization of `doc` (e.g. sol-form's getTurtle) yields just the
+  // user's data — never the form metadata. The cleanup still removes
+  // them outright on form teardown.
+  const formGraph = rdf.sym('about:sol-form-synth#g');
   const synthesized = [];
-  const add = (s, p, o, g = doc) => {
+  const add = (s, p, o, g = formGraph) => {
     store.add(s, p, o, g);
-    synthesized.push(rdf.sym ? { s, p, o, g } : null);
+    synthesized.push({ s, p, o, g });
   };
 
   // For each descriptor, build a ui:* field node and hand it (or its
@@ -305,7 +318,7 @@ export function renderRecordForm(container, store, subject, properties, opts = {
     row.dataset.key = desc.key;
     inner.appendChild(row);
 
-    const fieldNode = buildFieldNode(store, desc, synthesized, doc);
+    const fieldNode = buildFieldNode(store, desc, synthesized, formGraph);
     if (!fieldNode) {
       row.textContent = '(unrecognised shape for ' + (desc.label || desc.key) + ')';
       continue;
@@ -356,33 +369,29 @@ export function renderRecordForm(container, store, subject, properties, opts = {
 // pointing at the picked URI. Skipped for multi-select selects (those
 // go through solid-ui's own update path).
 function wireSingleSelectAutosave(row, store, subject, predicate, doc, cb) {
-  // Delegate on the row so it survives any later re-render by solid-ui.
-  // We mutate the store and write the doc back via updater.put — PATCH
-  // via update(ds, is, cb) returned ok-without-effect against CSS, so
-  // the full-doc PUT is the reliable path.
+  // solid-ui's single-select Choice (a) doesn't autosave the chosen value
+  // and (b) actively detaches the <select> from its parent on every change
+  // (its onChange does `container.removeChild(container.lastChild)` and
+  // never re-adds for single-select). We attach our own change handler
+  // that re-appends the detached <select> AND PATCHes the new value via
+  // store.updater.update — the same path solid-ui's basic fields use.
   row.addEventListener('change', (e) => {
     const sel = e.target;
     if (!sel || sel.tagName !== 'SELECT' || sel.multiple) return;
     const newUri = sel.value;
     if (!newUri || !/^https?:|^urn:|^did:/.test(newUri)) return;
-    const olds = store.statementsMatching(subject, predicate, null, doc).slice();
-    for (const s of olds) store.remove(s);
-    store.add(subject, predicate, rdf.sym(newUri), doc);
+
+    // solid-ui already removed sel from its parent (.choiceBox-selectBox).
+    // Put it back so the user keeps seeing the dropdown.
+    if (!sel.parentNode) {
+      const rhs = row.querySelector('.choiceBox-selectBox');
+      if (rhs) rhs.appendChild(sel);
+    }
+
     if (!store.updater) { cb(false); return; }
-    // Filter out shape-to-form's synthesized ui:Form metadata (Choice
-    // descriptors etc.) — those share the doc graph but aren't real
-    // data. Keep only triples on the subject's own URI.
-    const real = store.statementsMatching(null, null, null, doc)
-      .filter(s => s.subject.value === subject.value);
-    store.updater.put(doc, real, 'text/turtle', (_uri, ok) => {
-      cb(!!ok);
-      if (ok) {
-        document.dispatchEvent(new CustomEvent('sol-form-save', {
-          bubbles: true, composed: true,
-          detail: { subject, target: doc },
-        }));
-      }
-    });
+    const olds = store.statementsMatching(subject, predicate, null, doc).slice();
+    const news = [rdf.st(subject, predicate, rdf.sym(newUri), doc)];
+    store.updater.update(olds, news, (_uri, ok) => { cb(!!ok); });
   });
 }
 

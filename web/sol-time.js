@@ -20,7 +20,7 @@
  * @example
  *   <sol-time></sol-time>
  *   <sol-time time-label="tokyo" time-offset="9"></sol-time>
- *   <sol-time source="data/time.ttl#Settings"></sol-time>
+ *   <sol-time source="data/time-settings.ttl#Settings"></sol-time>
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';

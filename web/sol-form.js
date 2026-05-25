@@ -169,6 +169,11 @@ class SolForm extends HTMLElement {
       this._subject  = subjectNode;
       this._docNode  = docNode;
       this._docUrl   = docUrl;
+      // Track whether this form is editing an existing-on-server doc
+      // (`true` → per-field PATCH via solid-ui already saved everything;
+      // a Save-button click just emits the event) vs. authoring a new
+      // doc (`false` → PUT once to create, then flip to true).
+      this._docExists = !!docUrl;
       this._ordered  = formStore ? this._hasOrdering(formStore, formRoot) : false;
 
       if (formStore) {
@@ -333,11 +338,20 @@ class SolForm extends HTMLElement {
       doc,
       readOnly,
       onChange: () => {
+        // solid-ui's fieldFunction widgets (basic + Choice via our
+        // wireSingleSelectAutosave) PATCH via store.updater.update — that
+        // IS the save. We don't autosave on top of that; we just emit the
+        // events downstream listeners use to refresh.
         this.dispatchEvent(new CustomEvent('sol-form-change', {
           bubbles: true, composed: true,
           detail: { subject: this._subject, ok: true, message: '' },
         }));
-        if (!this._ordered) this._scheduleAutoSave();
+        if (!this._ordered) {
+          this.dispatchEvent(new CustomEvent('sol-form-save', {
+            bubbles: true, composed: true,
+            detail: { subject: this._subject, target: this._docUrl },
+          }));
+        }
       },
     });
     // Hide the save bar entirely when read-only — nothing to save.
@@ -383,25 +397,33 @@ class SolForm extends HTMLElement {
       return;
     }
 
-    const turtle = this.getTurtle();
-    if (!turtle) { this._setStatus('err', 'Nothing to save'); return; }
-
     const btn = this.shadowRoot.querySelector('.sol-form-save-btn');
-    btn.disabled = true;
-    this._setStatus('', 'Saving…');
+    if (btn) btn.disabled = true;
 
     try {
-      await this._putViaUpdater(turtle);
+      // For existing docs, each per-field edit already PATCHed via
+      // store.updater.update (solid-ui's basic widgets + our
+      // wireSingleSelectAutosave). Nothing left to save — just confirm.
+      // For brand-new docs (no on-server state yet), do a one-shot PUT
+      // to create the file, then flip the flag so subsequent edits flow
+      // through the per-field PATCH path normally.
+      if (!this._docExists) {
+        const turtle = this.getTurtle();
+        if (!turtle) { this._setStatus('err', 'Nothing to save'); return; }
+        this._setStatus('', 'Saving…');
+        await this._putViaUpdater(turtle);
+        this._docExists = true;
+      }
       this._pendingSave = false;
       this._setStatus('ok', this._ordered ? 'Saved' : 'Auto-saved');
       this.dispatchEvent(new CustomEvent('sol-form-save', {
         bubbles: true, composed: true,
-        detail: { subject: this._subject, turtle, target: this._docUrl },
+        detail: { subject: this._subject, target: this._docUrl },
       }));
     } catch (err) {
       this._setStatus('err', err.message || 'Save failed');
     } finally {
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
     }
   }
 

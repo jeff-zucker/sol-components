@@ -1,0 +1,28 @@
+
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX ui: <http://www.w3.org/ns/ui#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+
+shape <#DataKitchenSettingsFileShape> -> <urn:swc:shape:data-kitchen-settings:DataKitchenSettingsFile> {
+	foaf:primaryTopic [1..1] @<#DataKitchenSettingsShape> .
+}
+shape <#DataKitchenSettingsShape> {
+	ui:colorScheme ui:ColorScheme [0..1] %
+		sh:name "Color scheme"
+	% .
+	ui:fontSize ui:FontSize [0..1] %
+		sh:name "Font size"
+	% .
+	ui:editorKeys ui:EditorKeys [0..1] %
+		sh:name "Editor keys"
+	% .
+	ui:proxy xsd:string [0..1] %
+		sh:name "CORS proxy" ;
+		sh:description "URL prefix wrapping a target URL for CORS proxying; the target is URI-encoded onto the end."
+	% .
+}
+
+<> owl:imports <../data/ui-vocab.ttl> .
+<urn:swc:shape:data-kitchen-settings:DataKitchenSettingsFile> a rdfs:Class ;
+	rdfs:subClassOf wd:Q1193846 .
+

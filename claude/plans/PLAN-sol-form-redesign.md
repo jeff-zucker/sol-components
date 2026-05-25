@@ -32,7 +32,7 @@ can reuse it.
 
 ```html
 <!-- Canonical: schema + data + (inferred) view. -->
-<sol-form shape="foo-settings.shacl" data="data/foo.ttl#Settings"></sol-form>
+<sol-form shape="foo-settings.shacl" data="data/foo-settings.ttl#Settings"></sol-form>
 
 <!-- No fragment → multi-subject. Defaults to view=rolodex. -->
 <sol-form shape="contact-shape.shacl" data="contacts.ttl"></sol-form>
@@ -261,8 +261,8 @@ defaults) are not affected; the editable mode is opt-in.
   ```
   No more conditional editor/shape branching.
 - **Calendar settings** still needs disambiguation (4 named
-  containers in one doc). `data="data/calendar.ttl#All"` for the
-  specific container, OR `data="data/calendar.ttl"` to see all four
+  containers in one doc). `data="data/calendar-settings.ttl#All"` for the
+  specific container, OR `data="data/calendar-settings.ttl"` to see all four
   in a rolodex/table — a side benefit of the design.
 
 ## Build order

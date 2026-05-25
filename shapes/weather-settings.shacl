@@ -1,7 +1,11 @@
 @prefix :       <#> .
+@prefix swc:    <urn:swc:shape:weather-settings:> .
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix wd:     <http://www.wikidata.org/entity/> .
+@prefix foaf:   <http://xmlns.com/foaf/0.1/> .
 @prefix geo:    <http://www.w3.org/2003/01/geo/wgs84_pos#> .
 @prefix schema: <http://schema.org/> .
 @prefix time:   <http://www.w3.org/2006/time#> .
@@ -10,9 +14,21 @@
 <>
   owl:imports <../data/ui-vocab.ttl> .
 
+swc:WeatherSettingsFile
+  a rdfs:Class ;
+  rdfs:subClassOf wd:Q1193846 .
+
+:WeatherSettingsFileShape
+  a sh:NodeShape ;
+  sh:targetClass swc:WeatherSettingsFile ;
+  sh:property [
+    sh:path foaf:primaryTopic ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+    sh:node :WeatherSettingsShape ;
+  ] .
+
 :WeatherSettingsShape
   a sh:NodeShape ;
-  sh:targetSubjectsOf geo:lat ;
 
   sh:property [
     sh:path geo:lat ;

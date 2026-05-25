@@ -38,10 +38,11 @@ class SolDefault extends HTMLElement {
   static get observedAttributes() { return []; }
 
   /** SHACL shape describing the editable knobs (proxy etc.). Shares
-   *  preferences.shacl with the chrome's theme / font / editor-keys
-   *  knobs so a single sol-form can edit everything together. */
+   *  data-kitchen-settings.shacl with the chrome's theme / font /
+   *  editor-keys knobs so a single sol-form can edit everything
+   *  together. */
   static get shape() {
-    return new URL('../shapes/preferences.shacl', import.meta.url).href;
+    return new URL('../shapes/data-kitchen-settings.shacl', import.meta.url).href;
   }
 
   constructor() {

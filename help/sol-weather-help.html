@@ -94,7 +94,7 @@
 &lt;sol-weather lat="45.52" lon="-122.68" units="imperial"&gt;&lt;/sol-weather&gt;
 
 &lt;!-- Pull everything from a TTL config --&gt;
-&lt;sol-weather source="data/weather.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
+&lt;sol-weather source="data/weather-settings.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
 
     <h3>Theming via CSS parts</h3>
     <p>The card and each cell are exposed as shadow parts:
@@ -124,9 +124,9 @@ sol-weather::part(desc)  { display: inline; } /* show the verbose
       </tbody>
     </table>
 
-    <pre><code>&lt;sol-weather source="data/weather.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
+    <pre><code>&lt;sol-weather source="data/weather-settings.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
 
-    <p>And <code>data/weather.ttl</code>:</p>
+    <p>And <code>data/weather-settings.ttl</code>:</p>
     <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
 
 &lt;#Settings&gt;

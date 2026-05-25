@@ -127,12 +127,12 @@ const ok = probe.timeText
         // "local" + "gmt" are always shown; a third "HH:MM" block proves
         // sol-time pulled an extra-timezone label/offset pair out of the
         // TTL via loadConfig. (We don't hard-code the label string —
-        // users edit data/time.ttl to whatever city they prefer.)
+        // users edit data/time-settings.ttl to whatever city they prefer.)
         && /local/.test(probe.timeText)
         && /gmt/.test(probe.timeText)
         && (probe.timeText.match(/\d\d:\d\d/g) || []).length >= 3
         && probe.weatherText
-        // "Portland, OR" + both unit suffixes come from data/weather.ttl.
+        // "Portland, OR" + both unit suffixes come from data/weather-settings.ttl.
         && /Portland, OR/.test(probe.weatherText)
         && /°C/.test(probe.weatherText)
         && /°F/.test(probe.weatherText)

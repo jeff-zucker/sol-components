@@ -3,8 +3,8 @@
 ## Status
 
 **Completed 2026-05.** Weather, Time, Calendar, and Menu shapes
-plus the corresponding data files (`weather.ttl`, `time.ttl`,
-`calendar.ttl`, `menu.ttl`) migrated to direct predicates. The
+plus the corresponding data files (`weather-settings.ttl`, `time-settings.ttl`,
+`calendar-settings.ttl`, `menu.ttl`) migrated to direct predicates. The
 PropertyValue indirection and the bespoke `swc:` namespace for
 configuration properties are gone. The shape-to-form synthetic
 property/value commit dance was deleted with them. See
@@ -62,7 +62,7 @@ linked-data tooling without a custom vocabulary.
 ## Target data shape (final state)
 
 ```turtle
-# data/weather.ttl
+# data/weather-settings.ttl
 <#Settings>
   geo:lat 45.52 ;
   geo:long -122.68 ;
@@ -70,11 +70,11 @@ linked-data tooling without a custom vocabulary.
   dct:conformsTo qudt:SI , qudt:USCustomaryUnits ;   # "both" → two values
   time:hours 12 .
 
-# data/time.ttl
+# data/time-settings.ttl
 <#Settings>
   schema:timezone "Asia/Kolkata" .      # IANA name; offset + label derived
 
-# data/calendar.ttl  (per-container <#All>, <#SolidCG>, …)
+# data/calendar-settings.ttl  (per-container <#All>, <#SolidCG>, …)
 <#All>
   dct:source <https://www.w3.org/groups/cg/solid/calendar/export/> ,
              <https://www.w3.org/groups/wg/lws/calendar/export/> ,
@@ -197,7 +197,7 @@ commit path; the parser is a fork of the existing function.
 ### Phase 2 — Weather migration (proof of concept)
 
 - Rewrite `shapes/weather-settings.shacl` to use direct predicates.
-- Rewrite `data/weather.ttl` to use direct properties (preserve current Portland values).
+- Rewrite `data/weather-settings.ttl` to use direct properties (preserve current Portland values).
 - Update `sol-weather.js`'s settings reader for dual-read.
 - Update `sol-weather.js`'s `observedAttributes` if the HTML-attribute names should mirror the new predicate local-parts (they don't have to — HTML attrs like `latitude=` can stay).
 - Run the full smoke test:
@@ -214,7 +214,7 @@ is the only novel piece).
 ### Phase 3 — Time migration
 
 - Rewrite `shapes/time-settings.shacl` to a single property: `schema:timezone`.
-- Rewrite `data/time.ttl` to use `schema:timezone "Asia/Kolkata"` instead of `timezone "Mumbai"` + `timezone-offset 5.5`.
+- Rewrite `data/time-settings.ttl` to use `schema:timezone "Asia/Kolkata"` instead of `timezone "Mumbai"` + `timezone-offset 5.5`.
 - Update `sol-time.js`'s reader: collapse the two-field model to one IANA-name read; derive display label and offset using `Intl.DateTimeFormat(undefined, { timeZone: '…', timeZoneName: 'short' })`.
 - Smoke test as above.
 
@@ -226,7 +226,7 @@ testing against the current display.
 ### Phase 4 — Calendar migration
 
 - Rewrite `shapes/calendar-settings.shacl` for direct predicates, including the multi-valued `dct:source` (`sh:nodeKind sh:IRI ; sh:minCount 1`, no maxCount).
-- Rewrite `data/calendar.ttl` across all four named containers (`<#All>`, `<#SolidCG>`, `<#LWS>`, `<#Extra>`).
+- Rewrite `data/calendar-settings.ttl` across all four named containers (`<#All>`, `<#SolidCG>`, `<#LWS>`, `<#Extra>`).
 - Update `sol-calendar.js`'s reader.
 - Verify multi-valued source rendering in the form (the "+ Add another" / "− remove" chrome still appears correctly because cardinality is read from the shape).
 - Verify the calendar widget still merges sources correctly after a save.

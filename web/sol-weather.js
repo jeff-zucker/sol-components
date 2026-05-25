@@ -29,7 +29,7 @@
  * @example
  *   <sol-weather place="Portland, OR"></sol-weather>
  *   <sol-weather lat="45.52" lon="-122.68" units="imperial"></sol-weather>
- *   <sol-weather source="data/weather.ttl#Settings"></sol-weather>
+ *   <sol-weather source="data/weather-settings.ttl#Settings"></sol-weather>
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
