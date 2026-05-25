@@ -143,7 +143,7 @@ class SolWeather extends HTMLElement {
    *   geo:lat                  → lat
    *   geo:long                 → lon
    *   schema:addressLocality   → place
-   *   dct:conformsTo (+ QUDT)  → units   ("metric"/"imperial"/"both")
+   *   ui:temperatureUnit       → units   ("metric"/"imperial"/"both")
    *   time:hours               → hours-window
    * Skips any attribute already set in HTML. See
    * claude/plans/PLAN-vocab-migration.md for the predicate choices.
@@ -153,9 +153,8 @@ class SolWeather extends HTMLElement {
     if (!source) return;
     const GEO    = 'http://www.w3.org/2003/01/geo/wgs84_pos#';
     const SCHEMA = 'http://schema.org/';
-    const DCT    = 'http://purl.org/dc/terms/';
     const TIME   = 'http://www.w3.org/2006/time#';
-    const QUDT   = 'http://qudt.org/vocab/sou/';
+    const UI     = 'http://www.w3.org/ns/ui#';
 
     try {
       const cfg = await loadConfig(source);
@@ -169,13 +168,15 @@ class SolWeather extends HTMLElement {
       setIf('place',         cfg[SCHEMA + 'addressLocality']);
       setIf('hours-window',  cfg[TIME   + 'hours']);
 
-      // dct:conformsTo can be one URI or a list — normalize to an array.
-      const ct = cfg[DCT + 'conformsTo'];
-      if (ct != null) {
-        const systems = Array.isArray(ct) ? ct : [ct];
-        const si = systems.includes(QUDT + 'SI');
-        const us = systems.includes(QUDT + 'USCustomaryUnits');
-        const units = (si && us) ? 'both' : si ? 'metric' : us ? 'imperial' : null;
+      // ui:temperatureUnit is single-valued. Map the three instances
+      // onto the legacy 'units' attribute the renderer already speaks.
+      const tu = cfg[UI + 'temperatureUnit'];
+      if (tu != null) {
+        const value = Array.isArray(tu) ? tu[0] : tu;
+        const units = value === UI + 'Fahrenheit' ? 'imperial'
+                    : value === UI + 'Celsius'    ? 'metric'
+                    : value === UI + 'Both'       ? 'both'
+                    : null;
         if (units) setIf('units', units);
       }
     } catch (err) {

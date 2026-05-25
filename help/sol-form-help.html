@@ -554,8 +554,7 @@ node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
         store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#lat'),         lit('45.52',  'decimal'), doc);
         store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#long'),        lit('-122.68','decimal'), doc);
         store.add(subject, sym('http://schema.org/addressLocality'),                   lit('Portland, OR'),       doc);
-        store.add(subject, sym('http://purl.org/dc/terms/conformsTo'),                 sym('http://qudt.org/vocab/sou/SI'),                doc);
-        store.add(subject, sym('http://purl.org/dc/terms/conformsTo'),                 sym('http://qudt.org/vocab/sou/USCustomaryUnits'),  doc);
+        store.add(subject, sym('http://www.w3.org/ns/ui#temperatureUnit'),             sym('http://www.w3.org/ns/ui#Both'), doc);
         store.add(subject, sym('http://www.w3.org/2006/time#hours'),                   lit('12', 'integer'),      doc);
 
         formEl.classList.remove('loading');

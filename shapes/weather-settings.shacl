@@ -1,15 +1,14 @@
 @prefix :       <#> .
 @prefix sh:     <http://www.w3.org/ns/shacl#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
-@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
 @prefix geo:    <http://www.w3.org/2003/01/geo/wgs84_pos#> .
 @prefix schema: <http://schema.org/> .
-@prefix dct:    <http://purl.org/dc/terms/> .
-@prefix qudt:   <http://qudt.org/vocab/sou/> .
 @prefix time:   <http://www.w3.org/2006/time#> .
+@prefix ui:     <http://www.w3.org/ns/ui#> .
 
-qudt:SI                rdfs:label "metric" .
-qudt:USCustomaryUnits  rdfs:label "imperial" .
+<>
+  owl:imports <../data/ui-vocab.ttl> .
 
 :WeatherSettingsShape
   a sh:NodeShape ;
@@ -34,11 +33,11 @@ qudt:USCustomaryUnits  rdfs:label "imperial" .
     sh:description "Display name shown on the weather card" ;
   ] ,
   [
-    sh:path dct:conformsTo ;
-    sh:nodeKind sh:IRI ; sh:minCount 1 ;
-    sh:in ( qudt:SI qudt:USCustomaryUnits ) ;
-    sh:name "Unit system(s)" ;
-    sh:description "qudt:SI for metric, qudt:USCustomaryUnits for imperial. Multiple values render both." ;
+    sh:path ui:temperatureUnit ;
+    sh:class ui:TemperatureUnit ;
+    sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Temperature unit" ;
+    sh:description "Fahrenheit, Celsius, or Both" ;
   ] ,
   [
     sh:path time:hours ;

@@ -29,6 +29,11 @@ ui:editorKeys a rdf:Property ;
   rdfs:comment "Preferred editor keybindings; the value is one of the ui:EditorKeys instances." ;
   rdfs:range   ui:EditorKeys .
 
+ui:temperatureUnit a rdf:Property ;
+  rdfs:label   "temperature unit" ;
+  rdfs:comment "Display unit for temperature; the value is one of the ui:TemperatureUnit instances." ;
+  rdfs:range   ui:TemperatureUnit .
+
 # Value classes — each root is an rdfs:Class whose instances are the
 # picker options. Shape files declare sh:class <root>; shape-to-form
 # translates that to ui:from <root> and solid-ui's Choice handler
@@ -55,3 +60,10 @@ ui:EditorKeys a rdfs:Class ;
 ui:DefaultKeys a ui:EditorKeys ; rdfs:label "Default" .
 ui:EmacsKeys   a ui:EditorKeys ; rdfs:label "Emacs"   .
 ui:VimKeys     a ui:EditorKeys ; rdfs:label "Vim"     .
+
+ui:TemperatureUnit a rdfs:Class ;
+  rdfs:label "Temperature unit" .
+
+ui:Fahrenheit a ui:TemperatureUnit ; rdfs:label "Fahrenheit" .
+ui:Celsius    a ui:TemperatureUnit ; rdfs:label "Celsius"    .
+ui:Both       a ui:TemperatureUnit ; rdfs:label "Both"       .
