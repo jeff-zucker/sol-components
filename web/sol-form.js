@@ -31,8 +31,9 @@ import { adopt }  from '../core/adopt.js';
 import { rdf }    from '../core/rdf.js';
 import { loadRdfStore } from '../core/rdf-utils.js';
 import { UI, RDF, readFormParts, findForm } from '../core/form-utils.js';
-import { parseShape, renderRecordForm } from '../core/shape-to-form.js';
+import { parseShape, renderRecordForm, findSubjects } from '../core/shape-to-form.js';
 import { CSS as FORM_CSS, sheet as formSheet } from './styles/sol-form-css.js';
+import { CSS as ROLODEX_CSS, sheet as rolodexSheet } from './styles/view-rolodex-css.js';
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
 
@@ -52,11 +53,11 @@ class SolForm extends HTMLElement {
     this._pendingSave = false;
   }
 
-  static get observedAttributes() { return ['source', 'subject', 'shape', 'save-to']; }
+  static get observedAttributes() { return ['source', 'subject', 'shape', 'save-to', 'view']; }
 
   attributeChangedCallback(name, oldVal, newVal) {
     if (oldVal === newVal) return;
-    if (name === 'source' && this._rendered) this._load();
+    if ((name === 'source' || name === 'view') && this._rendered) this._load();
   }
 
   connectedCallback() {
@@ -120,6 +121,7 @@ class SolForm extends HTMLElement {
   async _load() {
     const source = this.getAttribute('source');
     const shape  = this.getAttribute('shape');
+    const view   = (this.getAttribute('view') || '').toLowerCase();
     if (!source && !shape) return;
 
     const body = this.shadowRoot.querySelector('.sol-form-body');
@@ -127,6 +129,21 @@ class SolForm extends HTMLElement {
     this._clearStatus();
     this._hideValidation();
     clearTimeout(this._saveTimer);
+
+    // Rolodex view: `source` is a data document, `shape` is the per-item
+    // shape. We find every subject the shape targets and render one
+    // editable record-form per subject, navigable card-by-card.
+    if (view === 'rolodex') {
+      try {
+        if (!shape)  throw new Error('view="rolodex" requires a shape attribute.');
+        if (!source) throw new Error('view="rolodex" requires a source data document.');
+        await this._renderRolodex(body, source, shape);
+      } catch (err) {
+        body.innerHTML = `<div class="sol-form-error">${this._esc(err.message)}</div>`;
+        console.error('<sol-form view="rolodex"> failed:', err);
+      }
+      return;
+    }
 
     try {
       // Form definition (optional in shape-driven mode).
@@ -205,16 +222,6 @@ class SolForm extends HTMLElement {
     const store = rdf.store;
     if (!store.fetcher) store.fetcher = new (rdf.Fetcher)(store);
     if (!store.updater) store.updater = new (rdf.UpdateManager)(store);
-
-    // Mark the doc as editable so solid-ui fields render as inputs.
-    store.updater.editable = (uri) => {
-      if (typeof uri === 'object') uri = uri?.value || uri?.uri;
-      return true;
-    };
-    // Swallow inline PATCH attempts — persistence is handled by _save.
-    store.updater.update = (deletions, insertions, callback) => {
-      if (callback) callback(docUrl, true);
-    };
 
     return store;
   }
@@ -323,7 +330,8 @@ class SolForm extends HTMLElement {
     body.innerHTML = '';
     let parsed;
     try {
-      parsed = await parseShape(this._shapeText, this.getAttribute('shape') || '');
+      parsed = await parseShape(this._shapeText, this.getAttribute('shape') || '',
+                                { dataStore: store, subject });
     } catch (err) {
       body.innerHTML = `<div class="sol-form-error">Failed to parse shape: ${this._esc(err.message)}</div>`;
       return;
@@ -332,6 +340,25 @@ class SolForm extends HTMLElement {
       body.innerHTML = '<div class="sol-form-error">Shape declares no qualified properties — nothing to render.</div>';
       return;
     }
+
+    // Container pattern: if the selected shape has a multi-valued
+    // property with a nested NodeShape (sh:node), the user data is "a
+    // collection of records" — render a rolodex of cards keyed off
+    // that property, one per linked record, using the inner shape's
+    // own properties. Scalar siblings on the outer shape are
+    // intentionally ignored here; the rolodex of records is what the
+    // user cares about. First match wins.
+    const containerProp = parsed.properties.find(p =>
+      (p.maxCount === Infinity || p.maxCount > 1) && p.nestedProperties);
+    if (containerProp) {
+      const subjects = containerProp.reverse
+        ? store.each(null, containerProp.path, subject, doc).filter(n => n)
+        : store.each(subject, containerProp.path, null, doc).filter(n => n);
+      this._buildRolodexCards(body, store, doc, subjects,
+                              containerProp.nestedProperties, containerProp.sortedBy);
+      return;
+    }
+
     const readOnly = this.hasAttribute('no-edit');
     this._shapeCleanup?.();
     this._shapeCleanup = renderRecordForm(body, store, subject, parsed.properties, {
@@ -357,6 +384,238 @@ class SolForm extends HTMLElement {
     // Hide the save bar entirely when read-only — nothing to save.
     const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
     if (saveBar) saveBar.style.display = readOnly ? 'none' : '';
+  }
+
+  // ── rolodex view (one form per matching subject) ──
+  //
+  // `source` is treated as a data document (not a ui:Form definition).
+  // `shape` selects which subjects in that document get a form via its
+  // sh:targetClass / sh:targetNode / sh:targetSubjectsOf. Each form is
+  // pre-rendered and kept mounted (toggle visibility on nav) so solid-ui
+  // widgets keep their state — sol-rolodex's clone-per-flip approach
+  // would break live form bindings.
+  async _renderRolodex(body, source, shape) {
+    await this._loadShape(shape);
+    const parsed = await parseShape(this._shapeText, shape || '');
+    if (!parsed.properties.length) {
+      throw new Error('Shape declares no qualified properties — nothing to render.');
+    }
+
+    const docUrl = new URL(source, document.baseURI).href;
+    const dataStore = this._initStore(docUrl);
+    await dataStore.fetcher.load(docUrl);
+    const docNode = rdf.sym(docUrl);
+
+    const subjects = findSubjects(dataStore, parsed.targets, docNode);
+
+    this._store   = dataStore;
+    this._docNode = docNode;
+    this._docUrl  = docUrl;
+
+    this._buildRolodexCards(body, dataStore, docNode, subjects, parsed.properties);
+  }
+
+  // Build the rolodex UI: nav buttons + counter + one pre-rendered card
+  // per subject. Used both by view="rolodex" and by the container-pattern
+  // detection in _renderFromShape (a shape whose outer property is a
+  // multi-valued sh:node onto an inner record shape).
+  //
+  // When `sortedBy` (NamedNode) is given, cards are sorted by that
+  // predicate's integer value on each subject, the matching inner field
+  // is hidden, and each card gains ↑/↓ buttons that swap the
+  // `sortedBy` value with the previous / next subject (two-statement
+  // PATCH via store.updater.update).
+  _buildRolodexCards(body, dataStore, docNode, subjects, properties, sortedBy = null) {
+    adopt(this.shadowRoot, { sheet: rolodexSheet, css: ROLODEX_CSS });
+
+    if (!subjects.length) {
+      body.innerHTML = '<div class="sol-form-empty">No records to edit.</div>';
+      const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
+      if (saveBar) saveBar.style.display = 'none';
+      return;
+    }
+
+    // Sort by the ordering predicate (if any). Missing / non-integer
+    // values sink to the end so they don't break the sort.
+    const sortKey = (subj) => {
+      if (!sortedBy) return 0;
+      const v = dataStore.anyValue(subj, sortedBy, null, docNode);
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+    };
+    if (sortedBy) {
+      subjects = [...subjects].sort((a, b) => sortKey(a) - sortKey(b));
+    }
+    // Hide the ordering field from each card — the ↑/↓ buttons own it.
+    const displayProps = sortedBy
+      ? properties.filter(p => !p.path || p.path.value !== sortedBy.value)
+      : properties;
+
+    this._rolodexCleanups?.forEach(fn => { try { fn(); } catch (_) {} });
+    this._rolodexCleanups = [];
+
+    body.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sol-view-rolodex';
+    wrapper.tabIndex = 0;
+    // sol-query's rolodex view is inline-block (one-cell-wide cards);
+    // sol-form's rolodex cards hold real form widgets and want the
+    // full host width so the consumer can size the rolodex from outside.
+    wrapper.style.display = 'block';
+    wrapper.style.width = '100%';
+
+    const nav = document.createElement('div');
+    nav.className = 'rolodex-nav';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'sol-btn sol-btn-icon rolodex-btn';
+    prevBtn.setAttribute('aria-label', 'Previous record');
+    prevBtn.textContent = '‹';
+
+    const counter = document.createElement('span');
+    counter.className = 'rolodex-counter';
+    counter.setAttribute('aria-live', 'polite');
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'sol-btn sol-btn-icon rolodex-btn';
+    nextBtn.setAttribute('aria-label', 'Next record');
+    nextBtn.textContent = '›';
+
+    nav.appendChild(prevBtn);
+    nav.appendChild(counter);
+    nav.appendChild(nextBtn);
+
+    const card = document.createElement('div');
+    card.className = 'rolodex-card';
+    card.style.cursor = 'default';
+
+    wrapper.appendChild(nav);
+    wrapper.appendChild(card);
+    body.appendChild(wrapper);
+
+    const pages = subjects.map(subj => {
+      const page = document.createElement('div');
+      page.className = 'sol-form-rolodex-page';
+      page.dataset.subject = subj.value;
+
+      card.appendChild(page);
+      const cleanup = renderRecordForm(page, dataStore, subj, displayProps, {
+        doc: docNode,
+        onChange: () => {
+          this.dispatchEvent(new CustomEvent('sol-form-change', {
+            bubbles: true, composed: true,
+            detail: { subject: subj, ok: true, message: '' },
+          }));
+        },
+      });
+      this._rolodexCleanups.push(cleanup);
+
+      if (sortedBy) {
+        const reorder = document.createElement('div');
+        reorder.className = 'rolodex-reorder';
+        const hint = document.createElement('span');
+        hint.className = 'rolodex-reorder-hint';
+        hint.textContent = 'Use arrows to change order';
+        reorder.appendChild(hint);
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
+        upBtn.setAttribute('aria-label', 'Move up');
+        upBtn.textContent = '↑';
+        upBtn.addEventListener('click', () => this._swapSortedNeighbor(-1));
+        const posSpan = document.createElement('span');
+        posSpan.className = 'rolodex-pos';
+        posSpan.setAttribute('aria-label', 'Position');
+        posSpan.textContent = String(sortKey(subj));
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
+        downBtn.setAttribute('aria-label', 'Move down');
+        downBtn.textContent = '↓';
+        downBtn.addEventListener('click', () => this._swapSortedNeighbor(1));
+        reorder.appendChild(upBtn);
+        reorder.appendChild(posSpan);
+        reorder.appendChild(downBtn);
+        page.appendChild(reorder);
+      }
+
+      return page;
+    });
+
+    let index = 0;
+    const show = i => {
+      index = ((i % pages.length) + pages.length) % pages.length;
+      pages.forEach((p, j) => { p.hidden = j !== index; });
+      counter.textContent = `${index + 1} of ${pages.length}`;
+      this._subject = subjects[index];
+      // Disable ↑/↓ at the ends — wraparound here would silently break
+      // the position values for items outside the visible swap.
+      if (sortedBy) {
+        const cur = pages[index];
+        const up = cur.querySelector('.rolodex-reorder-btn[aria-label="Move up"]');
+        const dn = cur.querySelector('.rolodex-reorder-btn[aria-label="Move down"]');
+        if (up) up.disabled = index === 0;
+        if (dn) dn.disabled = index === pages.length - 1;
+      }
+    };
+
+    // Swap the `sortedBy` value of the current card with its
+    // neighbor (-1 = previous, +1 = next), via two-statement PATCH.
+    // After save, swap the in-memory subjects / pages so widget state
+    // is preserved and the just-moved card stays in view.
+    this._swapSortedNeighbor = (delta) => {
+      const i = index;
+      const j = i + delta;
+      if (j < 0 || j >= subjects.length) return;
+      const a = subjects[i];
+      const b = subjects[j];
+      const litA = dataStore.any(a, sortedBy, null, docNode);
+      const litB = dataStore.any(b, sortedBy, null, docNode);
+      if (!litA || !litB) return;
+      const olds = [
+        rdf.st(a, sortedBy, litA, docNode),
+        rdf.st(b, sortedBy, litB, docNode),
+      ];
+      const news = [
+        rdf.st(a, sortedBy, litB, docNode),
+        rdf.st(b, sortedBy, litA, docNode),
+      ];
+      dataStore.updater.update(olds, news, (_uri, ok) => {
+        if (!ok) return;
+        [subjects[i], subjects[j]] = [subjects[j], subjects[i]];
+        [pages[i], pages[j]] = [pages[j], pages[i]];
+        // Reflect new DOM order so prev/next walks visit the new sequence.
+        card.insertBefore(pages[Math.min(i, j)], pages[Math.max(i, j)]);
+        // Refresh the displayed position numbers — both swapped cards
+        // now carry the other's value.
+        pages.forEach((p, k) => {
+          const span = p.querySelector('.rolodex-pos');
+          if (span) span.textContent = String(sortKey(subjects[k]));
+        });
+        // After swap, the just-moved card moved to position j.
+        show(j);
+        this.dispatchEvent(new CustomEvent('sol-form-save', {
+          bubbles: true, composed: true,
+          detail: { subject: a, target: this._docUrl },
+        }));
+      });
+    };
+
+    prevBtn.addEventListener('click', () => show(index - 1));
+    nextBtn.addEventListener('click', () => show(index + 1));
+    wrapper.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); show(index - 1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); show(index + 1); }
+    });
+
+    show(0);
+
+    // Per-field PATCH via solid-ui already persists; the manual Save
+    // bar is just visual noise in rolodex mode.
+    const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
+    if (saveBar) saveBar.style.display = 'none';
   }
 
   // ── save ──

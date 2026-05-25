@@ -237,14 +237,15 @@ class SolCalendar extends HTMLElement {
           this.setAttribute(attr, String(cfg[predicate]));
         }
       }
-      // dct:source overrides the element's source (which was the TTL
-      // itself). It may be a single URL or a list — re-encode an array
-      // as a whitespace-separated string so `_sourceUrls()` can split
-      // it back out at render time.
+      // dct:source provides the actual feed URLs (the element's `source`
+      // attribute was a config-doc pointer). Stash them on the instance
+      // instead of overwriting the attribute — sol-settings discovery
+      // and the editor need `source` to keep pointing at the config TTL.
       const dctSource = cfg[DCT + 'source'];
       if (dctSource != null) {
-        const encoded = Array.isArray(dctSource) ? dctSource.join(' ') : String(dctSource);
-        if (encoded && encoded !== source) this.setAttribute('source', encoded);
+        this._feedUrls = Array.isArray(dctSource)
+          ? dctSource.map(String).filter(Boolean)
+          : [String(dctSource)].filter(Boolean);
       }
     } catch (err) {
       // Bad TTL or missing rdflib — surface in the status strip but
@@ -253,12 +254,14 @@ class SolCalendar extends HTMLElement {
     }
   }
 
-  /** Split the current `source` attribute into an array of ICS URLs.
-   *  Returns [] when source is empty or still an RDF-config pointer
-   *  (which only happens during the brief window before _applySource
-   *  has rewritten it). Whitespace-separated values become multiple
-   *  entries for the amalgamated-calendar path. */
+  /** ICS feed URLs to fetch. When `source` is an RDF-config pointer,
+   *  `_applySource` populates `this._feedUrls` from dct:source — those
+   *  win. Otherwise `source` is treated as a direct ICS URL (or a
+   *  whitespace-separated list of them), per the documented inline
+   *  usage. Empty result before _applySource has run on a config
+   *  pointer; the post-load render fills it in. */
   _sourceUrls() {
+    if (Array.isArray(this._feedUrls) && this._feedUrls.length) return this._feedUrls;
     const raw = this.source;
     if (!raw || isRdfConfigSource(raw)) return [];
     return raw.split(/\s+/).filter(Boolean);

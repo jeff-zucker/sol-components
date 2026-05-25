@@ -91,7 +91,6 @@ export const CSS = `
     display: flex;
     align-items: center;
     gap: var(--space-sm, 4px);
-    font-weight: var(--font-weight-bold, 600);
   }
   .sol-menu-group-btn::after {
     content: '▸';

@@ -34,6 +34,11 @@ ui:temperatureUnit a rdf:Property ;
   rdfs:comment "Display unit for temperature; the value is one of the ui:TemperatureUnit instances." ;
   rdfs:range   ui:TemperatureUnit .
 
+ui:sortedBy a rdf:Property ;
+  rdfs:label   "sorted by" ;
+  rdfs:comment "On a SHACL sh:property describing a multi-valued container, names the inner predicate whose value orders the rolodex cards. shape-to-form sorts cards by that predicate's integer value, hides the matching inner field, and adds ↑/↓ buttons that swap values with the previous / next subject." ;
+  rdfs:range   rdf:Property .
+
 # Value classes — each root is an rdfs:Class whose instances are the
 # picker options. Shape files declare sh:class <root>; shape-to-form
 # translates that to ui:from <root> and solid-ui's Choice handler

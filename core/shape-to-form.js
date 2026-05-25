@@ -62,7 +62,7 @@ const OWL      = 'http://www.w3.org/2002/07/owl#';
  * @param {string} baseUri    base URI used to resolve relative refs in the doc
  * @returns {{ targets: Targets, properties: ShapeProp[] }}
  */
-export async function parseShape(shapeText, baseUri) {
+export async function parseShape(shapeText, baseUri, ctx = {}) {
   const abs = baseUri
     ? new URL(baseUri, typeof document !== 'undefined' ? document.baseURI : 'file:///').href
     : '';
@@ -70,20 +70,34 @@ export async function parseShape(shapeText, baseUri) {
   rdf.parse(shapeText, shapeStore, abs, 'text/turtle');
   await followOwlImports(shapeStore, abs);
 
-  // In the file/topic wrapper pattern (file-shape uses sh:node to point
-  // at a topic-shape that carries the actual property constraints), the
-  // topic-shape is what the form should render — it has the concrete
-  // sh:path entries, not just the foaf:primaryTopic wrapper. Prefer a
-  // shape that IS referenced via sh:node by another. For flat
-  // single-shape files (no nesting), nothing is sh:node-referenced and
-  // we fall through to allShapes[0] — behavior unchanged.
+  // Shape selection (in priority order):
+  //   1. If ctx supplies subject + dataStore: prefer the shape whose
+  //      sh:targetClass matches one of the subject's rdf:type values.
+  //      This is the "outer shape applies to user data" case (e.g.,
+  //      schema:ItemList → SearchEnginesShape).
+  //   2. The file/topic wrapper pattern: file-shape uses sh:node to
+  //      point at a topic-shape carrying the actual property
+  //      constraints (e.g., DataKitchenSettingsFile → settings topic
+  //      shape via foaf:primaryTopic). Prefer the sh:node-referenced
+  //      shape — the file-shape's only property is the walker.
+  //   3. Fallback: first NodeShape in the file.
   const allShapes = shapeStore.each(null,
     rdf.sym(RDF_NS + 'type'),
     rdf.sym(SH + 'NodeShape'));
   if (!allShapes.length) {
     return { targets: { nodes: [], classes: [], subjectsOf: [] }, properties: [] };
   }
-  const nodeShape =
+  let nodeShape = null;
+  if (ctx.subject && ctx.dataStore) {
+    const subjectTypes = ctx.dataStore.each(ctx.subject, rdf.sym(RDF_NS + 'type'));
+    if (subjectTypes.length) {
+      nodeShape = allShapes.find(s => {
+        const tcs = shapeStore.each(s, rdf.sym(SH + 'targetClass'));
+        return tcs.some(tc => subjectTypes.some(t => t.value === tc.value));
+      }) || null;
+    }
+  }
+  nodeShape ||=
     allShapes.find(s => shapeStore.any(null, rdf.sym(SH + 'node'), s)) ||
     allShapes[0];
 
@@ -197,6 +211,11 @@ export function readShapeProperty(shapeStore, prop) {
   // sub-fields (wrapped in a ui:Multiple when the outer property is
   // multi-valued).
   const nodeShape = shapeStore.any(prop, rdf.sym(SH + 'node'));
+  // ui:sortedBy on a container property — names the inner predicate
+  // whose integer value orders the rolodex cards. Renderer hides the
+  // named inner field and replaces it with ↑/↓ buttons that swap
+  // values with the previous / next subject.
+  const sortedBy = shapeStore.any(prop, rdf.sym(UI + 'sortedBy')) || null;
   let nestedProperties = null;
   if (nodeShape) {
     nestedProperties = [];
@@ -211,6 +230,7 @@ export function readShapeProperty(shapeStore, prop) {
   return {
     path, key, datatype, enumOpts, enumLabels, nodeKind, classNode,
     minCount, maxCount, label, description, nestedProperties, reverse,
+    sortedBy,
   };
 }
 
@@ -318,6 +338,25 @@ export function renderRecordForm(container, store, subject, properties, opts = {
     row.dataset.key = desc.key;
     inner.appendChild(row);
 
+    const cb = (ok /*, msg */) => {
+      if (ok) onChange(subject);
+    };
+
+    // Multi-valued primitive (no sh:node, no sh:in) → render rows
+    // ourselves. Workaround for a solid-ui basicField limitation: when
+    // wrapped in ui:Multiple, solid-ui passes the *value* as `subject`
+    // to the inner field, and basicField then does
+    // `kb.any(subject, property, …)` which looks for `<value> path ?`
+    // — a triple that doesn't exist for primitive multi-values like
+    // `<#All> dct:source <url>`. Result: inputs render empty.
+    // Persistence still goes through `store.updater.update` (rdflib's
+    // PATCH path) per [[feedback-no-reinvent-saves]].
+    const isMulti = desc.maxCount === Infinity || desc.maxCount > 1;
+    if (isMulti && !desc.nestedProperties && !desc.enumOpts) {
+      renderPrimitiveMulti(row, store, subject, desc, doc, cb, readOnly);
+      continue;
+    }
+
     const fieldNode = buildFieldNode(store, desc, synthesized, formGraph);
     if (!fieldNode) {
       row.textContent = '(unrecognised shape for ' + (desc.label || desc.key) + ')';
@@ -330,9 +369,6 @@ export function renderRecordForm(container, store, subject, properties, opts = {
         row.textContent = '(no renderer for ' + (desc.label || desc.key) + ')';
         continue;
       }
-      const cb = (ok /*, msg */) => {
-        if (ok) onChange(subject);
-      };
       const widget = renderFn(document, row, {}, subject, fieldNode, doc, cb);
       if (widget && !row.contains(widget)) row.appendChild(widget);
 
@@ -362,6 +398,107 @@ export function renderRecordForm(container, store, subject, properties, opts = {
     }
     if (inner.parentNode === container) container.removeChild(inner);
   };
+}
+
+// Render a multi-valued primitive (no sh:node, no sh:in) as a label
+// + one input row per existing value, with ✕ to remove a value and
+// + to add. Each commit PATCHes via `store.updater.update`.
+//
+// Why this exists: solid-ui's basicField, when wrapped in ui:Multiple,
+// is passed each value as `subject` and then queries
+// `kb.any(subject, property, …)` — wrong for primitive multi-values
+// (the value isn't itself the subject of `property`). See
+// [[feedback-dont-invent-what-exists]] — this is the bug-workaround
+// carve-out (surgical, library data path).
+function renderPrimitiveMulti(row, store, subject, desc, doc, cb, readOnly) {
+  const label = document.createElement('label');
+  label.className = 'sol-form-shape-multi-label';
+  label.textContent = desc.label || desc.key;
+  row.appendChild(label);
+
+  const valueBox = document.createElement('div');
+  valueBox.className = 'sol-form-shape-multi-value';
+  row.appendChild(valueBox);
+
+  const list = document.createElement('div');
+  list.className = 'sol-form-shape-multi-list';
+  valueBox.appendChild(list);
+
+  const isIRI = desc.nodeKind === SH + 'IRI'
+             || desc.nodeKind === SH + 'IRIOrLiteral'
+             || desc.nodeKind === SH + 'BlankNodeOrIRI'
+             || desc.datatype === XSD + 'anyURI';
+  const toTerm = (raw) => {
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (isIRI) {
+      try { return rdf.sym(s); } catch (_) { return null; }
+    }
+    return desc.datatype
+      ? rdf.literal(s, undefined, rdf.sym(desc.datatype))
+      : rdf.literal(s);
+  };
+
+  const makeItem = (existingValue) => {
+    const item = document.createElement('div');
+    item.className = 'sol-form-shape-multi-item';
+    const input = document.createElement('input');
+    input.type = isIRI ? 'url' : 'text';
+    input.value = existingValue ? existingValue.value : '';
+    input.disabled = readOnly;
+    item.appendChild(input);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'sol-form-shape-multi-del';
+    del.setAttribute('aria-label', 'Remove value');
+    del.textContent = '✕';
+    del.disabled = readOnly;
+    item.appendChild(del);
+
+    let bound = existingValue || null;
+    del.addEventListener('click', () => {
+      if (!bound) { list.removeChild(item); return; }
+      const olds = [rdf.st(subject, desc.path, bound, doc)];
+      store.updater.update(olds, [], (_uri, ok) => {
+        if (!ok) return;
+        list.removeChild(item);
+        cb(true);
+      });
+    });
+
+    input.addEventListener('change', () => {
+      const term = toTerm(input.value);
+      if (!term) return;
+      if (bound && bound.equals(term)) return;
+      const olds = bound ? [rdf.st(subject, desc.path, bound, doc)] : [];
+      const news = [rdf.st(subject, desc.path, term, doc)];
+      store.updater.update(olds, news, (_uri, ok) => {
+        if (!ok) return;
+        bound = term;
+        cb(true);
+      });
+    });
+
+    return item;
+  };
+
+  for (const v of store.each(subject, desc.path, null, doc)) {
+    list.appendChild(makeItem(v));
+  }
+
+  if (!readOnly) {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'sol-form-shape-multi-add';
+    add.textContent = `+ Add ${(desc.label || desc.key).toLowerCase()}`;
+    add.addEventListener('click', () => {
+      const item = makeItem(null);
+      list.appendChild(item);
+      item.querySelector('input').focus();
+    });
+    valueBox.appendChild(add);
+  }
 }
 
 // Find the picker's <select> inside `row` and attach a change handler

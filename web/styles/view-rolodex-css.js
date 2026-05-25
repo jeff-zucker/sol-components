@@ -59,5 +59,29 @@ export const CSS = BTN_CSS + `
   }
   .rolodex-card a { color: var(--accent, #0066cc); text-decoration: none; }
   .rolodex-card a:hover { text-decoration: underline; }
+  .rolodex-reorder {
+    display: flex;
+    gap: .25rem;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: .4rem;
+  }
+  .rolodex-reorder-btn[disabled] { opacity: .35; cursor: not-allowed; }
+  .rolodex-pos {
+    min-width: 1.75em;
+    padding: .1em .45em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    background: var(--focus-bg, #e3f2fd);
+    color: var(--accent-dark, #1976d2);
+    border-radius: var(--radius-sm, 4px);
+    font-size: .9em;
+  }
+  .rolodex-reorder-hint {
+    font-size: .8em;
+    color: var(--text-muted, #888);
+    font-style: italic;
+    margin-right: .35rem;
+  }
 `;
 export const sheet = sheetFrom(CSS);

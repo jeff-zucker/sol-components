@@ -258,6 +258,16 @@ export const CSS = `
     border-color: var(--accent, #1F618D);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #1F618D) 22%, transparent);
   }
+  /* In rolodex mode each card holds one record's worth of fields; let
+     inputs fill the card width so long values (URLs, etc.) aren't
+     clipped to the browser default ~150px size. */
+  .sol-form-rolodex-page input[type="text"],
+  .sol-form-rolodex-page input[type="url"],
+  .sol-form-rolodex-page input[type="email"],
+  .sol-form-rolodex-page textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
   .sol-form-shape-input[type="checkbox"] {
     flex: 0 0 auto;
     width: 1.1em;
@@ -367,6 +377,76 @@ export const CSS = `
      row; align its label too. */
   .sol-form-shape-fields .choiceBox {
     display: contents;
+  }
+
+  /* Multi-valued primitive rows (workaround for solid-ui basicField in
+     Multiple). Label takes column 1, the value box (list of inputs +
+     add button) takes column 2. */
+  .sol-form-shape-multi-label {
+    grid-column: 1;
+    justify-self: end;
+    text-align: right;
+    color: var(--accent, #1F618D);
+    font-weight: 500;
+    padding-top: 0.4em;
+  }
+  .sol-form-shape-multi-value {
+    grid-column: 2;
+    justify-self: stretch;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+  }
+  .sol-form-shape-multi-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+  }
+  .sol-form-shape-multi-item {
+    display: flex;
+    gap: 0.4em;
+    align-items: center;
+  }
+  .sol-form-shape-multi-item > input {
+    flex: 1;
+    max-width: 28rem;
+    box-sizing: border-box;
+    background: var(--surface, #fff);
+    color: var(--text, #000);
+    border: 1px solid var(--border, #9e9e9e);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.35em 0.6em;
+    font: inherit;
+  }
+  .sol-form-shape-multi-item > input:focus-visible {
+    outline: 2px solid var(--accent, #1F618D);
+    outline-offset: 1px;
+    border-color: var(--accent, #1F618D);
+  }
+  .sol-form-shape-multi-del {
+    background: transparent;
+    border: 1px solid var(--border, #9e9e9e);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.2em 0.5em;
+    color: var(--text-muted, #666);
+    cursor: pointer;
+  }
+  .sol-form-shape-multi-del:hover {
+    color: var(--text, #000);
+  }
+  .sol-form-shape-multi-add {
+    align-self: start;
+    background: transparent;
+    border: 1px dashed var(--border, #9e9e9e);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.25em 0.65em;
+    color: var(--accent, #1F618D);
+    cursor: pointer;
+    font: inherit;
+  }
+  .sol-form-shape-multi-add:hover {
+    background: var(--focus-bg, #e3f2fd);
   }
 
   /* Read-only ("no-edit") mode: inputs render but the user can't

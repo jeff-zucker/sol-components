@@ -2,6 +2,7 @@
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX hydra: <http://www.w3.org/ns/hydra/core#>
 PREFIX schema: <http://schema.org/>
+PREFIX ui: <http://www.w3.org/ns/ui#>
 
 shape <#SearchEnginesShape> -> schema:ItemList {
 	schema:name xsd:string [1..1] %
@@ -9,7 +10,8 @@ shape <#SearchEnginesShape> -> schema:ItemList {
 	% .
 	schema:itemListElement @<#EngineShape> %
 		sh:name "Engines" ;
-		sh:description "Search engines in the list. Each row edits one hydra:IriTemplate."
+		sh:description "Search engines in the list. Each row edits one hydra:IriTemplate." ;
+		ui:sortedBy schema:position
 	% .
 }
 shape <#EngineShape> {
