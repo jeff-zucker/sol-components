@@ -308,6 +308,14 @@ export const CSS = `
   .sol-form-shape-fields > .sol-form-shape-key {
     display: contents;
   }
+  /* solid-ui wraps text fields in an unclassed inline-styled
+     div (display:flex flex-direction:row). Without this override the
+     wrapper becomes a single grid cell and labels stop lining up
+     between text-field rows and Choice/Multiple rows. !important is
+     required to beat solid-ui's inline style. */
+  .sol-form-shape-fields > .sol-form-shape-key > div {
+    display: contents !important;
+  }
   /* solid-ui's labels: formFieldName for field types, choiceBox-label
      for Choice. Force right-align + first column. */
   .sol-form-shape-fields .formFieldName,
@@ -327,6 +335,11 @@ export const CSS = `
     justify-self: stretch;
     min-width: 0;
   }
+  /* solid-ui paints inline styling on every input/select it emits
+     (light-blue background, custom border + radius, 0.4em margin).
+     Re-skin to match dk's chrome controls so the dropdown does not
+     look out-of-place next to the text inputs. !important is needed
+     to beat solid-ui's inline styles. */
   .sol-form-shape-fields .formFieldValue > input,
   .sol-form-shape-fields .formFieldValue > select,
   .sol-form-shape-fields .formFieldValue > textarea,
@@ -334,6 +347,21 @@ export const CSS = `
     width: 100%;
     max-width: 28rem;
     box-sizing: border-box;
+    background: var(--surface, #fff) !important;
+    color: var(--text, #000) !important;
+    border: 1px solid var(--border, #9e9e9e) !important;
+    border-radius: var(--radius-sm, 4px) !important;
+    padding: 0.35em 0.6em !important;
+    margin: 0 !important;
+    font: inherit !important;
+  }
+  .sol-form-shape-fields .formFieldValue > input:focus-visible,
+  .sol-form-shape-fields .formFieldValue > select:focus-visible,
+  .sol-form-shape-fields .formFieldValue > textarea:focus-visible,
+  .sol-form-shape-fields .choiceBox-selectBox select:focus-visible {
+    outline: 2px solid var(--accent, #1F618D) !important;
+    outline-offset: 1px !important;
+    border-color: var(--accent, #1F618D) !important;
   }
   /* solid-ui's Multiple emits a wrapping container with each item as a
      row; align its label too. */
