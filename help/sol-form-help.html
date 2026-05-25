@@ -24,14 +24,16 @@
   }
   </script>
   <script type="module">
-    // Side-effect imports: solid-ui sets window.UI on first eval, and
-    // solid-logic is exposed on window.solidLogic so swc's core/rdf.js
-    // rendezvous on the same store. shape-to-form.js (used by the demo
-    // below) reads window.UI.widgets.fieldFunction; without these
-    // imports the demo would render "solid-ui is not loaded".
+    // Side-effect imports needed by <sol-form>:
+    //   solid-ui sets window.UI on first eval (fieldFunction lives here).
+    //   solid-logic is exposed on window.solidLogic so swc's core/rdf.js
+    //     rendezvous on the same store.
+    // Then register <sol-form> by importing its module for its
+    // customElements.define side effect.
     import 'solid-ui';
     import * as solidLogic from 'solid-logic';
     if (typeof window !== 'undefined') window.solidLogic = solidLogic;
+    import '../web/sol-form.js';
   </script>
 
   <style>
@@ -273,7 +275,10 @@
           <span class="hint">no-edit</span>
         </header>
         <div class="panel-body">
-          <div id="form-host" class="loading">Loading form…</div>
+          <sol-form id="form-host"
+                    subject="data/weather-demo.ttl#Settings"
+                    shape="../shapes/weather-settings.shacl"
+                    no-edit></sol-form>
         </div>
       </section>
     </div>
@@ -500,18 +505,11 @@ node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
   </script>
 
   <script type="module">
-    // ── shape2form demo (Demo tab) ────────────────────────────────────
-    //
-    // Loads weather-settings.shacl, parses via core/shape-to-form.js,
-    // renders the form into the right panel against an in-memory rdflib
-    // graph seeded with the Portland weather values. No network PUTs.
-    import { rdf } from '../core/rdf.js';
-    import { parseShape, renderRecordForm } from '../core/shape-to-form.js';
-
-    // parseShape needs an absolute base URI; resolve once.
-    const SHAPE_URL = new URL('../shapes/weather-settings.shacl', document.baseURI).href;
-    const DATA_BASE = 'urn:demo:weather#';
-    const SUBJECT_URI = DATA_BASE + 'Settings';
+    // Demo tab — left panel shows the SHACL source; right panel is a
+    // real <sol-form no-edit> against a small fixture TTL next to this
+    // page. Using <sol-form> (not a lower-level helper) means anything
+    // that affects production rendering — sol-form-css alignment, the
+    // <select> skin, the shape-to-form pipeline — shows up here too.
 
     // Tiny turtle highlighter — comments, prefixed names, IRIs, literals.
     function highlightTurtle(text) {
@@ -525,51 +523,19 @@ node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
         .replace(/(\s)(a)(\s)/g,                     '$1<span class="kw">$2</span>$3');
     }
 
-    async function init() {
+    const SHAPE_URL = new URL('../shapes/weather-settings.shacl', document.baseURI).href;
+    (async () => {
       const shaclEl = document.getElementById('shacl-source');
-      const formEl  = document.getElementById('form-host');
       try {
-        const shaclResp = await fetch(SHAPE_URL);
-        if (!shaclResp.ok) throw new Error('Failed to load ' + SHAPE_URL + ': ' + shaclResp.status);
-        const shaclText = await shaclResp.text();
+        const resp = await fetch(SHAPE_URL);
+        if (!resp.ok) throw new Error('Failed to load ' + SHAPE_URL + ': ' + resp.status);
         shaclEl.classList.remove('loading');
-        shaclEl.innerHTML = highlightTurtle(shaclText);
-
-        const { properties } = await parseShape(shaclText, SHAPE_URL);
-
-        // Build an in-memory weather settings record using the direct
-        // predicates from the migrated shape. No PropertyValue indirection
-        // here — the data layout mirrors data/weather.ttl as it ships.
-        // Use the shared singleton (rdf.store) — the same one solid-ui
-        // captured as its `kb` at module-load time. shape-to-form
-        // synthesizes ui:* field types into this store at render time;
-        // they must land in the store solid-ui actually reads from.
-        const store = rdf.store;
-        const subject = rdf.sym(SUBJECT_URI);
-        const doc = rdf.sym(DATA_BASE);
-        const lit = (v, dt) => dt
-          ? rdf.literal(v, rdf.sym('http://www.w3.org/2001/XMLSchema#' + dt))
-          : rdf.literal(v);
-        const sym = (uri) => rdf.sym(uri);
-        store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#lat'),         lit('45.52',  'decimal'), doc);
-        store.add(subject, sym('http://www.w3.org/2003/01/geo/wgs84_pos#long'),        lit('-122.68','decimal'), doc);
-        store.add(subject, sym('http://schema.org/addressLocality'),                   lit('Portland, OR'),       doc);
-        store.add(subject, sym('http://www.w3.org/ns/ui#temperatureUnit'),             sym('http://www.w3.org/ns/ui#Both'), doc);
-        store.add(subject, sym('http://www.w3.org/2006/time#hours'),                   lit('12', 'integer'),      doc);
-
-        formEl.classList.remove('loading');
-        formEl.innerHTML = '';
-        // readOnly: true mirrors the sol-form `no-edit` attribute — the
-        // help page is a documentation surface, not an editor. Real edits
-        // happen in dk-settings against the same store + shape.
-        renderRecordForm(formEl, store, subject, properties, { doc, readOnly: true });
+        shaclEl.innerHTML = highlightTurtle(await resp.text());
       } catch (err) {
-        formEl.classList.remove('loading');
-        formEl.innerHTML = '<div class="error">' + err.message + '</div>';
-        console.error('sol-form demo init failed:', err);
+        shaclEl.classList.remove('loading');
+        shaclEl.innerHTML = '<div class="error">' + err.message + '</div>';
       }
-    }
-    init();
+    })();
   </script>
 </body>
 </html>

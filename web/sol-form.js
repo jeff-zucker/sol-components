@@ -137,8 +137,14 @@ class SolForm extends HTMLElement {
         if (!formRoot) throw new Error('No ui:Form found in ' + source);
       }
 
-      const subjectUri = this.getAttribute('subject');
-      const saveTo     = this.getAttribute('save-to');
+      const subjectAttr = this.getAttribute('subject');
+      const saveTo      = this.getAttribute('save-to');
+      // rdflib requires absolute IRIs; absolutize `subject` against the
+      // page so consumers can use relative URLs (matching what `shape`
+      // and `source` already do via `new URL(…, document.baseURI)`).
+      const subjectUri = subjectAttr
+        ? new URL(subjectAttr, document.baseURI).href
+        : null;
       let dataStore, subjectNode, docNode, docUrl;
 
       if (subjectUri) {
