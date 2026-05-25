@@ -175,7 +175,7 @@ class SolForm extends HTMLElement {
         // sol-form walks the shape and generates one labelled field per
         // sh:qualifiedValueShape entry (PropertyValue-style settings).
         await this._loadShape(shape);
-        this._renderFromShape(body, dataStore, subjectNode, docNode);
+        await this._renderFromShape(body, dataStore, subjectNode, docNode);
       }
 
       this._showSaveButton(this._ordered);
@@ -308,11 +308,11 @@ class SolForm extends HTMLElement {
   // sol-form's job here is just: parse + render + wire the onChange
   // callback to the existing autosave + sol-form-change event flow.
 
-  _renderFromShape(body, store, subject, doc) {
+  async _renderFromShape(body, store, subject, doc) {
     body.innerHTML = '';
     let parsed;
     try {
-      parsed = parseShape(this._shapeText, this.getAttribute('shape') || '');
+      parsed = await parseShape(this._shapeText, this.getAttribute('shape') || '');
     } catch (err) {
       body.innerHTML = `<div class="sol-form-error">Failed to parse shape: ${this._esc(err.message)}</div>`;
       return;

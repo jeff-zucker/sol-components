@@ -1,0 +1,57 @@
+@prefix ui:   <http://www.w3.org/ns/ui#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# Properties (the predicates themselves) for the chrome-level
+# preferences sol-* components consume. Declared here alongside the
+# value classes so a single owl:imports of this file gives the
+# preferences shape (and any other shape that wants these knobs)
+# everything it needs to render and validate.
+
+ui:proxy a rdf:Property ;
+  rdfs:label   "proxy" ;
+  rdfs:comment "URL prefix that wraps a target URL for CORS proxying; the target is URI-encoded onto the end." ;
+  rdfs:range   xsd:string .
+
+ui:colorScheme a rdf:Property ;
+  rdfs:label   "color scheme" ;
+  rdfs:comment "Preferred page color scheme; the value is one of the ui:ColorScheme instances." ;
+  rdfs:range   ui:ColorScheme .
+
+ui:fontSize a rdf:Property ;
+  rdfs:label   "font size" ;
+  rdfs:comment "Preferred page font size; the value is one of the ui:FontSize instances." ;
+  rdfs:range   ui:FontSize .
+
+ui:editorKeys a rdf:Property ;
+  rdfs:label   "editor keys" ;
+  rdfs:comment "Preferred editor keybindings; the value is one of the ui:EditorKeys instances." ;
+  rdfs:range   ui:EditorKeys .
+
+# Value classes — each root is an rdfs:Class whose instances are the
+# picker options. Shape files declare sh:class <root>; shape-to-form
+# translates that to ui:from <root> and solid-ui's Choice handler
+# enumerates instances at render time. Each instance's rdfs:label
+# drives the dropdown text.
+
+ui:ColorScheme a rdfs:Class ;
+  rdfs:label "Color scheme" .
+
+ui:LightColorScheme  a ui:ColorScheme ; rdfs:label "Light"  .
+ui:DarkColorScheme   a ui:ColorScheme ; rdfs:label "Dark"   .
+ui:SystemColorScheme a ui:ColorScheme ; rdfs:label "System" .
+
+ui:FontSize a rdfs:Class ;
+  rdfs:label "Font size" .
+
+ui:SmallFont  a ui:FontSize ; rdfs:label "Small"  .
+ui:MediumFont a ui:FontSize ; rdfs:label "Medium" .
+ui:LargeFont  a ui:FontSize ; rdfs:label "Large"  .
+
+ui:EditorKeys a rdfs:Class ;
+  rdfs:label "Editor keys" .
+
+ui:DefaultKeys a ui:EditorKeys ; rdfs:label "Default" .
+ui:EmacsKeys   a ui:EditorKeys ; rdfs:label "Emacs"   .
+ui:VimKeys     a ui:EditorKeys ; rdfs:label "Vim"     .

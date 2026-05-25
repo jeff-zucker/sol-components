@@ -112,14 +112,13 @@ class SolSearch extends HTMLElement {
     return ['view', 'source', 'engines', 'default-engine', 'placeholder'];
   }
 
-  // No editor form for v0. sol-search's data model uses an inverse
-  // relation (`?link bk:hasTopic <#Topic>`) that doesn't map cleanly
-  // to ui:Form's ui:Multiple over a forward property. Returning null
-  // makes the discovery walk skip this component and the editor-self
-  // gear become a no-op. Revisit when ui:Multiple supports inverse
-  // membership or the search engines data is migrated to a forward
-  // hasMember relation.
-  static get editor() { return null; }
+  /** SHACL shape describing the engines list. Discovery via
+   *  &lt;sol-settings&gt; picks this up; the shape uses sh:inversePath on
+   *  dct:subject so the editor lists each hydra:IriTemplate that
+   *  classifies under the currently-edited skos:Concept. */
+  static get shape() {
+    return new URL('../shapes/search-engines.shacl', import.meta.url).href;
+  }
 
   constructor() {
     super();

@@ -82,6 +82,7 @@ export function parseMenuItems(store, menuNode, rootLinkTarget = null) {
 
     if (partType && partType.value === componentType.value) {
       const { tag, params } = rdfComponent(store, part);
+      const keepAliveLit = rdfVal(store, part, 'keepAlive');
       items.push({
         type: 'component',
         name: label,
@@ -89,6 +90,7 @@ export function parseMenuItems(store, menuNode, rootLinkTarget = null) {
         tag,
         params,
         linkTarget: rootLinkTarget,
+        keepAlive: keepAliveLit === 'true' || keepAliveLit === '1',
       });
       continue;
     }

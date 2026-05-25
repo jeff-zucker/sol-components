@@ -45,7 +45,7 @@
 import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { rdf } from '../core/rdf.js';
-import { parseShape, renderRecordForm } from '../core/shape-to-form.js';
+import { parseShape, renderRecordForm, readShapeProperty } from '../core/shape-to-form.js';
 
 const RDF_TYPE  = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 const UI_PARTS  = 'http://www.w3.org/ns/ui#parts';
@@ -193,7 +193,7 @@ class SolTreeEdit extends HTMLElement {
     if (!this._headShapeText) {
       const headUri = new URL(this.getAttribute('head-shape'), document.baseURI).href;
       this._headShapeText = await (await fetch(headUri)).text();
-      this._headParsed = parseShape(this._headShapeText, headUri);
+      this._headParsed = await parseShape(this._headShapeText, headUri);
     }
     if (!this._itemShapeText) {
       const itemUri = new URL(this.getAttribute('item-shape'), document.baseURI).href;
@@ -230,7 +230,7 @@ class SolTreeEdit extends HTMLElement {
       // manually here to get a per-shape parse.
       const props = [];
       for (const p of store.each(ns, rdf.sym(SH + 'property'))) {
-        const desc = singleShapePropFromStore(store, p);
+        const desc = readShapeProperty(store, p);
         if (desc) props.push(desc);
       }
       out.push({ nodeShape: ns, target, properties: props });
@@ -474,54 +474,6 @@ class SolTreeEdit extends HTMLElement {
     // changes (e.g., parts list reordering).
     // For v0 keep it minimal — defer to consumer's listening.
   }
-}
-
-// Pull the same descriptor fields parseShape uses, but from an
-// already-walked shape store. Lifted from core/shape-to-form.js;
-// kept inline so sol-tree-edit can parse multi-NodeShape files in one
-// pass without re-reading the bytes.
-function singleShapePropFromStore(shapeStore, prop) {
-  const SH  = 'http://www.w3.org/ns/shacl#';
-  const RDFS_LABEL = 'http://www.w3.org/2000/01/rdf-schema#label';
-  const path = shapeStore.any(prop, rdf.sym(SH + 'path'));
-  if (!path) return null;
-  const minCount = parseInt(shapeStore.anyValue(prop, rdf.sym(SH + 'minCount')) ?? '0', 10);
-  const maxRaw   = shapeStore.anyValue(prop, rdf.sym(SH + 'maxCount'));
-  const maxCount = maxRaw == null ? Infinity : parseInt(maxRaw, 10);
-  const label    = shapeStore.anyValue(prop, rdf.sym(SH + 'name')) ?? null;
-  const description = shapeStore.anyValue(prop, rdf.sym(SH + 'description')) ?? null;
-  const dt = shapeStore.any(prop, rdf.sym(SH + 'datatype'));
-  const datatype = dt ? dt.value : null;
-  const inList = shapeStore.any(prop, rdf.sym(SH + 'in'));
-  let enumOpts = null, enumLabels = null;
-  if (inList) {
-    const items = (inList.termType === 'Collection' && Array.isArray(inList.elements))
-      ? inList.elements
-      : (() => {
-          const out = []; let node = inList;
-          while (node && node.value !== RDF_NIL) {
-            const first = shapeStore.any(node, rdf.sym(RDF_FIRST));
-            if (first) out.push(first);
-            node = shapeStore.any(node, rdf.sym(RDF_REST));
-          }
-          return out;
-        })();
-    enumOpts = items.map(n => n.value);
-    enumLabels = items.map(n => {
-      if (n.termType !== 'NamedNode') return n.value;
-      const lbl = shapeStore.anyValue(n, rdf.sym(RDFS_LABEL));
-      return lbl || n.value;
-    });
-  }
-  const nk = shapeStore.any(prop, rdf.sym(SH + 'nodeKind'));
-  const nodeKind = nk ? nk.value : null;
-  const key = lastSegment(path.value);
-  return { path, key, datatype, enumOpts, enumLabels, nodeKind, minCount, maxCount, label, description };
-}
-
-function lastSegment(uri) {
-  const i = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
-  return i === -1 ? uri : uri.slice(i + 1);
 }
 
 define('sol-tree-edit', SolTreeEdit);

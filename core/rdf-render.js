@@ -14,6 +14,7 @@
 //                 ('sol-menu-embed' / 'sol-tab-embed')
 
 import { siblingUrl } from './here.js';
+import { mountInTarget } from './component-mount.js';
 
 /**
  * Lazy-import a sibling sol-* handler module on first use, so authors
@@ -46,22 +47,36 @@ function resolveTarget(linkTarget, body) {
 /**
  * Build a render closure for a ui:Component part.
  *
- * @param {object} desc { tag, params, linkTarget }
+ * When `linkTarget` is set, each item gets its own
+ * `<div data-menu-item="Name">` wrapper inside the target. Items
+ * marked `keepAlive` keep their wrapper mounted across nav (just
+ * toggled `hidden`); non-keep-alive items are recreated on each
+ * activation. Without `linkTarget`, the host body is wiped and the
+ * component appended directly (legacy behavior).
+ *
+ * @param {object} desc { name, tag, params, linkTarget, keepAlive }
  * @param {object} ctx  { host, baseUrl, sourceName, embedClass }
  * @returns {(body: HTMLElement) => void}
  */
 export function renderComponentItem(desc, ctx) {
   return (body) => {
-    const { tag, params, linkTarget } = desc;
+    const { name, tag, params, linkTarget } = desc;
     if (!tag) return;
     ensureHandler(tag, ctx.host, ctx.baseUrl, ctx.sourceName);
-    const el = document.createElement(tag);
-    for (const [k, v] of params) el.setAttribute(k, v);
-    el.classList.add(ctx.embedClass);
-    const target = resolveTarget(linkTarget, body);
+
+    if (!linkTarget) {
+      const el = document.createElement(tag);
+      for (const [k, v] of params) el.setAttribute(k, v);
+      el.classList.add(ctx.embedClass);
+      if (!body) return;
+      body.innerHTML = '';
+      body.appendChild(el);
+      return;
+    }
+
+    const target = document.querySelector(linkTarget);
     if (!target) return;
-    target.innerHTML = '';
-    target.appendChild(el);
+    mountInTarget({ target, name, tag, attrs: params, embedClass: ctx.embedClass });
   };
 }
 
@@ -77,7 +92,7 @@ export function renderComponentItem(desc, ctx) {
  */
 export function renderLinkItem(desc, ctx) {
   return (body) => {
-    const { href, contents, handlerTag, handlerParams, linkTarget } = desc;
+    const { name, href, contents, handlerTag, handlerParams, linkTarget } = desc;
     if (contents) {
       const target = resolveTarget(linkTarget, body);
       if (target) target.innerHTML = contents;
@@ -86,14 +101,43 @@ export function renderLinkItem(desc, ctx) {
     if (!href) return;
     const tag = handlerTag || ctx.host.getAttribute('handler') || 'sol-include';
     ensureHandler(tag, ctx.host, ctx.baseUrl, ctx.sourceName);
-    const el = document.createElement(tag);
-    el.setAttribute('source', href);
-    el.setAttribute('endpoint', href);
-    for (const [k, v] of handlerParams) el.setAttribute(k, v);
-    el.classList.add(ctx.embedClass);
-    const target = resolveTarget(linkTarget, body);
+
+    if (!linkTarget) {
+      const el = document.createElement(tag);
+      el.setAttribute('source', href);
+      el.setAttribute('endpoint', href);
+      for (const [k, v] of handlerParams) el.setAttribute(k, v);
+      el.classList.add(ctx.embedClass);
+      if (!body) return;
+      body.innerHTML = '';
+      body.appendChild(el);
+      return;
+    }
+
+    const target = document.querySelector(linkTarget);
     if (!target) return;
-    target.innerHTML = '';
-    target.appendChild(el);
+    const linkAttrs = [['source', href], ['endpoint', href], ...handlerParams];
+    // External links share a single "external" wrapper and overwrite
+    // each other; same-origin links keep their own persistent tab.
+    const external = isExternalHref(href);
+    mountInTarget({
+      target,
+      name: external ? 'external' : name,
+      tag,
+      attrs: linkAttrs,
+      embedClass: ctx.embedClass,
+      replace: external,
+    });
   };
+}
+
+function isExternalHref(href) {
+  if (!href) return false;
+  try {
+    const u = new URL(href, document.baseURI);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    return u.origin !== location.origin;
+  } catch {
+    return false;
+  }
 }

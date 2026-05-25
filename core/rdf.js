@@ -37,6 +37,7 @@ class Rdf {
   // Stores & parsing
   graph()                          { return _lib.graph(); }
   parse(text, store, base, type)   { return _lib.parse(text, store, base, type); }
+  st(s, p, o, g)                   { return _lib.st(s, p, o, g); }
 
   // Shared singleton store — interop point with solid-logic / solid-ui / mashlib.
   // **When solid-logic's singleton is present on `window`, that's THE store**

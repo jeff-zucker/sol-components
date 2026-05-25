@@ -1,0 +1,36 @@
+@prefix :      <#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix hydra: <http://www.w3.org/ns/hydra/core#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+
+:SearchEnginesShape
+  a sh:NodeShape ;
+  sh:targetClass skos:Concept ;
+
+  sh:property [
+    sh:path skos:prefLabel ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Topic label" ;
+  ] ,
+  [
+    sh:path [ sh:inversePath dct:subject ] ;
+    sh:node :EngineShape ;
+    sh:name "Engines" ;
+    sh:description "Search engines categorised under this topic. Each row edits one hydra:IriTemplate." ;
+  ] .
+
+:EngineShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path dct:title ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "Title" ;
+  ] ,
+  [
+    sh:path hydra:template ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "URL template" ;
+    sh:description "RFC 6570 template. {query} is substituted with the URI-encoded search term." ;
+  ] .

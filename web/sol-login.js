@@ -50,6 +50,12 @@ function getSessionClass() {
 }
 
 class AuthManager {
+  /** The page-wide singleton. Every `<sol-login>` instance binds to
+   *  this same AuthManager so sessions established by any embedded app
+   *  (podz left/right, future apps) are visible to shell-level code
+   *  without DOM probing. */
+  static get shared() { return sharedAuth; }
+
   constructor() {
     this.sessions = new Map();
     this._noAuth = null;

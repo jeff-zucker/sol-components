@@ -38,7 +38,7 @@ export const CSS = `
     padding: var(--space-sm, 4px) var(--space-lg, 12px);
     gap: var(--space-sm, 4px);
     border-right: none;
-    border-bottom: 1px solid var(--border, #e0e0e0);
+    border-bottom: var(--menu-nav-border-bottom, 1px solid var(--border, #e0e0e0));
     overflow-x: auto; overflow-y: hidden;
   }
 
@@ -77,8 +77,8 @@ export const CSS = `
     outline-offset: 2px;
   }
   .sol-menu-nav button.active {
-    background: var(--menu-active-bg, var(--focus-bg, #e3f2fd));
-    color: var(--menu-active-color, var(--accent-dark, #1976d2));
+    background: var(--menu-active-bg, var(--focus-bg, #e3f2fd)) !important;
+    color: var(--menu-active-color, var(--accent-dark, #1976d2)) !important;
     font-weight: var(--font-weight-bold, 600);
   }
 
@@ -125,7 +125,7 @@ export const CSS = `
     max-width: 100%;
     display: flex; flex-direction: column;
     overflow: auto;
-    padding: var(--space-xl, 16px) var(--space-xl, 16px);
+    padding: var(--menu-content-padding, var(--space-xl, 16px) var(--space-xl, 16px));
     box-sizing: border-box;
   }
   .sol-menu-content > * {

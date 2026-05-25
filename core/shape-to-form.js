@@ -52,6 +52,7 @@ const RDF_NS   = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 const RDFS_NS  = 'http://www.w3.org/2000/01/rdf-schema#';
 const UI       = 'http://www.w3.org/ns/ui#';
 const XSD      = 'http://www.w3.org/2001/XMLSchema#';
+const OWL      = 'http://www.w3.org/2002/07/owl#';
 
 /**
  * Parse a SHACL document into a normalized descriptor list.
@@ -61,9 +62,13 @@ const XSD      = 'http://www.w3.org/2001/XMLSchema#';
  * @param {string} baseUri    base URI used to resolve relative refs in the doc
  * @returns {{ targets: Targets, properties: ShapeProp[] }}
  */
-export function parseShape(shapeText, baseUri) {
+export async function parseShape(shapeText, baseUri) {
+  const abs = baseUri
+    ? new URL(baseUri, typeof document !== 'undefined' ? document.baseURI : 'file:///').href
+    : '';
   const shapeStore = rdf.graph();
-  rdf.parse(shapeText, shapeStore, baseUri, 'text/turtle');
+  rdf.parse(shapeText, shapeStore, abs, 'text/turtle');
+  await followOwlImports(shapeStore, abs);
 
   const nodeShape = shapeStore.any(null,
     rdf.sym(RDF_NS + 'type'),
@@ -86,9 +91,66 @@ export function parseShape(shapeText, baseUri) {
   return { targets, properties };
 }
 
-function readShapeProperty(shapeStore, prop) {
-  const path = shapeStore.any(prop, rdf.sym(SH + 'path'));
-  if (!path) return null;
+// Follow owl:imports declarations in the shape store, fetching each
+// referenced TTL and parsing it into BOTH the shape store (so
+// shape-to-form's own lookups like sh:class → narrower options work)
+// AND the shared singleton store (so solid-ui's Choice handler can
+// enumerate instances of those classes at render time). Cycle-safe
+// via a visited set; failed fetches are warned and skipped.
+async function followOwlImports(store, baseUri) {
+  const seen = new Set(baseUri ? [baseUri] : []);
+  const objectsOfImports = () =>
+    store.statementsMatching(null, rdf.sym(OWL + 'imports'), null).map(st => st.object);
+  const queue = objectsOfImports()
+    .map(o => new URL(o.value, baseUri || document.baseURI).href)
+    .filter(u => !seen.has(u));
+  while (queue.length) {
+    const url = queue.shift();
+    if (seen.has(url)) continue;
+    seen.add(url);
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) { console.warn(`[shape-to-form] owl:imports HTTP ${resp.status}: ${url}`); continue; }
+      const text = await resp.text();
+      rdf.parse(text, store, url, 'text/turtle');
+      try { rdf.parse(text, rdf.store, url, 'text/turtle'); }
+      catch (_) { /* shared store may already have these triples; ignore */ }
+      const more = objectsOfImports()
+        .map(o => new URL(o.value, url).href)
+        .filter(u => !seen.has(u));
+      queue.push(...more);
+    } catch (err) {
+      console.warn(`[shape-to-form] owl:imports ${url}: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Read a single sh:property descriptor from a shape store. Exported so
+ * components that parse multi-NodeShape files (e.g. sol-tree-edit, which
+ * routes one shape per ui:Component / ui:Link / ui:Menu via
+ * sh:targetClass) can reuse the same walker without re-implementing it.
+ *
+ * Recurses into sh:node when present, populating `nestedProperties` so
+ * renderers can synthesise a ui:Group / ui:Multiple for nested data
+ * shapes (e.g. a list of schema:PropertyValue pairs).
+ */
+export function readShapeProperty(shapeStore, prop) {
+  const pathNode = shapeStore.any(prop, rdf.sym(SH + 'path'));
+  if (!pathNode) return null;
+
+  // SHACL property paths. We handle the two common shapes:
+  //   sh:path <pred>                      → forward predicate (path = NamedNode)
+  //   sh:path [ sh:inversePath <pred> ]   → inverse predicate (path = blank node)
+  // Sequence / alternative / zeroOrMore paths aren't supported yet.
+  let path = pathNode;
+  let reverse = false;
+  if (pathNode.termType !== 'NamedNode') {
+    const inv = shapeStore.any(pathNode, rdf.sym(SH + 'inversePath'));
+    if (!inv) return null;          // complex path we don't understand
+    path = inv;
+    reverse = true;
+  }
 
   const minCount = parseInt(shapeStore.anyValue(prop, rdf.sym(SH + 'minCount')) ?? '0', 10);
   const maxRaw   = shapeStore.anyValue(prop, rdf.sym(SH + 'maxCount'));
@@ -114,9 +176,32 @@ function readShapeProperty(shapeStore, prop) {
   const nk = shapeStore.any(prop, rdf.sym(SH + 'nodeKind'));
   const nodeKind = nk ? nk.value : null;
 
+  // sh:class — values must be instances of this class. shape-to-form
+  // emits ui:from on the synthesized ui:Choice, leaving the runtime
+  // enumeration to solid-ui (it walks `kb.each(null, rdf:type, X)`).
+  const classNode = shapeStore.any(prop, rdf.sym(SH + 'class')) || null;
+
+  // sh:node — a nested NodeShape validating the values of this path.
+  // Each matching value is a blank/named node carrying its own
+  // sh:property entries; the renderer turns this into a ui:Group of
+  // sub-fields (wrapped in a ui:Multiple when the outer property is
+  // multi-valued).
+  const nodeShape = shapeStore.any(prop, rdf.sym(SH + 'node'));
+  let nestedProperties = null;
+  if (nodeShape) {
+    nestedProperties = [];
+    for (const subProp of shapeStore.each(nodeShape, rdf.sym(SH + 'property'))) {
+      const subDesc = readShapeProperty(shapeStore, subProp);
+      if (subDesc) nestedProperties.push(subDesc);
+    }
+  }
+
   const key = localPart(path.value);
 
-  return { path, key, datatype, enumOpts, enumLabels, nodeKind, minCount, maxCount, label, description };
+  return {
+    path, key, datatype, enumOpts, enumLabels, nodeKind, classNode,
+    minCount, maxCount, label, description, nestedProperties, reverse,
+  };
 }
 
 function localPart(uri) {
@@ -237,6 +322,13 @@ export function renderRecordForm(container, store, subject, properties, opts = {
       };
       const widget = renderFn(document, row, {}, subject, fieldNode, doc, cb);
       if (widget && !row.contains(widget)) row.appendChild(widget);
+
+      // solid-ui's single-select Choice does NOT autosave on change —
+      // only its multiSelect path writes back. For sh:class-driven
+      // single-cardinality dropdowns we attach our own change handler
+      // that replaces the predicate's value with the picked URI and
+      // PUTs the result through updater.update.
+      if (!desc.nestedProperties) wireSingleSelectAutosave(row, store, subject, desc.path, doc, cb);
     } catch (err) {
       row.textContent = err.message;
       console.error('[shape-to-form]', err);
@@ -259,11 +351,49 @@ export function renderRecordForm(container, store, subject, properties, opts = {
   };
 }
 
+// Find the picker's <select> inside `row` and attach a change handler
+// that swaps the (subject, predicate, *) triples for a single new one
+// pointing at the picked URI. Skipped for multi-select selects (those
+// go through solid-ui's own update path).
+function wireSingleSelectAutosave(row, store, subject, predicate, doc, cb) {
+  // Delegate on the row so it survives any later re-render by solid-ui.
+  // We mutate the store and write the doc back via updater.put — PATCH
+  // via update(ds, is, cb) returned ok-without-effect against CSS, so
+  // the full-doc PUT is the reliable path.
+  row.addEventListener('change', (e) => {
+    const sel = e.target;
+    if (!sel || sel.tagName !== 'SELECT' || sel.multiple) return;
+    const newUri = sel.value;
+    if (!newUri || !/^https?:|^urn:|^did:/.test(newUri)) return;
+    const olds = store.statementsMatching(subject, predicate, null, doc).slice();
+    for (const s of olds) store.remove(s);
+    store.add(subject, predicate, rdf.sym(newUri), doc);
+    if (!store.updater) { cb(false); return; }
+    // Filter out shape-to-form's synthesized ui:Form metadata (Choice
+    // descriptors etc.) — those share the doc graph but aren't real
+    // data. Keep only triples on the subject's own URI.
+    const real = store.statementsMatching(null, null, null, doc)
+      .filter(s => s.subject.value === subject.value);
+    store.updater.put(doc, real, 'text/turtle', (_uri, ok) => {
+      cb(!!ok);
+      if (ok) {
+        document.dispatchEvent(new CustomEvent('sol-form-save', {
+          bubbles: true, composed: true,
+          detail: { subject, target: doc },
+        }));
+      }
+    });
+  });
+}
+
 // Build (and add to the store) the ui:* triples for one descriptor.
 // Returns the form-side node solid-ui should render — that's either the
 // field itself for single-valued, or a wrapping ui:Multiple for
 // multi-valued. Returns null if the descriptor is malformed.
 function buildFieldNode(store, desc, synthesized, doc) {
+  if (desc.nestedProperties) {
+    return buildNestedFieldNode(store, desc, synthesized, doc);
+  }
   const fieldNode = rdf.blankNode();
   const fieldType = uiTypeForDescriptor(desc, store, synthesized, doc, fieldNode);
   if (!fieldType) return null;
@@ -315,12 +445,75 @@ function buildFieldNode(store, desc, synthesized, doc) {
     if (desc.label) {
       addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'label'), rdf.literal(desc.label));
     }
+    if (desc.reverse) {
+      // SHACL sh:inversePath → solid-ui reads ui:reverse to flip its
+      // own kb.each() direction (and to emit inverse triples on add).
+      addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'reverse'),
+                rdf.literal('true', rdf.sym(XSD + 'boolean')));
+    }
     return multi;
   }
   return fieldNode;
 }
 
+// sh:node nested shape → ui:Group of sub-fields (wrapped in ui:Multiple
+// when the outer property is multi-valued, matching menu-form.ttl's
+// ui:attribute → :attrForm pattern). Each sub-property is built via the
+// regular buildFieldNode so nesting can chain arbitrarily deep.
+function buildNestedFieldNode(store, desc, synthesized, doc) {
+  const groupNode = rdf.blankNode();
+  addTriple(store, synthesized, doc, groupNode,
+            rdf.sym(RDF_NS + 'type'), rdf.sym(UI + 'Group'));
+
+  const subNodes = [];
+  for (const sub of desc.nestedProperties) {
+    const subNode = buildFieldNode(store, sub, synthesized, doc);
+    if (subNode) subNodes.push(subNode);
+  }
+  const list = synthesizeRdfList(store, synthesized, doc, subNodes);
+  addTriple(store, synthesized, doc, groupNode,
+            rdf.sym(UI + 'parts'), list);
+
+  const isMulti = desc.maxCount > 1 || desc.maxCount === Infinity;
+  if (!isMulti) {
+    if (desc.label) {
+      addTriple(store, synthesized, doc, groupNode,
+                rdf.sym(UI + 'label'), rdf.literal(desc.label));
+    }
+    return groupNode;
+  }
+  const multi = rdf.blankNode();
+  addTriple(store, synthesized, doc, multi, rdf.sym(RDF_NS + 'type'), rdf.sym(UI + 'Multiple'));
+  addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'property'), desc.path);
+  addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'part'), groupNode);
+  if (desc.label) {
+    addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'label'), rdf.literal(desc.label));
+  }
+  if (desc.reverse) {
+    addTriple(store, synthesized, doc, multi, rdf.sym(UI + 'reverse'),
+              rdf.literal('true', rdf.sym(XSD + 'boolean')));
+  }
+  return multi;
+}
+
+// Build an rdflib Collection holding `nodes`. Returned as a single
+// Collection term so solid-ui's Group handler — which reads
+// `parts.elements` directly — finds the populated array. Cons-cell
+// triples never enter the store; on teardown the Collection just gets
+// garbage-collected with the synthesized parent triple.
+function synthesizeRdfList(store, synthesized, doc, nodes) {
+  if (nodes.length === 0) return rdf.sym(RDF_NS + 'nil');
+  return new rdf.Collection(nodes);
+}
+
 function uiTypeForDescriptor(desc, store, synthesized, doc, fieldNode) {
+  // sh:class — reuse the existing class as the ui:Choice source.
+  // Solid-ui enumerates instances at render time, so the option list
+  // stays live as new instances are added to the data store.
+  if (desc.classNode) {
+    addTriple(store, synthesized, doc, fieldNode, rdf.sym(UI + 'from'), desc.classNode);
+    return UI + 'Choice';
+  }
   // sh:in with IRI options → ui:Choice + synthesized class.
   if (desc.enumOpts && desc.enumOpts.length > 0 && desc.enumOpts[0].termType === 'NamedNode') {
     const choiceClass = synthesizeEnumClass(store, synthesized, doc, desc);

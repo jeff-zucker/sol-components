@@ -13,6 +13,8 @@
 // dk-settings. The helper lives in swc because it's a property of
 // the component infrastructure, useful to other consumers.
 
+import { buildEditorElement, resolveEditorSpec } from './editor.js';
+
 const GEAR_CSS = `
 .sol-editor-self-gear {
   position: absolute;
@@ -61,8 +63,7 @@ function gearSheet() {
  *   no editor at all.
  */
 export function attachEditorSelfGear(el) {
-  const editor = el.constructor?.editor;
-  if (!editor || (typeof editor === 'object' && editor.inline)) return null;
+  if (!resolveEditorSpec(el.constructor)) return null;
   if (el._editorSelfGear) return el._editorSelfGear;
 
   const root = el.shadowRoot ?? el;
@@ -87,7 +88,7 @@ export function attachEditorSelfGear(el) {
   btn.textContent = '⚙';   // ⚙
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openEditorModal(el, editor);
+    openEditorModal(el);
   });
 
   root.appendChild(btn);
@@ -97,36 +98,28 @@ export function attachEditorSelfGear(el) {
 
 /**
  * Programmatically open the editor modal for any component. Used by
- * the gear handler above and by external surfaces (dk-settings).
+ * the gear handler above and by external surfaces.
  *
  * @param {HTMLElement} el - the component being edited
- * @param {string} [editorOverride] - optional explicit editor URI
- *   (defaults to `el.constructor.editor`)
  */
-export function openEditorModal(el, editorOverride) {
-  const editor = editorOverride ?? el.constructor?.editor;
-  if (!editor || (typeof editor === 'object' && editor.inline)) return;
-
-  const subject = el.getAttribute('source')
-               || el.getAttribute('from-rdf')
-               || '';
+export function openEditorModal(el) {
+  const editor = buildEditorElement(el);
+  if (!editor) return;
 
   const modal = document.createElement('sol-modal');
   modal.setAttribute('title', `Edit ${el.localName}`);
   modal.setAttribute('open', '');
 
-  const form = document.createElement('sol-form');
-  form.setAttribute('source', editor);
-  if (subject) {
-    form.setAttribute('subject', subject);
-    form.setAttribute('save-to', subject);
-  }
-  form.addEventListener('sol-form-save', () => {
-    if (typeof el.reload === 'function') el.reload().catch(() => {});
+  const close = () => {
     if (typeof modal.close === 'function') modal.close();
     else modal.removeAttribute('open');
-  });
+  };
+  const onSaved = () => {
+    if (typeof el.reload === 'function') el.reload().catch(() => {});
+    close();
+  };
+  editor.addEventListener('sol-form-save', onSaved);
 
-  modal.appendChild(form);
+  modal.appendChild(editor);
   document.body.appendChild(modal);
 }

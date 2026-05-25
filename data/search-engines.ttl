@@ -1,67 +1,62 @@
-@prefix : <#> .
-@prefix ui: <http://www.w3.org/ns/ui#> .
-@prefix bk: <http://www.w3.org/2002/01/bookmark#> .
+@prefix :      <#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix hydra: <http://www.w3.org/ns/hydra/core#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
 
-# Source list for <sol-search>. Each engine is a ui:Link with a
-# bk:recalls value carrying the search-URL prefix (the query is URI-
-# encoded onto the end of that prefix). Add an entry by minting a new
-# blank-numbered subject under <#SearchEngines>; the ordering in this
-# file is the ordering shown in the UI.
+<#SearchEngine>
+  a skos:Concept ;
+  skos:prefLabel "Search Engines" .
 
-<#SearchEngines>
-  a bk:Topic ;
-  ui:label "Search Engines" .
+:ddg
+  a hydra:IriTemplate ;
+  dct:title "DuckDuckGo" ;
+  hydra:template "https://duckduckgo.com/?q={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_ddg
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://duckduckgo.com/?q=" ;
-  ui:label "DuckDuckGo" .
+:google
+  a hydra:IriTemplate ;
+  dct:title "Google" ;
+  hydra:template "https://www.google.com/search?q={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_google
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://www.google.com/search?q=" ;
-  ui:label "Google" .
+:wp
+  a hydra:IriTemplate ;
+  dct:title "Wikipedia" ;
+  hydra:template "https://en.wikipedia.org/w/index.php?search={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_wp
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://en.wikipedia.org/w/index.php?search=" ;
-  ui:label "Wikipedia" .
+:prefix
+  a hydra:IriTemplate ;
+  dct:title "prefix.cc" ;
+  hydra:template "https://prefix.cc/{query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_prefix
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://prefix.cc/" ;
-  ui:label "prefix.cc" .
+:lov
+  a hydra:IriTemplate ;
+  dct:title "LOV" ;
+  hydra:template "https://lov.linkeddata.es/dataset/lov/terms?q={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_lov
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://lov.linkeddata.es/dataset/lov/terms?q=" ;
-  ui:label "LOV" .
+:ety
+  a hydra:IriTemplate ;
+  dct:title "Etymology" ;
+  hydra:template "https://www.etymonline.com/search?q={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_ety
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://www.etymonline.com/search?q=" ;
-  ui:label "Etymology" .
+:yt
+  a hydra:IriTemplate ;
+  dct:title "YouTube" ;
+  hydra:template "https://www.youtube.com/results?search_query={query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_yt
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://www.youtube.com/results?search_query=" ;
-  ui:label "YouTube" .
+:archive
+  a hydra:IriTemplate ;
+  dct:title "Wayback" ;
+  hydra:template "https://web.archive.org/web/*/{query}" ;
+  dct:subject <#SearchEngine> .
 
-:e_archive
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://web.archive.org/web/*/" ;
-  ui:label "Wayback" .
-
-:e_dbpedia
-  a ui:Link ;
-  bk:hasTopic <#SearchEngines> ;
-  bk:recalls "https://dbpedia.org/search?query=" ;
-  ui:label "DBpedia" .
+:dbpedia
+  a hydra:IriTemplate ;
+  dct:title "DBpedia" ;
+  hydra:template "https://dbpedia.org/search?query={query}" ;
+  dct:subject <#SearchEngine> .

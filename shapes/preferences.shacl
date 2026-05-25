@@ -1,0 +1,38 @@
+@prefix :    <#> .
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ui:  <http://www.w3.org/ns/ui#> .
+
+<>
+  owl:imports <../data/ui-vocab.ttl> .
+
+:PreferencesShape
+  a sh:NodeShape ;
+  sh:targetSubjectsOf ui:colorScheme ;
+
+  sh:property [
+    sh:path ui:colorScheme ;
+    sh:class ui:ColorScheme ;
+    sh:maxCount 1 ;
+    sh:name "Color scheme" ;
+  ] ,
+  [
+    sh:path ui:fontSize ;
+    sh:class ui:FontSize ;
+    sh:maxCount 1 ;
+    sh:name "Font size" ;
+  ] ,
+  [
+    sh:path ui:editorKeys ;
+    sh:class ui:EditorKeys ;
+    sh:maxCount 1 ;
+    sh:name "Editor keys" ;
+  ] ,
+  [
+    sh:path ui:proxy ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "CORS proxy" ;
+    sh:description "URL prefix wrapping a target URL for CORS proxying; the target is URI-encoded onto the end." ;
+  ] .

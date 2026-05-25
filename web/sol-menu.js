@@ -81,9 +81,21 @@ class SolMenu extends HTMLElement {
 
   static get observedAttributes() { return ['from-rdf']; }
 
-  /** Form TTL describing how to edit this menu's `from-rdf` subject. */
+  /** Editor declaration consumed by core/editor.js. Menus are edited
+   *  with sol-tree-edit (head fields + per-item shapes + drill into
+   *  nested ui:Menu submenus), so `<sol-form>` is not the right tool. */
   static get editor() {
-    return new URL('../data/menu-form.ttl', import.meta.url).href;
+    return {
+      tag: 'sol-tree-edit',
+      subjectAttr: 'root',
+      attrs: {
+        'head-shape':      new URL('../shapes/menu-head.shacl', import.meta.url).href,
+        'item-shape':      new URL('../shapes/menu-items.shacl', import.meta.url).href,
+        'drill-when-type': 'http://www.w3.org/ns/ui#Menu',
+        'head-label':      'Menu Heading',
+        'items-label':     'menu items',
+      },
+    };
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -126,6 +138,26 @@ class SolMenu extends HTMLElement {
     document.addEventListener('click', this._onDocClick);
     this._onKeyDown = (e) => this._handleKeyDown(e);
     root.addEventListener('keydown', this._onKeyDown);
+
+    // Sync active-state visuals when something else (e.g. <sol-button>)
+    // mounts a non-menu tab into our linkTarget. The mount layer
+    // dispatches sol-tab-activate; if the name isn't one of our items,
+    // we clear every active button so the chrome doesn't pretend the
+    // user is still "on" a menu page.
+    this._onTabActivate = (e) => {
+      const name = e.detail?.name;
+      const isOurs = name && this._flatLeaves(this._items).some(i => i.name === name);
+      if (isOurs) {
+        if (this._active !== name) {
+          this._active = name;
+          this._setActiveButton(name);
+        }
+      } else {
+        this._active = null;
+        this._setActiveButton(null);
+      }
+    };
+    document.addEventListener('sol-tab-activate', this._onTabActivate);
   }
 
   _handleKeyDown(e) {
@@ -408,18 +440,7 @@ class SolMenu extends HTMLElement {
     this._active = item.name;
 
     if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
-
-    Object.values(this._btns).forEach(b => {
-      b.classList.remove('active');
-      b.removeAttribute('aria-current');
-      b.setAttribute('tabindex', '-1');
-    });
-    const activeBtn = this._btns[item.name];
-    if (activeBtn) {
-      activeBtn.classList.add('active');
-      activeBtn.setAttribute('aria-current', 'page');
-      activeBtn.setAttribute('tabindex', '0');
-    }
+    this._setActiveButton(item.name);
 
     const body = this.body;
     body.innerHTML = '';
@@ -432,6 +453,26 @@ class SolMenu extends HTMLElement {
     this.dispatchEvent(new CustomEvent('sol-menu-change', {
       bubbles: true, composed: true, detail: { name: item.name },
     }));
+  }
+
+  /**
+   * Update the visual active state on the nav buttons. Passing a name
+   * that isn't one of this menu's leaves clears every button — the
+   * menu owns no active item (e.g. a sol-button mounted something
+   * other than a menu target into the linkTarget).
+   */
+  _setActiveButton(name) {
+    Object.values(this._btns).forEach(b => {
+      b.classList.remove('active');
+      b.removeAttribute('aria-current');
+      b.setAttribute('tabindex', '-1');
+    });
+    if (!name) return;
+    const btn = this._btns[name];
+    if (!btn) return;
+    btn.classList.add('active');
+    btn.setAttribute('aria-current', 'page');
+    btn.setAttribute('tabindex', '0');
   }
 
   /**
@@ -449,6 +490,7 @@ class SolMenu extends HTMLElement {
     if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
     if (this._onDocClick) { document.removeEventListener('click', this._onDocClick); this._onDocClick = null; }
     if (this._onKeyDown) { this.shadowRoot.removeEventListener('keydown', this._onKeyDown); this._onKeyDown = null; }
+    if (this._onTabActivate) { document.removeEventListener('sol-tab-activate', this._onTabActivate); this._onTabActivate = null; }
   }
 }
 

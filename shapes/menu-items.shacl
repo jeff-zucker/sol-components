@@ -1,7 +1,8 @@
-@prefix :    <#> .
-@prefix sh:  <http://www.w3.org/ns/shacl#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix ui:  <http://www.w3.org/ns/ui#> .
+@prefix :       <#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
 
 :LinkItemShape
   a sh:NodeShape ;
@@ -47,6 +48,25 @@
     sh:path ui:icon ;
     sh:nodeKind sh:IRI ; sh:minCount 0 ; sh:maxCount 1 ;
     sh:name "Icon URL" ;
+  ] ,
+  [
+    sh:path ui:attribute ;
+    sh:node :PropertyValueShape ;
+    sh:name "Attributes" ;
+    sh:description "HTML attributes passed to the element as schema:PropertyValue pairs (name + value)." ;
+  ] .
+
+:PropertyValueShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path schema:name ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "name" ;
+  ] ,
+  [
+    sh:path schema:value ;
+    sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:name "value" ;
   ] .
 
 :SubMenuItemShape

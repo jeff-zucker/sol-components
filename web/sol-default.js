@@ -27,6 +27,7 @@
  */
 
 import { define } from '../core/define.js';
+import { loadConfig } from './utils/rdf-config.js';
 
 class SolDefault extends HTMLElement {
   // observedAttributes is intentionally empty: a MutationObserver
@@ -36,12 +37,19 @@ class SolDefault extends HTMLElement {
   // the observer.)
   static get observedAttributes() { return []; }
 
+  /** SHACL shape describing the editable knobs (proxy etc.). Shares
+   *  preferences.shacl with the chrome's theme / font / editor-keys
+   *  knobs so a single sol-form can edit everything together. */
+  static get shape() {
+    return new URL('../shapes/preferences.shacl', import.meta.url).href;
+  }
+
   constructor() {
     super();
     this.style.display = 'none';
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     if (this._observer) return;
     this._observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -54,6 +62,34 @@ class SolDefault extends HTMLElement {
       }
     });
     this._observer.observe(this, { attributes: true, attributeOldValue: true });
+
+    // RDF source: pulls each predicate's value into a matching HTML
+    // attribute (only when not already set explicitly on the element,
+    // so an inline override wins). camelCase predicates kebab-case
+    // their attribute name (`ui:defaultIssuers` → `default-issuers`).
+    const source = this.getAttribute('source');
+    if (source) await this._applySource(source);
+  }
+
+  async _applySource(source) {
+    try {
+      const cfg = await loadConfig(source);
+      for (const [predUri, value] of Object.entries(cfg)) {
+        const attr = attrFromPredicate(predUri);
+        if (!attr) continue;
+        if (this.hasAttribute(attr)) continue;   // HTML override wins
+        this.setAttribute(attr, Array.isArray(value) ? value.join(' ') : String(value));
+      }
+    } catch (err) {
+      console.warn(`[sol-default] source ${source}: ${err.message}`);
+    }
+  }
+
+  /** Public hook used by &lt;sol-settings&gt; after a save: re-read the RDF
+   *  and re-emit change events for downstream consumers. */
+  async reload() {
+    const source = this.getAttribute('source');
+    if (source) await this._applySource(source);
   }
 
   disconnectedCallback() {
@@ -66,6 +102,16 @@ class SolDefault extends HTMLElement {
       detail: { name, newValue, oldValue },
     }));
   }
+}
+
+// Map a predicate URI's local name to a kebab-case HTML attribute.
+// `http://www.w3.org/ns/ui#proxy`         → `proxy`
+// `http://www.w3.org/ns/ui#defaultIssuers` → `default-issuers`
+function attrFromPredicate(uri) {
+  const i = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
+  const local = i === -1 ? uri : uri.slice(i + 1);
+  if (!local || local === 'type') return null;
+  return local.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
 define('sol-default', SolDefault);
