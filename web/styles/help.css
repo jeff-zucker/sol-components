@@ -23,3 +23,220 @@
     body { max-width:960px; }
     li { margin-bottom:1.5rem;  }
     ul { margin-bottom:0; margin-top:1rem;  }
+
+/* ───────────────────────────────────────────────────────────────────────
+ * Help-page layouts. Two patterns share most of the styling:
+ *
+ *   body.tabbed-help    — full-viewport flex column; header sits up top,
+ *                         a tab bar below it, and the active tab panel
+ *                         takes the remaining height and scrolls inside
+ *                         itself. Used by every component help page that
+ *                         has live-demo tabs.
+ *
+ *   body.scroll-help    — the older simple help layout (margin 2rem,
+ *                         max-width 960px). Used by sol-menu-from-rdf
+ *                         and sol-tabs-from-rdf.
+ *
+ * A page opts in by setting the class on <body>. Page-specific
+ * overrides (per-tab widget sizing, demo grids, syntax highlights)
+ * live below in #id selectors that only exist on that page, so they
+ * don't conflict.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* ── tabbed-help: full-viewport tabs layout ────────────────────────── */
+body.tabbed-help { max-width: none; }
+body.tabbed-help, html:has(body.tabbed-help) { height: 100%; }
+body.tabbed-help {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0; padding: 0; color: var(--text, #2c3e50);
+  background: var(--bg, transparent); font-size: var(--font-size, 20px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+body.tabbed-help h1 { margin: 0 .9rem .2rem; margin-top: 0; }
+body.tabbed-help h2 { margin-bottom: .5rem; }
+body.tabbed-help i  { color: var(--success, green); }
+body.tabbed-help .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
+body.tabbed-help pre {
+  background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
+  border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
+  overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: .5rem 0;
+}
+body.tabbed-help code { font-family: 'Fira Code', 'Consolas', monospace; }
+
+body.tabbed-help .tabs {
+  display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
+  border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem;
+}
+body.tabbed-help .tabs button {
+  background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
+  font-size: .95rem; color: var(--text-muted, #7f8c8d);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+body.tabbed-help .tabs button[aria-selected="true"] {
+  color: var(--text, #2c3e50);
+  border-bottom-color: var(--accent, #3498db); font-weight: 600;
+}
+body.tabbed-help .tabs button:hover { color: var(--text, #2c3e50); }
+body.tabbed-help .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
+
+body.tabbed-help .tab-panel { display: none; }
+body.tabbed-help .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
+
+body.tabbed-help .demo-area {
+  border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+  background: var(--surface, #fff);
+}
+body.tabbed-help .demo-code {
+  align-self: flex-start; margin: 0;
+  background: var(--pre-bg, #2c3e50); color: var(--pre-fg, #ecf0f1);
+  border: none;
+}
+body.tabbed-help .demo-code code { border: none !important; }
+
+/* ── scroll-help: simple scrolling page ───────────────────────────── */
+body.scroll-help {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 2rem; color: var(--text, #2c3e50);
+  background: var(--bg, transparent); max-width: 960px;
+  font-size: var(--font-size, 20px);
+}
+body.scroll-help i { color: var(--success, green); }
+body.scroll-help h2 { margin-bottom: .5rem; }
+body.scroll-help h2 + p { margin-bottom: 1.5rem; }
+body.scroll-help pre {
+  background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
+  border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+  padding: 1rem; overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: 0;
+}
+body.scroll-help code { font-family: 'Fira Code', 'Consolas', monospace; }
+body.scroll-help .demo-area {
+  border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+  padding: 1rem; background: var(--surface, #fff);
+}
+body.scroll-help .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border, #d0dce8); margin-bottom: 1rem; }
+body.scroll-help .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer; font-size: .95rem; color: var(--text-muted, #7f8c8d); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+body.scroll-help .tabs button.active { color: var(--text, #2c3e50); border-bottom-color: var(--accent, #3498db); font-weight: 600; }
+body.scroll-help .tabs button:hover { color: var(--text, #2c3e50); }
+body.scroll-help .tab-panel { display: none; }
+body.scroll-help .tab-panel.active { display: block; max-height: 70vh; overflow: auto; }
+
+/* ── page-specific selectors (each ID only exists on one page) ────── */
+
+/* sol-calendar-help */
+#tab-attr, #tab-providers, #tab-config,
+#tab-multi, #tab-meeting, #tab-theme, #tab-a11y { max-width: 960px; }
+#tab-agenda .demo-area { width: max-content; max-width: 100%; }
+#tab-agenda sol-calendar { width: 460px; max-width: 100%; height: 540px; }
+#tab-agenda.tab-panel.active { display: flex; flex-direction: row; gap: 1rem; }
+
+/* sol-feed-help */
+#tab-sources { max-width: 960px; }
+#tab-feed .demo-area,
+#tab-topic .demo-area { width: max-content; max-width: 100%; }
+#tab-feed sol-feed,
+#tab-topic sol-feed { width: 420px; max-width: 100%; }
+#tab-topic .demo-area,
+#tab-all .demo-area { border: none; background: transparent; }
+#tab-feed.tab-panel.active,
+#tab-topic.tab-panel.active { display: flex; flex-direction: row; gap: 1rem; }
+
+/* sol-form-help — demo grid + SHACL syntax highlight */
+#tab-modes, #tab-mapping, #tab-script { max-width: 960px; }
+#tab-demo .demo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1rem; align-items: start; max-width: 1200px;
+}
+@media (max-width: 880px) { #tab-demo .demo-grid { grid-template-columns: 1fr; } }
+#tab-demo .panel {
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 6px; background: var(--surface, #fff); overflow: hidden;
+}
+#tab-demo .panel-head {
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--border, #d0d0d0);
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--accent, #1F618D) 4%, var(--surface, #fff)),
+    var(--surface, #fff));
+  font-weight: 600; font-size: .85rem; letter-spacing: 0.01em;
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+#tab-demo .panel-head .label { color: var(--accent, #1F618D); }
+#tab-demo .panel-head .hint  { font-weight: 400; color: var(--text-muted, #4d4d4d); font-size: .75rem; }
+#tab-demo .panel-body { padding: 1rem 1.25rem 1.25rem; }
+pre.shacl {
+  margin: 0; padding: 1rem 1.25rem;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: .78rem; line-height: 1.55;
+  background: var(--code-bg, #fdf6e3); color: var(--text, #2c3e50);
+  border: 0; border-radius: 0; max-height: 65vh; overflow: auto;
+}
+pre.shacl .kw  { color: #859900; }
+pre.shacl .uri { color: #268bd2; }
+pre.shacl .lit { color: #cb4b16; }
+pre.shacl .cmt { color: #93a1a1; font-style: italic; }
+table.mapping {
+  border-collapse: collapse; width: 100%; max-width: 880px; font-size: 0.92rem;
+}
+table.mapping th, table.mapping td {
+  text-align: left; vertical-align: top;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--border-soft, #e0e0e0);
+}
+table.mapping th {
+  background: var(--th-bg, #f0f4f8); font-weight: 600;
+  font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted, #4d4d4d);
+}
+table.mapping td:first-child, table.mapping td:nth-child(2) {
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 0.85rem; white-space: nowrap;
+}
+
+/* sol-login-help — live demo strip */
+.demo-strip {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .8rem 1rem; margin: .5rem 0 1rem;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+}
+.demo-strip-label { color: var(--text-muted, #4d4d4d); font-size: .9rem; flex-shrink: 0; }
+.demo-strip-log {
+  flex: 1; min-width: 0; font-family: monospace;
+  font-size: .82rem; color: var(--text-muted, #4d4d4d);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* sol-menu-from-rdf */
+sol-menu nav { --font-size: 80px; }
+#display { padding: 1rem; }
+.scroll-help .demo-area { height: 70vh; }
+
+/* sol-pod-demo */
+body.pod-demo #results { padding: 1rem; background: lightgrey; }
+body.pod-demo .container { height: 480px; width: 840px; margin: auto; }
+body.pod-demo sol-pod { font-size: var(--font-size, 20px); }
+
+/* sol-query-help */
+body.query-help pre b { color: orange; }
+body.query-help li { display: inline-block; margin-right: 1rem; text-align: top; }
+
+/* sol-search-help */
+#tab-engines { max-width: 960px; }
+body.tabbed-help.help-sol-search .demo-area { padding: 1.25rem; }
+#tab-button.tab-panel.active,
+#tab-inline.tab-panel.active {
+  display: flex; flex-direction: row; gap: 1rem; align-items: flex-start;
+}
+#tab-button .demo-area { display: inline-block; }
+#tab-inline .demo-area { width: 36rem; max-width: 100%; }
+#tab-inline .demo-area sol-search { display: flex; width: 100%; }
+
+/* sol-time-help */
+body.tabbed-help.help-sol-time .demo-area { padding: 1.5rem 2rem; display: inline-block; }
+#tab-clock.tab-panel.active { display: flex; flex-direction: row; gap: 1rem; align-items: flex-start; }
+
+/* sol-weather-help */
+#tab-data { max-width: 960px; }
+body.tabbed-help.help-sol-weather .demo-area { padding: 1.5rem 2rem; display: inline-block; }
+#tab-card.tab-panel.active { display: flex; flex-direction: row; gap: 1rem; align-items: flex-start; }

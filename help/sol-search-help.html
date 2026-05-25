@@ -8,58 +8,8 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-<style>
-  html, body { height: 100%; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-         margin: 0; padding: 0; max-width: none; color: var(--text, #2c3e50);
-         background: var(--bg, transparent); font-size: var(--font-size, 20px);
-         display: flex; flex-direction: column; overflow: hidden; }
-  h1 { margin: 0 .9rem .2rem; margin-top: 0; }
-  .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
-  h2 { margin-bottom: .5rem; }
-  i { color: var(--success, green); }
-  pre { background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
-        border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
-        overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: .5rem 0; }
-  code { font-family: 'Fira Code', 'Consolas', monospace; }
-
-  .tabs { display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
-          border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem; }
-  .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
-                 font-size: .95rem; color: var(--text-muted, #7f8c8d);
-                 border-bottom: 2px solid transparent; margin-bottom: -2px; }
-  .tabs button[aria-selected="true"] { color: var(--text, #2c3e50);
-                 border-bottom-color: var(--accent, #3498db); font-weight: 600; }
-  .tabs button:hover { color: var(--text, #2c3e50); }
-  .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
-  #tab-attr, #tab-engines, #tab-a11y { max-width: 960px; }
-
-  .demo-area { border: 1px solid var(--border, #d0dce8); border-radius: 6px;
-               background: var(--surface, #fff); padding: 1.25rem; }
-  /* Each demo tab shows its widget alongside the source snippet. */
-  #tab-button.tab-panel.active,
-  #tab-inline.tab-panel.active {
-    display: flex; flex-direction: row; gap: 1rem; align-items: flex-start;
-  }
-  #tab-button .demo-area { display: inline-block; }
-  #tab-inline .demo-area { width: 36rem; max-width: 100%; }
-  #tab-inline .demo-area sol-search { display: flex; width: 100%; }
-  #tab-button .demo-code,
-  #tab-inline .demo-code {
-    align-self: flex-start;
-    margin: 0;
-    background: var(--pre-bg, #2c3e50);
-    color: var(--pre-fg, #ecf0f1);
-    border: none;
-  }
-  #tab-button .demo-code code,
-  #tab-inline .demo-code code { border: none !important; }
-</style>
 </head>
-<body>
+<body class="tabbed-help help-sol-search">
 
   <h1>sol-search component</h1>
   <p class="page-intro">A multi-engine search field with two layouts:

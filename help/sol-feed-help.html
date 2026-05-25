@@ -8,81 +8,8 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-<style>
-  /* Full-height flex column: header + tabs stay put, the active tab panel
-     takes the rest of the viewport and scrolls inside itself. */
-  html, body { height: 100%; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-         margin: 0; padding: 0; max-width: none; color: var(--text, #2c3e50);
-         background: var(--bg, transparent); font-size: var(--font-size, 20px);
-         display: flex; flex-direction: column; overflow: hidden; }
-  h1 { margin: 0 .9rem .2rem; margin-top:0}
-  .page-intro { margin: 0 .9rem .6rem; max-width: 960px; }
-  h2 { margin-bottom: .5rem; }
-  i { color: var(--success, green); }
-  pre { background: var(--code-bg, #f4f6f8); color: var(--text, inherit);
-        border: 1px solid var(--border, #d0dce8); border-radius: 6px; padding: 1rem;
-        overflow-x: auto; font-size: .9rem; line-height: 1.5; margin: .5rem 0; }
-  code { font-family: 'Fira Code', 'Consolas', monospace; }
-
-  /* Tab system — same pattern as help/sol-menu-from-rdf.html */
-  .tabs { display: flex; gap: 0; flex-wrap: wrap; flex: 0 0 auto;
-          border-bottom: 2px solid var(--border, #d0dce8); margin: 0 .9rem; }
-  .tabs button { background: none; border: none; padding: .6rem 1.2rem; cursor: pointer;
-                 font-size: .95rem; color: var(--text-muted, #7f8c8d);
-                 border-bottom: 2px solid transparent; margin-bottom: -2px; }
-  .tabs button[aria-selected="true"] { color: var(--text, #2c3e50);
-                 border-bottom-color: var(--accent, #3498db); font-weight: 600; }
-  .tabs button:hover { color: var(--text, #2c3e50); }
-  .tabs button:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
-
-  /* Only the active panel is shown; it fills the remaining height and
-     scrolls internally so it never grows past the viewport. */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; flex: 1 1 auto; overflow: auto; padding: .9rem; }
-  /* prose tabs read better narrow; demo tabs span the full page width */
-  #tab-attr, #tab-sources, #tab-a11y { max-width: 960px; }
-
-  /* the demo box fills the tab panel, so the demo never runs past the page;
-     <sol-feed> fills the box (:host { height:100% }) and scrolls inside. */
-  .demo-area { border: 1px solid var(--border, #d0dce8); border-radius: 6px;
-               background: var(--surface, #fff); height: 100%; }
-  /* the feed and topic demos are shown as a narrow 420px widget.
-     NB: don't set `display` here — it would override the component's
-     own `:host { display: flex }` and break its internal scrolling. */
-  #tab-feed .demo-area,
-  #tab-topic .demo-area { width: max-content; max-width: 100%; }
-  #tab-feed sol-feed,
-  #tab-topic sol-feed { width: 420px; max-width: 100%; }
-
-  /* Topic and All: the demo-area chrome adds an extra outer border —
-     drop it so the component fills the panel without a frame. */
-  #tab-topic .demo-area,
-  #tab-all .demo-area { border: none; background: transparent; }
-
-  /* Feed and Topic tabs: show the source code of the demo to the right
-     of the live widget. */
-  #tab-feed.tab-panel.active,
-  #tab-topic.tab-panel.active {
-    display: flex;
-    flex-direction: row;
-    gap: 1rem;
-  }
-  #tab-feed .demo-code,
-  #tab-topic .demo-code {
-    align-self: flex-start;
-    margin: 0;
-    background: var(--pre-bg, #2c3e50);
-    color: var(--pre-fg, #ecf0f1);
-    border: none;
-  }
-  /* help.css adds a dashed border to every <code>; suppress it inside
-     the demo's code blocks so the lines render cleanly on the dark bg. */
-  #tab-feed .demo-code code,
-  #tab-topic .demo-code code { border: none !important; }
-</style>
 </head>
-<body>
+<body class="tabbed-help">
 
   <h1>sol-feed component</h1>
   <p class="page-intro">Fetches and displays RSS or Atom feeds. One element, three layouts —
