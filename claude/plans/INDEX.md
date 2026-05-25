@@ -19,6 +19,8 @@ Quick map of what's in `claude/plans/` and where each plan stands.
 |---|---|---|
 | [PLAN-sol-include-trusted-lightdom](PLAN-sol-include-trusted-lightdom.md) | 2026-05-24 | `trusted` content now renders to light DOM (via a shadow `<slot>`) so host CSS reaches in. dk Settings smoke test passes; sol-include help page documents the coupling. |
 | [PLAN-vocab-migration](PLAN-vocab-migration.md) | 2026-05 | Migrated weather/time/calendar/menu shapes from `schema:additionalProperty` indirection to direct W3C/Schema.org/DCT/QUDT/OWL-Time predicates. |
+| URN settings shape pattern (no dedicated plan file) | 2026-05-25 | weather/time/data-kitchen-settings shapes adopted `swc:<X>File rdfs:subClassOf wd:Q1193846` (stable `urn:swc:shape:<file>:` namespace) + `foaf:primaryTopic`-driven targeting. Data files declare `<> a swc:<X>File ; foaf:primaryTopic <#Settings>`. Renames: `preferences.shacl → data-kitchen-settings.shacl`; `data/{weather,time,calendar}.ttl → *-settings.ttl`; `settings.shacl` deleted. See memory `project_swc_shape_urn_pattern`. |
+| sol-form save via `updater.update` | 2026-05-25 | Per-edit PATCH is the save (was layering a full-doc PUT on top). `wireSingleSelectAutosave` switched from PUT-of-filtered-subject to `updater.update`, and re-appends the `<select>` solid-ui's Choice handler detaches. Save button only PUTs for brand-new docs. |
 
 ## Reading order if picking up cold
 
