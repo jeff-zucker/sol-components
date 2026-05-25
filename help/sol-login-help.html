@@ -8,14 +8,49 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+  <script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"></script>
+  <script src="../dist/solid-web-components.bundle.min.js"></script>
   <style>
     body { padding-top:8px; }
     b {color:orange;}
+    .demo-strip {
+      display: flex; align-items: center; gap: 1rem;
+      padding: .8rem 1rem; margin: .5rem 0 1rem;
+      background: var(--surface, #fff);
+      border: 1px solid var(--border, #d0dce8); border-radius: 6px;
+    }
+    .demo-strip-label {
+      color: var(--text-muted, #4d4d4d); font-size: .9rem;
+      flex-shrink: 0;
+    }
+    .demo-strip-log {
+      flex: 1; min-width: 0; font-family: monospace;
+      font-size: .82rem; color: var(--text-muted, #4d4d4d);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
   </style>
 </head>
 <body>
 
   <h1>sol-login component</h1>
+
+  <div class="demo-strip">
+    <span class="demo-strip-label">Live demo:</span>
+    <sol-login visible
+               mode="popup"
+               popup-callback="../popup-auth-callback.html"
+               issuers="https://solidcommunity.net,https://login.inrupt.com,https://solidweb.org"
+    ></sol-login>
+    <span class="demo-strip-log" id="login-log">(no events yet — click the button or trigger an authed fetch elsewhere)</span>
+  </div>
+  <script>
+    (function () {
+      const log = document.getElementById('login-log');
+      document.addEventListener('sol-login',  (e) => { log.textContent = `sol-login: ${e.detail.webId} via ${e.detail.issuer}`; });
+      document.addEventListener('sol-logout', (e) => { log.textContent = `sol-logout: side=${e.detail.side || 'default'}`; });
+    })();
+  </script>
   <p>Login/logout UI plus the page-wide authenticated-fetch plumbing.
     A single <code>&lt;sol-login&gt;</code> on the page does three jobs:
     (1) lets the user log into one or more Solid pods,
