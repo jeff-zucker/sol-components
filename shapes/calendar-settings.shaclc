@@ -1,0 +1,16 @@
+PREFIX :       <#>
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX dct:    <http://purl.org/dc/terms/>
+PREFIX schema: <http://schema.org/>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX ui:     <http://www.w3.org/ns/ui#>
+
+shape :CalendarSettingsShape {
+  targetSubjectsOf dct:source ;
+  dct:source             IRI         [1..*] ;
+  dct:format             xsd:string  in ("ics" "google")                  [1..1] ;
+  ui:view                xsd:string  in ("agenda" "month" "week" "day")   [1..1] ;
+  time:days              xsd:integer [1..1] ;
+  schema:numberOfItems   xsd:integer [0..1] ;
+}

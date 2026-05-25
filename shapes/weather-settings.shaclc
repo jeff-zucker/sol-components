@@ -1,0 +1,19 @@
+PREFIX :       <#>
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl:    <http://www.w3.org/2002/07/owl#>
+PREFIX geo:    <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX schema: <http://schema.org/>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX ui:     <http://www.w3.org/ns/ui#>
+
+imports <../data/ui-vocab.ttl>
+
+shape :WeatherSettingsShape {
+  targetSubjectsOf geo:lat ;
+  geo:lat                  xsd:decimal         [1..1] ;
+  geo:long                 xsd:decimal         [1..1] ;
+  schema:addressLocality   xsd:string          [1..1] ;
+  ui:temperatureUnit       @ui:TemperatureUnit [1..1] ;
+  time:hours               xsd:integer         [1..1] ;
+}

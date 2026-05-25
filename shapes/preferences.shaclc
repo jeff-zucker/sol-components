@@ -1,0 +1,15 @@
+PREFIX :    <#>
+PREFIX sh:  <http://www.w3.org/ns/shacl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX ui:  <http://www.w3.org/ns/ui#>
+
+imports <../data/ui-vocab.ttl>
+
+shape :PreferencesShape {
+  targetSubjectsOf ui:colorScheme ;
+  ui:colorScheme  @ui:ColorScheme [0..1] ;
+  ui:fontSize     @ui:FontSize    [0..1] ;
+  ui:editorKeys   @ui:EditorKeys  [0..1] ;
+  ui:proxy        xsd:string      [0..1] ;
+}

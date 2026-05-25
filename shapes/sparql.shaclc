@@ -1,0 +1,16 @@
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+PREFIX sparql: <http://www.w3.org/ns/sparql#>
+PREFIX sd:     <http://www.w3.org/ns/sparql-service-description#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX skos:   <http://www.w3.org/2004/02/skos/core#>
+PREFIX schema: <http://schema.org/>
+
+shape <#QueryShape> {
+  targetClass sparql:Query ;
+  rdfs:label        xsd:string   [0..1] ;
+  rdfs:comment      xsd:string   [1..1] ;
+  rdfs:description  xsd:string   [0..1] ;
+  schema:category   skos:Concept [0..*] ;
+  sd:endpoint       IRI          [0..1] ;
+}

@@ -1,0 +1,9 @@
+PREFIX :       <#>
+PREFIX sh:     <http://www.w3.org/ns/shacl#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX schema: <http://schema.org/>
+
+shape :TimeSettingsShape {
+  targetSubjectsOf schema:timezone ;
+  schema:timezone xsd:string [1..1] ;
+}

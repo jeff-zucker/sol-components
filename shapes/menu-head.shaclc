@@ -1,0 +1,11 @@
+PREFIX :    <#>
+PREFIX sh:  <http://www.w3.org/ns/shacl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX ui:  <http://www.w3.org/ns/ui#>
+
+shape :MenuHeadShape {
+  targetClass ui:Menu ;
+  ui:label        xsd:string [1..1] ;
+  ui:orientation  xsd:string in ("horizontal" "vertical") [0..1] ;
+  ui:linkTarget   xsd:string [0..1] ;
+}
