@@ -343,3 +343,87 @@ export async function parseSourceList(sourceUri, { proxy } = {}) {
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching source list`);
   return feedsFromRdf(fileUri, abs, await resp.text());
 }
+
+/* ── schema:ItemList readers ──────────────────────────────────────────── */
+
+const SCHEMA = 'http://schema.org/';
+const HYDRA  = 'http://www.w3.org/ns/hydra/core#';
+
+/**
+ * Parse a Turtle document and return the engines in `<listUri>`'s
+ * `schema:itemListElement` set, sorted by `schema:position` (items
+ * without a position fall to the end, ties resolved by first-seen
+ * triple order).
+ *
+ *   <#SearchEngines> a schema:ItemList ;
+ *     schema:itemListElement :ddg , :google .
+ *   :ddg a hydra:IriTemplate ;
+ *     dct:title "DuckDuckGo" ; schema:position 1 ;
+ *     hydra:template "https://duckduckgo.com/?q={query}" .
+ *
+ * Each returned record is `{ id, label, template, position }`. `id`
+ * is the IRI's fragment (or last path segment); `label` falls back
+ * through `dct:title` → `schema:name` → `rdfs:label` → fragment.
+ */
+async function enginesFromRdf(fileUri, listUri, text) {
+  let rdf;
+  try { ({ rdf } = await import('../../core/rdf.js')); }
+  catch { throw new Error('RDF source lists need rdflib on the page'); }
+  if (!rdf.isReady()) throw new Error('rdflib is not available');
+
+  const store = rdf.graph();
+  rdf.parse(text, store, fileUri, 'text/turtle');
+
+  const sym = u => rdf.sym(u);
+  const valueOf = (subj, pred) => {
+    const o = store.any(subj, sym(pred), null);
+    return o ? o.value : '';
+  };
+
+  const list = sym(listUri);
+  const engines = [];
+  let seq = 0;
+  for (const st of store.statementsMatching(list, sym(SCHEMA + 'itemListElement'), null)) {
+    const subj = st.object;
+    if (subj.termType !== 'NamedNode') continue;
+    const template = valueOf(subj, HYDRA + 'template');
+    if (!template) continue;
+    const posStr = valueOf(subj, SCHEMA + 'position');
+    const position = posStr ? Number(posStr) : Number.POSITIVE_INFINITY;
+    engines.push({
+      id: lastSegment(subj.value),
+      label:
+        valueOf(subj, 'http://purl.org/dc/terms/title')
+        || valueOf(subj, SCHEMA + 'name')
+        || valueOf(subj, 'http://www.w3.org/2000/01/rdf-schema#label')
+        || lastSegment(subj.value),
+      template,
+      position,
+      _seq: seq++,
+    });
+  }
+  engines.sort((a, b) => (a.position - b.position) || (a._seq - b._seq));
+  return engines.map(({ _seq, ...rest }) => rest);
+}
+
+/**
+ * Resolve a `source` of the form `<rdfFile>#<ListName>` into a
+ * position-sorted array of `{ id, label, template, position }` engine
+ * records. The fragment is required.
+ *
+ * @param {string} sourceUri            `<rdfFile>#<ListName>`
+ * @param {{proxy?: string}} [options]  CORS proxy pattern
+ */
+export async function parseEngineList(sourceUri, { proxy } = {}) {
+  const abs = resolveUrl(sourceUri || '');
+  const hashIdx = abs.indexOf('#');
+  if (hashIdx === -1) {
+    throw new Error(
+      'An ItemList IRI is required — e.g. source="search-engines.ttl#SearchEngines"',
+    );
+  }
+  const fileUri = abs.slice(0, hashIdx);
+  const resp = await feedFetch(fileUri, proxy);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching engine list`);
+  return enginesFromRdf(fileUri, abs, await resp.text());
+}

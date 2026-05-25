@@ -2,7 +2,15 @@ import { sheetFrom } from '../../core/adopt.js';
 import { BTN_CSS } from './buttons-css.js';
 
 export const CSS = BTN_CSS + `
-  :host {
+  /* Hidden by default. Frames embed sol-login for the auth-needed
+     listener side-effect; the element surfaces UI only when an auth
+     prompt is actively in flight (host gains the 'active' attribute)
+     so callers do not need to allocate chrome space for a permanent
+     login chip. Hosts that DO want a permanent chip can override
+     with style="display: inline-flex". */
+  :host { display: none; }
+  :host([active]),
+  :host([visible]) {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -52,6 +60,22 @@ export const CSS = BTN_CSS + `
     display: none;
   }
   .dropdown.open { display: block; }
+
+  /* Hint shown above the issuer list while auto-login is in flight.
+     Names the issuer being signed into and prompts the user to click
+     another option in the list to switch. Inserted/removed by
+     _showSwitchHint / _hideSwitchHint as part of the auth-needed
+     auto-login flow. */
+  .switch-hint {
+    font-size: 0.78em;
+    color: var(--text-muted, #4d4d4d);
+    padding: 2px 6px 6px 6px;
+    border-bottom: 1px solid var(--border-soft, #e5e5e5);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .issuer-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
   .issuer-list:empty { display: none; }

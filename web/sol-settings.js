@@ -29,22 +29,44 @@ import './sol-accordion.js';
 
 class SolSettings extends HTMLElement {
   connectedCallback() {
-    if (this._built) return;
-    this._built = true;
+    if (this._wired) return;
+    this._wired = true;
     // Defer one microtask so the surrounding DOM (e.g., a sibling
     // keep-alive wrapper that holds the dashboard widgets) is fully
     // attached before discovery walks.
     queueMicrotask(() => this._build());
+
+    // Re-discover when nav activates a different tab. The mount layer
+    // fires sol-tab-activate whenever a [data-menu-item] wrapper is
+    // shown/created; if sol-settings was the destination *and* a new
+    // editable widget appeared while we were away, the accordion needs
+    // to grow a panel for it. Cheap to re-run discovery; the rebuild
+    // only happens when the widget set has actually changed.
+    this._onTabActivate = () => {
+      if (this.offsetParent === null) return;   // we're hidden; ignore
+      this._rebuildIfChanged();
+    };
+    document.addEventListener('sol-tab-activate', this._onTabActivate);
+  }
+
+  disconnectedCallback() {
+    if (this._onTabActivate) {
+      document.removeEventListener('sol-tab-activate', this._onTabActivate);
+      this._onTabActivate = null;
+    }
   }
 
   _build() {
     const widgets = this._discover();
+    this._lastSignature = signatureOf(widgets);
+    this.innerHTML = '';
     if (!widgets.length) {
       this._empty();
       return;
     }
 
     const accordion = document.createElement('sol-accordion');
+    accordion.setAttribute('start-closed', '');
     widgets.forEach((w, i) => {
       const panel = document.createElement('div');
       const head = document.createElement('div');
@@ -60,6 +82,13 @@ class SolSettings extends HTMLElement {
     // sol-accordion runs synchronously on connect; once it has cloned
     // the author divs into <details>, attach lazy-mount handlers.
     Promise.resolve().then(() => this._wireLazy(accordion, widgets));
+  }
+
+  _rebuildIfChanged() {
+    const widgets = this._discover();
+    const sig = signatureOf(widgets);
+    if (sig === this._lastSignature) return;
+    this._build();
   }
 
   _empty() {
@@ -129,6 +158,17 @@ function labelFromTag(tag) {
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+/** Stable identity for a discovered widget set, used to detect when a
+ *  later re-discovery has actually changed anything. Tag + subject is
+ *  enough — two instances of the same widget with the same source
+ *  would render an identical accordion panel. */
+function signatureOf(widgets) {
+  return widgets
+    .map(w => `${w.el.localName}#${w.el.getAttribute('source') || w.el.getAttribute('from-rdf') || ''}`)
+    .sort()
+    .join('|');
 }
 
 define('sol-settings', SolSettings);

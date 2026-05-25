@@ -100,8 +100,12 @@ const W = {
 async function writeRdfAdditions(fileUri, triples) {
   const { rdf } = await import('../core/rdf.js');
   if (!rdf.isReady()) throw new Error('rdflib is not available');
+  // Route both the GET and the PUT through solFetch so a protected
+  // source triggers the chrome's login flow + auto-retry instead of
+  // a silent 401.
+  const { solFetch } = await import('../core/auth-fetch.js');
 
-  const resp = await fetch(fileUri);
+  const resp = await solFetch(fileUri);
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching source`);
   const text = await resp.text();
 
@@ -124,7 +128,7 @@ async function writeRdfAdditions(fileUri, triples) {
     });
   }
 
-  const put = await fetch(fileUri, {
+  const put = await solFetch(fileUri, {
     method: 'PUT',
     headers: { 'content-type': 'text/turtle' },
     body: serialized,

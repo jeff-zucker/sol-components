@@ -27,6 +27,7 @@ import {
   getFirstLoggedIn as _getFirstLoggedIn,
 } from '../core/auth-core.js';
 import { PopupProxySession } from '../core/popup-proxy.js';
+import { solFetch } from '../core/auth-fetch.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const login = document.querySelector('sol-login');
@@ -272,6 +273,7 @@ class SolLogin extends HTMLElement {
       const attr = this.getAttribute('issuers');
       if (attr) this._issuers = attr.split(',').map(s => s.trim()).filter(Boolean);
     }
+    this._attachAuthNeededListener();
   }
 
   disconnectedCallback() {
@@ -279,6 +281,89 @@ class SolLogin extends HTMLElement {
       window.removeEventListener('message', this._popupMsgHandler);
       this._popupMsgHandler = null;
     }
+    this._detachAuthNeededListener();
+  }
+
+  /* ── sol-auth-needed listener ──────────────────────────────────────
+   * Components save through solFetch (core/auth-fetch.js); when a
+   * request returns 401, solFetch dispatches `sol-auth-needed` and
+   * waits for someone to resolve its detail promise. We listen on
+   * `document`, pick the default issuer (own `issuer` attribute, then
+   * `<sol-default default-issuer>`, then the first entry in our list),
+   * run the existing login flow, and resolve the promise on success or
+   * give-up.
+   *
+   * Concurrent prompts are coalesced — multiple solFetch callers that
+   * hit 401 in the same window will share one login attempt rather
+   * than stacking popups.
+   */
+
+  _attachAuthNeededListener() {
+    if (this._authNeededHandler) return;
+    this._authNeededHandler = (e) => this._handleAuthNeeded(e);
+    document.addEventListener('sol-auth-needed', this._authNeededHandler);
+  }
+
+  _detachAuthNeededListener() {
+    if (this._authNeededHandler) {
+      document.removeEventListener('sol-auth-needed', this._authNeededHandler);
+      this._authNeededHandler = null;
+    }
+  }
+
+  _resolveDefaultIssuer() {
+    return this.getAttribute('issuer')
+      || (document.querySelector('sol-default')?.getAttribute('default-issuer'))
+      || this._issuers[0]
+      || null;
+  }
+
+  async _handleAuthNeeded(e) {
+    const { resolve, reject } = e.detail || {};
+    if (typeof resolve !== 'function') return;
+
+    if (this._pendingAuthPromise) {
+      try { resolve(await this._pendingAuthPromise); }
+      catch (err) { reject?.(err); }
+      return;
+    }
+
+    const issuer = this._resolveDefaultIssuer();
+    if (!issuer) { resolve(false); return; }
+
+    // Surface the element for the duration of the auth flow so the
+    // user can pick a different issuer (the picker dropdown lives in
+    // sol-login's own UI). `active` is the CSS hook in
+    // styles/sol-login-css.js — :host([active]) flips display back on.
+    this.setAttribute('active', '');
+
+    // Open the dropdown so the issuer list is visible while auto-login
+    // is running. The user can click a different issuer to switch
+    // (which closes the in-flight popup and opens a fresh one — see
+    // _popupLogin's reissue handling).
+    requestAnimationFrame(() => {
+      this._showSwitchHint(issuer);
+      this._toggleDropdown();
+    });
+
+    this._pendingAuthPromise = new Promise((res) => {
+      const cleanup = () => {
+        this.removeEventListener('sol-login', onLogin);
+        this.removeEventListener('sol-popup-blocked', onFail);
+        this.removeAttribute('active');
+        this._closeDropdown();
+        this._hideSwitchHint();
+        this._pendingAuthPromise = null;
+      };
+      const onLogin = () => { cleanup(); res(true);  };
+      const onFail  = () => { cleanup(); res(false); };
+      this.addEventListener('sol-login', onLogin);
+      this.addEventListener('sol-popup-blocked', onFail);
+      Promise.resolve(this.login(issuer)).catch(() => onFail());
+    });
+
+    try { resolve(await this._pendingAuthPromise); }
+    catch (err) { reject?.(err); }
   }
 
   attributeChangedCallback(name, oldV, newV) {
@@ -315,10 +400,18 @@ class SolLogin extends HTMLElement {
       return;
     }
 
-    // Reuse an already-open popup for this side rather than stacking windows.
+    // Reuse vs. reissue: if a popup is already open for this side and
+    // the issuer matches, just refocus. If the caller is switching to
+    // a different issuer (e.g. user clicked another option in the
+    // dropdown while auto-login was in flight), close the old popup
+    // and open a fresh one with the new issuer URL.
     if (this._popupWindow && !this._popupWindow.closed) {
-      this._popupWindow.focus();
-      return;
+      if (this._popupIssuer === issuer) {
+        this._popupWindow.focus();
+        return;
+      }
+      try { this._popupWindow.close(); } catch (e) {}
+      this._popupWindow = null;
     }
 
     const url = this._popupCallback +
@@ -335,7 +428,10 @@ class SolLogin extends HTMLElement {
       return;
     }
     this._popupWindow = w;
+    this._popupIssuer = issuer;
     this._setStatusMessage('Signing in…');
+    // Auto-login also wants the hint updated as the user re-picks.
+    if (this.hasAttribute('active')) this._showSwitchHint(issuer);
 
     if (!this._popupMsgHandler) {
       this._popupMsgHandler = (e) => this._onPopupMessage(e);
@@ -431,10 +527,13 @@ async logout() {
 _integrateWithRdflib() {
   const win = typeof window !== 'undefined' ? window : {};
 
-  const authFetchWrapper = (uri, options = {}) => {
-    const authFetch = this._auth.fetchFor(uri);
-    return authFetch(uri, options);
-  };
+  // Route rdflib's Fetcher (and anything else we patch) through solFetch
+  // so a 401 from UpdateManager-driven saves (sol-form), sol-query SPARQL
+  // calls, sol-include document loads, etc. triggers `sol-auth-needed`
+  // and gets the chrome's login UX + auto-retry. solFetch internally
+  // calls am.fetchFor under the hood, so an already-authenticated
+  // request still goes through the right session.
+  const authFetchWrapper = (uri, options = {}) => solFetch(uri, options);
 
   const patchFetcherCtor = (FetcherCtor) => {
     if (!FetcherCtor?.prototype) return;
@@ -556,6 +655,28 @@ _integrateWithRdflib() {
   _closeDropdown() {
     const dd = this.shadowRoot.querySelector('.dropdown');
     if (dd) dd.classList.remove('open');
+  }
+
+  /** Insert (or update) a tiny hint at the top of the dropdown that
+   *  names the default issuer auto-login is using and prompts the user
+   *  to pick another to switch. Idempotent — calling twice updates
+   *  the hint text instead of stacking it. */
+  _showSwitchHint(defaultIssuer) {
+    const dd = this.shadowRoot.querySelector('.dropdown');
+    if (!dd) return;
+    let hint = dd.querySelector('.switch-hint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.className = 'switch-hint';
+      dd.insertBefore(hint, dd.firstChild);
+    }
+    const short = defaultIssuer.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    hint.textContent = `Signing in as ${short} — pick another to switch`;
+  }
+
+  _hideSwitchHint() {
+    const hint = this.shadowRoot.querySelector('.switch-hint');
+    if (hint) hint.remove();
   }
 
   _renderIssuers() {

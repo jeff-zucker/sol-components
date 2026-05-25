@@ -6,7 +6,11 @@
  * summary (header), the second becomes the collapsible content.
  * Only one section is open at a time (exclusive mode via `<details name>`).
  *
+ * The first panel opens by default. Add `start-closed` to start with
+ * every panel collapsed instead.
+ *
  * @element sol-accordion
+ * @attr {boolean} start-closed - leave every panel collapsed on first render
  *
  * @example
  * <sol-accordion>
@@ -30,9 +34,10 @@ import { define } from '../core/define.js';
 class SolAccordion extends HTMLElement {
   connectedCallback() {
     const groupName = `sol-accordion-${Math.random().toString(36).slice(2, 9)}`;
-    
+    const startClosed = this.hasAttribute('start-closed');
+
     const authorDivs = Array.from(this.children).filter(el => el.tagName === 'DIV');
-    
+
     if (!authorDivs.length) {
       this.textContent = 'No accordion panels found';
       return;
@@ -45,14 +50,15 @@ class SolAccordion extends HTMLElement {
 
     authorDivs.forEach((srcDiv, i) => {
       const childDivs = Array.from(srcDiv.children).filter(el => el.tagName === 'DIV');
-      
+
+      const openInitial = !startClosed && i === 0;
       const det = document.createElement('details');
       det.name = groupName;
-      if (i === 0) det.open = true;
+      if (openInitial) det.open = true;
 
       const sum = document.createElement('summary');
       sum.setAttribute('role', 'button');
-      sum.setAttribute('aria-expanded', i === 0 ? 'true' : 'false');
+      sum.setAttribute('aria-expanded', openInitial ? 'true' : 'false');
       sum.setAttribute('tabindex', '0');
       sum.id = `panel-${i}-summary`;
       

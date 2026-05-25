@@ -12,12 +12,13 @@
  *                    already have a dedicated strip for search.
  *
  * Engine sources, in order of precedence:
- *   `source`   — URL of a Turtle file with a bk:Topic and a set of
- *                ui:Link entries (`bk:recalls` = search-URL prefix,
- *                `ui:label` = display name). Parsed through
- *                feed-fetch.js#parseSourceList — the same bookmark-list
- *                utility sol-feed uses, which shares the single rdflib
- *                instance from core/rdf.js.
+ *   `source`   — URL of a Turtle file with a `schema:ItemList` whose
+ *                `schema:itemListElement`s are `hydra:IriTemplate`
+ *                entries (`hydra:template` = RFC 6570 search URL with
+ *                `{query}`, `dct:title` = display name,
+ *                `schema:position` = sort order). Parsed through
+ *                feed-fetch.js#parseEngineList, sharing the single
+ *                rdflib instance from core/rdf.js.
  *   `engines`  — JSON array of {id,label,url} on the attribute itself.
  *   built-ins  — a sensible default list (DuckDuckGo / Google /
  *                Wikipedia / prefix.cc / LOV / Etymology / YouTube /
@@ -44,7 +45,7 @@
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as SEARCH_CSS, sheet as SEARCH_SHEET } from './styles/sol-search-css.js';
-import { parseSourceList } from './utils/feed-fetch.js';
+import { parseEngineList } from './utils/feed-fetch.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 
 /** Sensible defaults; callers can override via `engines` or `source`. */
@@ -97,6 +98,17 @@ function slugify(label) {
   return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+/** Build the result URL for an engine + query. RDF-sourced engines
+ *  carry `template` with a `{query}` placeholder (RFC 6570-ish);
+ *  built-in / JSON-attr engines carry `url` as a prefix that the query
+ *  is appended to. Both paths URI-encode the query. */
+function expandQuery(eng, q) {
+  const encoded = encodeURIComponent(q);
+  if (eng?.template) return eng.template.replace(/\{query\}/g, encoded);
+  if (eng?.url)      return eng.url + encoded;
+  return 'https://duckduckgo.com/?q=' + encoded;
+}
+
 // RDF parsing is delegated to feed-fetch.js#parseSourceList — the same
 // utility sol-feed uses for its bookmark/SKOS source files, which routes
 // through core/rdf.js (the single rdflib instance the suite shares).
@@ -113,9 +125,10 @@ class SolSearch extends HTMLElement {
   }
 
   /** SHACL shape describing the engines list. Discovery via
-   *  &lt;sol-settings&gt; picks this up; the shape uses sh:inversePath on
-   *  dct:subject so the editor lists each hydra:IriTemplate that
-   *  classifies under the currently-edited skos:Concept. */
+   *  &lt;sol-settings&gt; picks this up; the shape uses a forward
+   *  `schema:itemListElement` so the editor lists each
+   *  `hydra:IriTemplate` that's a member of the currently-edited
+   *  `schema:ItemList`. */
   static get shape() {
     return new URL('../shapes/search-engines.shacl', import.meta.url).href;
   }
@@ -201,20 +214,21 @@ class SolSearch extends HTMLElement {
       this._doSearch();
     });
 
-    // If a `source` is set, fetch + parse it through the shared
-    // bookmark-list utility (same code path as sol-feed). The default /
-    // engines-attr list is shown in the meantime so the UI is never
-    // blank, and stays put if the source request fails.
+    // If a `source` is set, fetch + parse it as a schema:ItemList of
+    // hydra:IriTemplate engines (see feed-fetch.js#parseEngineList).
+    // The default / engines-attr list is shown in the meantime so the
+    // UI is never blank, and stays put if the source request fails.
     const source = this.getAttribute('source');
     if (source) {
       try {
-        const list = await parseSourceList(source);
+        const list = await parseEngineList(source);
         if (list && list.length) {
           this._engines = list.map((item, i) => ({
-            id:    slugify(item.label) || `e${i}`,
-            label: item.label,
-            url:   item.url,
+            id:       item.id || slugify(item.label) || `e${i}`,
+            label:    item.label,
+            template: item.template,
           }));
+          this._loadEngines();
           this._renderEngines();
         }
       } catch (err) {
@@ -372,7 +386,7 @@ class SolSearch extends HTMLElement {
     const q = (this.$q.value || '').trim();
     if (!q) return;
     const eng = this._selectedEngine();
-    const url = (eng?.url || 'https://duckduckgo.com/?q=') + encodeURIComponent(q);
+    const url = expandQuery(eng, q);
     if (!openInReader(url)) {
       // Popup blocked; fall through to a normal new-tab open so the user
       // still gets the search result rather than nothing.
