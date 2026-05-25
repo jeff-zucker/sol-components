@@ -9,15 +9,29 @@
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
 
-  <!-- core/shape-to-form.js needs rdflib at runtime. Paths are relative
-       to this file (help/ is one level below project root). -->
+  <!-- core/shape-to-form.js needs rdflib at runtime AND solid-ui's
+       fieldFunction for widget rendering (window.UI.widgets.fieldFunction).
+       solid-logic supplies the singleton store solid-ui's enumerators walk.
+       Paths are relative to this file (help/ is one level below project root). -->
   <script type="importmap">
   {
     "imports": {
-      "rdflib": "../dist/vendor/rdflib.js",
-      "n3":     "../dist/vendor/n3.js"
+      "rdflib":       "../dist/vendor/rdflib.js",
+      "n3":           "../dist/vendor/n3.js",
+      "solid-ui":     "../dist/vendor/solid-ui.js",
+      "solid-logic":  "../dist/vendor/solid-logic.js"
     }
   }
+  </script>
+  <script type="module">
+    // Side-effect imports: solid-ui sets window.UI on first eval, and
+    // solid-logic is exposed on window.solidLogic so swc's core/rdf.js
+    // rendezvous on the same store. shape-to-form.js (used by the demo
+    // below) reads window.UI.widgets.fieldFunction; without these
+    // imports the demo would render "solid-ui is not loaded".
+    import 'solid-ui';
+    import * as solidLogic from 'solid-logic';
+    if (typeof window !== 'undefined') window.solidLogic = solidLogic;
   </script>
 
   <style>
@@ -521,12 +535,16 @@ node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
         shaclEl.classList.remove('loading');
         shaclEl.innerHTML = highlightTurtle(shaclText);
 
-        const { properties } = parseShape(shaclText, SHAPE_URL);
+        const { properties } = await parseShape(shaclText, SHAPE_URL);
 
         // Build an in-memory weather settings record using the direct
         // predicates from the migrated shape. No PropertyValue indirection
         // here — the data layout mirrors data/weather.ttl as it ships.
-        const store = rdf.graph();
+        // Use the shared singleton (rdf.store) — the same one solid-ui
+        // captured as its `kb` at module-load time. shape-to-form
+        // synthesizes ui:* field types into this store at render time;
+        // they must land in the store solid-ui actually reads from.
+        const store = rdf.store;
         const subject = rdf.sym(SUBJECT_URI);
         const doc = rdf.sym(DATA_BASE);
         const lit = (v, dt) => dt
