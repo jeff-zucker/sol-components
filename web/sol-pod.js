@@ -44,6 +44,9 @@ import './sol-login.js';   // built-in login button in the pod header
  * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
  * @attr {string} handler - default sol-* component for file viewing
+ * @attr {string} gear-icon - icon for the per-item action button. Treated as
+ *                 a URL when it contains '/' or ends in svg/png/jpg/gif/webp;
+ *                 otherwise used as text (emoji). Defaults to '⚙'.
  * @attr {string} pods-group - shared pod-list scope; absent = the default shared
  *                 group, 'none' = a standalone unshared registry
  * @property {Object} login - SolLogin element reference (external if given, else the built-in one)
@@ -488,7 +491,10 @@ class SolPod extends HTMLElement {
     } else {
       storages.forEach(url => {
         const opt = document.createElement('option');
-        opt.value = url; opt.textContent = url;
+        opt.value = url;
+        // Strip the scheme for display; the value still carries the
+        // full URL so selection / fetch keep working.
+        opt.textContent = url.replace(/^https?:\/\//, '');
         sel.appendChild(opt);
       });
     }
@@ -733,8 +739,17 @@ class SolPod extends HTMLElement {
     };
 
     const gear = document.createElement('button');
-    gear.className = 'item-gear'; gear.textContent = '\u2699';
+    gear.className = 'item-gear';
     gear.title = 'Actions';
+    const iconAttr = this.getAttribute('gear-icon');
+    if (iconAttr && /\/|\.(svg|png|jpe?g|gif|webp)$/i.test(iconAttr)) {
+      const img = document.createElement('img');
+      img.src = iconAttr;
+      img.alt = '';
+      gear.appendChild(img);
+    } else {
+      gear.textContent = iconAttr || '\u2699';
+    }
     gear.onclick = openItemAction;
     li.appendChild(gear);
 

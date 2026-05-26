@@ -33,6 +33,10 @@ export const CSS = BTN_CSS + `
   }
   .pod-header select {
     flex: 1; padding: 6px 10px;
+    /* Without min-width:0 a flex <select> reserves the width of its
+       widest option, pushing the login + settings buttons out of the
+       sidebar in narrow panels. */
+    min-width: 0;
     border: 1px solid var(--border, #e0e0e0); border-radius: 4px;
     font-size: 0.9em;
     background: var(--surface, #fff); color: var(--text, #212121);
@@ -129,6 +133,8 @@ export const CSS = BTN_CSS + `
     transition: color 0.15s;
   }
   .item-gear:hover { color: var(--accent-dark, #1976d2); background: var(--focus-bg, #e3f2fd); }
+  /* When gear-icon attribute is a URL, the button holds an <img>. */
+  .item-gear img { display: block; width: 1.1em; height: 1.1em; pointer-events: none; }
 
   .file-tree .folder { font-weight: 500; color: var(--folder-color, var(--accent-dark, #1976d2)); }
   .file-tree .file   { color: var(--file-color, #424242); }
