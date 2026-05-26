@@ -74,6 +74,7 @@ export const CSS = BTN_CSS + `
     border-bottom: 1px solid var(--border, #e0e0e0);
     font-size: 0.9em; color: var(--text-muted, #666);
     flex-shrink: 0;
+    display: flex; align-items: center;
   }
   .breadcrumb button {
     padding: 4px 8px; font-size: 0.9em; margin-right: 5px;
@@ -82,6 +83,7 @@ export const CSS = BTN_CSS + `
     border-radius: 4px; font-family: inherit;
   }
   .breadcrumb button:hover { background: var(--hover, #f0f0f0); color: var(--accent, #2196f3); }
+  .breadcrumb .crumb-gear { margin-left: auto; margin-right: 0; font-size: 1.05em; line-height: 1; }
 
   .pod-filter-row {
     padding: 6px 14px;

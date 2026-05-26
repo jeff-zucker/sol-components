@@ -143,9 +143,14 @@ const r = await solFetch('https://example.pod/private/notes.ttl', {
     <p>For frame authors who want to hook the login UX (e.g. a custom
       chrome that shows a banner during auth):</p>
     <pre><code>document.addEventListener('sol-auth-needed', (e) =&gt; {
-  const { url, response, resolve, reject } = e.detail;
+  const { url, response, side, resolve, reject } = e.detail;
   // url      — the resource being fetched
   // response — the original Response (status 401 or 403)
+  // side     — the authTag the request was made under (or undefined for
+  //            untagged calls). When set, ONLY the &lt;sol-login&gt; with
+  //            matching `side` handles the event; others early-return.
+  //            Untagged events fall through to every listener — first
+  //            to resolve wins.
   // resolve(true)  → solFetch retries the original request
   // resolve(false) → solFetch returns the original response
   // reject(err)    → solFetch throws err
@@ -157,6 +162,11 @@ const r = await solFetch('https://example.pod/private/notes.ttl', {
       flow. Concurrent prompts are coalesced into one login attempt.
       A five-minute timeout caps the wait so an ignored popup doesn't
       hang the calling widget forever.</p>
+    <p>Pages with multiple <code>&lt;sol-login&gt;</code> chips (e.g.
+      podz's left + right per-pod chips) get side-scoped routing: a
+      <code>solFetch(url, {authTag: 'left'})</code> only wakes the
+      <code>side="left"</code> chip. Callers without an
+      <code>authTag</code> still wake every chip — same as before.</p>
   </div>
 
   <div id="section-8" class="usage-section">

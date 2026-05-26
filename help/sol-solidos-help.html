@@ -60,6 +60,22 @@
 &lt;/script&gt;
 &lt;sol-solidos&gt;&lt;/sol-solidos&gt;</code></pre>
 
+  <h2>Header / footer hidden by default</h2>
+  <p>sol-solidos CSS-hides its own
+     <code>&lt;header id="PageHeader"&gt;</code> and
+     <code>&lt;footer id="PageFooter"&gt;</code>, because when sol-solidos
+     is mounted inside a host shell (data-kitchen, …) the host already
+     owns login + help/prefs chrome and a duplicate login button in
+     mashlib's header is broken anyway (popup-mode pod sessions don't
+     reach mashlib's default Inrupt session, so its login button stalls).
+     Mashlib's reads still go through rdflib's patched Fetcher →
+     <code>solFetch</code> → the host's <code>&lt;sol-login&gt;</code>
+     chip handles any <code>sol-auth-needed</code> prompt and retries.</p>
+  <p>If you want mashlib's standalone header back, override the rule
+     in your page CSS:</p>
+  <pre><code>sol-solidos &gt; #PageHeader,
+sol-solidos &gt; #PageFooter { display: block !important; }</code></pre>
+
   <h2>Embedding alternative: skip sol-solidos, use panes directly</h2>
   <p>sol-solidos creates its own DOM scaffolding
      (<code>&lt;header id="PageHeader"&gt;</code>,

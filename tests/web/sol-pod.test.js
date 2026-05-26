@@ -345,20 +345,23 @@ describe('SolPod — selection', () => {
 // ── _updateBreadcrumb ───────────────────────────────────────────────────────
 
 describe('SolPod — _updateBreadcrumb', () => {
-  test('renders a Home button plus one button per path segment', () => {
+  test('renders Home + one button per path segment + a trailing gear', () => {
     const el = mkPod();
     el._rootUrl = 'https://pod.example/';
     el._updateBreadcrumb('https://pod.example/docs/sub/');
     const labels = [...el.shadowRoot.querySelectorAll('.breadcrumb button')]
       .map(b => b.textContent);
-    expect(labels).toEqual(['\u{1F3E0}', 'docs', 'sub']);
+    expect(labels).toEqual(['\u{1F3E0}', 'docs', 'sub', '⚙']);
   });
 
-  test('at the root only the Home button is shown', () => {
+  test('at the root the Home button + the gear are shown', () => {
     const el = mkPod();
     el._rootUrl = 'https://pod.example/';
     el._updateBreadcrumb('https://pod.example/');
-    expect(el.shadowRoot.querySelectorAll('.breadcrumb button')).toHaveLength(1);
+    const btns = el.shadowRoot.querySelectorAll('.breadcrumb button');
+    expect(btns).toHaveLength(2);
+    expect(btns[0].textContent).toBe('\u{1F3E0}');
+    expect(btns[1].classList.contains('crumb-gear')).toBe(true);
   });
 
   test('the Home button loads the root container', () => {
@@ -368,6 +371,19 @@ describe('SolPod — _updateBreadcrumb', () => {
     el._updateBreadcrumb('https://pod.example/docs/');
     el.shadowRoot.querySelector('.breadcrumb button').click();
     expect(el.loadContainer).toHaveBeenCalledWith('https://pod.example/');
+  });
+
+  test('the gear opens the ops modal for the current container', () => {
+    const el = mkPod();
+    el._rootUrl = 'https://pod.example/';
+    el._currentPath = 'https://pod.example/docs/';
+    el._openItemModal = jest.fn();
+    el._updateBreadcrumb('https://pod.example/docs/');
+    el.shadowRoot.querySelector('.crumb-gear').click();
+    expect(el._openItemModal).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://pod.example/docs/',
+      isContainer: true,
+    }));
   });
 });
 

@@ -108,14 +108,14 @@ function shouldPrompt(response, am) {
   return false;
 }
 
-function awaitAuth(url, response) {
+function awaitAuth(url, response, side) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (ok)  => { if (!settled) { settled = true; resolve(!!ok); } };
     const fail   = (err) => { if (!settled) { settled = true; reject(err); } };
     document.dispatchEvent(new CustomEvent(AUTH_NEEDED_EVENT, {
       bubbles: false, composed: false,
-      detail: { url, response, resolve: finish, reject: fail },
+      detail: { url, response, side, resolve: finish, reject: fail },
     }));
     setTimeout(() => finish(false), AUTH_PROMPT_TIMEOUT_MS);
   });
@@ -137,7 +137,7 @@ export async function solFetch(url, opts) {
   if (!shouldPrompt(response, am)) return response;
   if (!hasLoginListener()) return response;
 
-  const ok = await awaitAuth(url, response);
+  const ok = await awaitAuth(url, response, tag);
   if (!ok) return response;
 
   const retryFetch = (am ?? getAuthManager())?.fetchFor(url, tag) || baseFetch;

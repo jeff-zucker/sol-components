@@ -176,7 +176,7 @@ export const CSS = `
        fieldset can fit several checkboxes side-by-side. */
     grid-template-columns: 2fr 1fr;
     gap: 1rem;
-    margin: 0 0 1rem;
+    margin: 2rem 0 1rem;
   }
   .feed-picker[hidden] { display: none; }
   .feed-picker-left,

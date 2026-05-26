@@ -51,7 +51,7 @@ export const CSS = `
     background:var(--border,#ccc);touch-action:none}
 .sle-resizer:hover,.sle-resizer.dragging{background:var(--accent,#4a9eff)}
 .pp>#po{flex-shrink:0}
-.pp>.mdp{padding:1rem 1.4rem}
+.pp .sle-md-preview{padding:1rem}
 
 .csv-tbl{width:100%;border-collapse:collapse;font-size:.88em}
 .csv-tbl th{padding:7px 10px;text-align:left;background:var(--text,#222);color:var(--surface,#fff);font-weight:600;position:sticky;top:0;z-index:1}

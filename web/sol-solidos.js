@@ -14,8 +14,17 @@ function getMashlib() {
   return { Mashlib, initMainPage, SolidLogic, $rdf, panes };
 }
 
+// Hide mashlib's own header/footer chrome — when sol-solidos is mounted
+// inside a host shell (dk), the host already owns login + help/prefs
+// affordances, so a duplicate login button in mashlib's header is both
+// confusing and broken (popup-mode pod sessions don't reach mashlib's
+// default Inrupt session, so its login button stalls). Mashlib's reads
+// go through rdflib's patched Fetcher → solFetch → sol-auth-needed →
+// the host's <sol-login> chip handles the prompt and retries.
 const HOST_CSS = `
   sol-solidos { display: block; width: 100%; height: 100%; }
+  sol-solidos > #PageHeader,
+  sol-solidos > #PageFooter { display: none; }
 `;
 
 class SolSolidos extends HTMLElement {

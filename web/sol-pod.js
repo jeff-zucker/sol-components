@@ -274,7 +274,9 @@ class SolPod extends HTMLElement {
     }
     // No explicit source: use whatever the group registry already holds
     // (seeded by the host, or discovered by a sibling pod); otherwise
-    // discover for this session/origin.
+    // discover for this session/origin. Seeded pods are authoritative —
+    // a non-empty registry stands as the dropdown's contents and no
+    // discovery is attempted. Discovery only fills an empty registry.
     if (this.storages.length === 0) {
       await this.discover();
     }
@@ -387,7 +389,7 @@ class SolPod extends HTMLElement {
           <select class="pod-select" aria-label="Pod storage">
             <option value="">Loading pods...</option>
           </select>
-          <sol-login class="pod-login"></sol-login>
+          <sol-login class="pod-login" visible></sol-login>
           <button class="pod-settings-btn" type="button" title="Settings"
                   aria-label="Display settings" aria-expanded="false">⚙</button>
         </div>
@@ -567,6 +569,32 @@ class SolPod extends HTMLElement {
         el.appendChild(btn);
       });
     }
+
+    // Gear at the right edge — opens the sol-pod-ops modal for the
+    // currently-viewed container (works at home / root too).
+    const gear = document.createElement('button');
+    gear.textContent = '⚙';
+    gear.className = 'sol-btn sol-btn-sm sol-btn-ghost crumb-gear';
+    gear.title = 'Edit this folder';
+    gear.setAttribute('aria-label', 'Edit this folder');
+    gear.onclick = () => this._openCurrentContainerModal();
+    el.appendChild(gear);
+  }
+
+  _openCurrentContainerModal() {
+    const u = this._currentPath || this._rootUrl;
+    if (!u) return;
+    const trimmed = u.replace(/\/$/, '');
+    const name = trimmed.split('/').pop() || u;
+    let displayName;
+    try { displayName = decodeURIComponent(name); } catch { displayName = name; }
+    this._openItemModal({
+      url: u,
+      name,
+      displayName,
+      isContainer: true,
+      contentType: 'text/turtle',
+    });
   }
 
   _renderTree(allItems, { preserveFocus = true } = {}) {

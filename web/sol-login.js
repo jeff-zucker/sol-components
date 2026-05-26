@@ -319,8 +319,15 @@ class SolLogin extends HTMLElement {
   }
 
   async _handleAuthNeeded(e) {
-    const { resolve, reject } = e.detail || {};
+    const { resolve, reject, side } = e.detail || {};
     if (typeof resolve !== 'function') return;
+
+    // Side-scoped routing: if the event names a side, only the matching
+    // <sol-login> handles it. Untagged events (no side) fall through to
+    // every listener — first to settle wins, others no-op. This keeps
+    // left/right pod chips from both popping their dropdowns for the
+    // same authTag-bearing 401.
+    if (side && side !== this._side) return;
 
     if (this._pendingAuthPromise) {
       try { resolve(await this._pendingAuthPromise); }

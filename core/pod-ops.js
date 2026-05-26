@@ -243,23 +243,31 @@ export async function getStoragesFromWebIds(webIds) {
   async function processWebId(webId) {
     if (visited.has(webId)) return;
     visited.add(webId);
+    const profileDoc = webId.split('#')[0];
     try {
-      const profileDoc = webId.split('#')[0];
       const store = rdf.graph();
       const fetcher = rdf.fetcher(store);
       await fetcher.load(profileDoc);
       const subj = rdf.sym(webId);
-      store.each(subj, rdf.sym(PIM_STORAGE), null, null).forEach(n => storages.add(n.value));
-      const sameAs = store.each(subj, rdf.sym(OWL_SAME_AS), null, null);
-      for (const linked of sameAs) {
-        await processWebId(linked.value);
-      }
+      const found = store.each(subj, rdf.sym(PIM_STORAGE), null, null).map(n => n.value);
+      found.forEach(u => storages.add(u));
+      // owl:sameAs is symmetric — follow it in BOTH directions so a
+      // profile that asserts `<remote> owl:sameAs <local>` chains the
+      // same as one that asserts `<local> owl:sameAs <remote>`.
+      const forward = store.each(subj, rdf.sym(OWL_SAME_AS), null, null);
+      const inverse = store.each(null, rdf.sym(OWL_SAME_AS), subj, null);
+      const linked = [...forward, ...inverse].map(n => n.value);
+      console.info(`[pod-ops] ${webId} → ${found.length} storage(s), ${linked.length} sameAs link(s)`,
+        { storages: found, sameAs: linked });
+      for (const next of linked) await processWebId(next);
     } catch (e) {
-      console.warn(`[pod-ops] Failed to fetch storages for ${webId}:`, e);
+      console.warn(`[pod-ops] Failed to load profile ${profileDoc} for ${webId}:`, e?.message || e);
     }
   }
 
   for (const webId of webIds) await processWebId(webId);
+  console.info(`[pod-ops] discovery: ${visited.size} WebID(s) walked, ${storages.size} pod(s) found`,
+    { webIds: [...visited], storages: [...storages] });
   return [...storages].sort();
 }
 

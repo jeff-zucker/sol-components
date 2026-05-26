@@ -65,6 +65,7 @@ export async function buildEditor(parent, ext, root, onChange) {
         syntaxHighlighting(defaultHighlightStyle),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         ...langExt,
+        ...(ext === 'md' ? [EditorView.lineWrapping] : []),
         updateListener,
         EditorView.theme({
           '&': { height: '100%' },
