@@ -44,14 +44,35 @@ import './sol-login.js';   // built-in login button in the pod header
  * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
  * @attr {string} handler - default sol-* component for file viewing
- * @attr {string} gear-icon - icon for the per-item action button. Treated as
- *                 a URL when it contains '/' or ends in svg/png/jpg/gif/webp;
+ * @attr {string} gear-icon - icon for BOTH the per-item action button and
+ *                 the breadcrumb (current-container) gear. Treated as a URL
+ *                 when it contains '/' or ends in svg/png/jpg/gif/webp;
  *                 otherwise used as text (emoji). Defaults to '⚙'.
  * @attr {string} pods-group - shared pod-list scope; absent = the default shared
  *                 group, 'none' = a standalone unshared registry
+ *
+ * Lifecycle: auto-initializes from `connectedCallback` (microtask-deferred so
+ * JS callers that set `podClickAction` between `appendChild` and the next
+ * microtask still land setup before init runs). `initialize()` is
+ * single-flight — calling it explicitly returns the in-flight or resolved
+ * promise instead of triggering a duplicate discovery.
+ *
+ * Last-visited recall: the current container URL is persisted to
+ * localStorage keyed by (pods-group, side). On the next mount, if the
+ * remembered path sits under one of the known storages, sol-pod restores it
+ * (and switches the pod selector to that storage if it differs from
+ * `storages[0]`). Wrapped against storage-unavailable contexts.
+ *
+ * Item shape (returned by `fetchContainer`, passed to `podClickAction`):
+ *   { url, name, displayName, isContainer, contentType,
+ *     size,        // bytes, from posix:size (null if not emitted)
+ *     mtime,       // POSIX epoch seconds, from posix:mtime
+ *     modified,    // ISO datetime string, from dct:modified
+ *     types }      // array of rdf:type IRIs
+ *
  * @property {Object} login - SolLogin element reference (external if given, else the built-in one)
- * @property {string} currentPath - current container URL
- * @property {Array} items - current directory listing
+ * @property {string} currentPath - current container URL (also the remembered start path)
+ * @property {Array} items - current directory listing (see item shape above)
  * @property {Array} storages - known pod URLs for this pod's group
  * @fires sol-navigate - detail: { url }
  * @fires sol-drag-start - detail: { item, element }

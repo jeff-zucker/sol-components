@@ -39,7 +39,14 @@ function browserContainer(html) {
  * @attr {string} source - URL to fetch (required)
  * @attr {string} selector - CSS selector — show only matching elements
  * @attr {boolean} raw - show source text verbatim
- * @attr {boolean} trusted - skip DOMPurify sanitization
+ * @attr {boolean} trusted - skip DOMPurify sanitization, render into LIGHT
+ *                 DOM (via a shadow <slot>) so host CSS reaches the content
+ *
+ * Layout: `:host` is a flex column with `flex: 1 1 auto; min-height: 0` and
+ * the `.si-content` wrapper gets the same treatment (matched in both the
+ * shadow and trusted-slotted modes), so a definite parent height propagates
+ * down to components placed inside (sol-pod, sol-menu, etc.). They can then
+ * fill and scroll on their own — sol-include itself never scrolls.
  */
 class SolInclude extends HTMLElement {
   static get observedAttributes() {

@@ -198,6 +198,23 @@ const sharedAuth = new AuthManager();
  * @attr {string} mode - "redirect" (default) | "popup"
  * @attr {string} side - session tag for this element (popup mode); default "default"
  * @attr {string} popup-callback - URL of the popup callback page (popup mode)
+ * @attr {string} external-auth - set automatically when another same-origin
+ *                 window/tab/iframe reports a login over BroadcastChannel
+ *                 ('sol-auth'). Pure visual signal — CSS in sol-login-css.js
+ *                 paints the button green and surfaces the chip so the user
+ *                 can choose to also log in here. Cleared when this element
+ *                 holds its own session.
+ *
+ * Cross-window auth signaling: every sol-login opens a
+ * BroadcastChannel('sol-auth') in connectedCallback. Own login/logout events
+ * are rebroadcast on the channel; foreign login messages set the
+ * `external-auth` attribute (and clear it on logout) — unless this element
+ * already has its own logged-in session, in which case foreign signals are
+ * ignored. A `hello` ping on connect asks existing windows to announce
+ * themselves so newly-mounted elements pick up state established before
+ * they existed. Used by dk-solidos's iframe (broadcasts mashlib's session
+ * via pages/solidos-host.html) and any other same-origin sol-login.
+ *
  * @property {Function} fetchFor - fetchFor(url) returns authenticated fetch
  * @property {string} webId - logged-in user's WebID
  * @property {boolean} isLoggedIn - whether a session is active

@@ -67,6 +67,17 @@ import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-
  * @attr {string} orientation - "horizontal" to lay nav on top (default: sidebar)
  * @attr {string} handler - default sol-* component tag for anchors
  * @fires sol-menu-change - detail: { name }
+ *
+ * CSS Shadow Parts (outside theming hooks):
+ *   - `nav`     — the .sol-menu-nav strip (the buttons row / column).
+ *   - `content` — the .sol-menu-content body where tab content mounts.
+ *     Default is `overflow: hidden` (demo / app chrome doesn't scroll);
+ *     hosts that want the tab body to scroll opt in via
+ *     `sol-menu::part(content) { overflow: auto }`.
+ *
+ * Horizontal-orientation nav now wraps (`flex-wrap: wrap`) instead of
+ * showing a horizontal scrollbar — items overflow to a second row when
+ * they don't fit the chrome width (e.g. large font).
  */
 class SolMenu extends HTMLElement {
   constructor() {
