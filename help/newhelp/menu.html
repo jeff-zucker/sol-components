@@ -1,0 +1,141 @@
+<link rel="stylesheet" href="../../web/styles/help.css">
+<style>
+/* Height cascade so the demo bounds the live menu.
+   sol-include trusted projects its content via .si-content (light DOM
+   sibling of the <slot> in sol-include's shadow). With the include
+   itself mounted as a flex item inside the outer sol-menu, each
+   successive container declares flex:1 + min-height:0 so the grid at
+   the bottom of the chain gets a definite height — which is what
+   <sol-menu>'s :host { height: 100% } actually needs to make its own
+   .sol-menu-content { overflow: auto } trigger. */
+.si-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+}
+#tab-demo.tab-panel {
+  flex: 1 1 0;
+  min-height: 0;
+}
+#tab-demo .demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "code  live"
+    "data  live";
+  gap: 2rem;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+}
+#tab-demo .demo-grid > .panel:nth-of-type(1) { grid-area: code; }
+#tab-demo .demo-grid > .panel:nth-of-type(2) { grid-area: live; }
+#tab-demo .demo-grid > .panel:nth-of-type(3) { grid-area: data; }
+
+.panel { width: auto !important; margin-bottom: 0; overflow: hidden; }
+
+/* Live-menu panel: flex column so its body fills the grid row and
+   sol-menu inside has a definite height to fill with height:100%. */
+.panel.panel-wide {
+  width: auto !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel.panel-wide > .panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.panel.panel-wide sol-menu {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+/* Raw TTL listing: same flex pattern, but with an internal scroll on
+   the panel-body since the listing is longer than its grid row. */
+#tab-demo .demo-grid > .panel:nth-of-type(3) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#tab-demo .demo-grid > .panel:nth-of-type(3) > .panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panel-body { padding: 0 !important; }
+.panel-body pre { margin: 0 !important; padding: 1rem; font-size: .8rem; }
+h1 { margin-top: 0 !important; margin-bottom: 0.25rem; }
+p { margin-top: 0; }
+</style>
+
+<h1>sol-menu</h1>
+<p>Sidebar or top-strip navigation; entries can be anchors or RDF-driven.</p>
+
+
+  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
+    <div class="demo-grid">
+
+<!--
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Menu Component HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-menu orientation="horizontal">
+    &lt;a href="../data/sample.md">Notes&lt;/a>
+    &lt;a href="../data/sample-html.html" trusted>HTML&lt;/a>
+    &lt;a href="../data/sample-data.ttl">Triples&lt;/a>
+&lt;/sol-menu></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated Menu HTML</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-menu orientation="horizontal">
+            <a href="../data/sample.md">Notes</a>
+            <a href="../data/sample-html.html" trusted>HTML</a>
+            <a href="../data/sample-data.ttl">Triples</a>
+          </sol-menu>
+        </div>
+      </section>
+-->
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Menu Component HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-menu
+    from-rdf="../data/demo-menu.ttl#MainMenu"
+>&lt;/sol-menu></pre>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <header class="panel-head">
+          <span class="label">Generated RDF-driven Menu</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-menu from-rdf="../data/demo-menu.ttl#MainMenu"></sol-menu>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">RDF Menu Definition</span>
+        </header>
+        <div class="panel-body">
+          <sol-include source="../data/demo-menu.ttl" raw></sol-include>
+        </div>
+      </section>
+
+    </div>
+  </div>

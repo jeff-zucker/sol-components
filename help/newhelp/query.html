@@ -1,0 +1,87 @@
+<link rel="stylesheet" href="../../web/styles/help.css">
+<style>
+.panel {width:fit-content !important; margin-bottom:1rem; }
+.panel.panel-wide { width:40rem !important; }
+.panel-body { padding:0 !important; }
+.panel-body pre { margin:0 !important; padding:1rem; font-size:.8rem; }
+h1 { margin-top:0 !important; margin-bottom:0.25rem; }
+p { margin-top:0; max-width:960px;}
+#tab-demo .demo-grid {
+  grid-template-columns: auto auto auto;
+  max-width: none;
+}
+</style>
+
+<h1>sol-query</h1>
+<p>Query SPARQL endpoints or plain RDF files using Comunica or triple patterns. Stored queries, replaceable parameters, and multi-endpoint federation are all supported.
+
+
+  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
+    <div class="demo-grid">
+
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Query Component HTML (table)</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-query
+    endpoint="../data/sample-data.ttl"
+    sparql="PREFIX schema: &lt;http://schema.org/>
+            SELECT ?name ?gender ?location WHERE {
+              ?p a schema:Person ;
+                 schema:name ?name ;
+                 schema:gender ?gender ;
+                 schema:homeLocation ?location .
+            }
+    view="table"
+>&lt;/sol-query></pre>
+        </div>
+      </section>
+
+      <section class="panel panel-wide" style="width:fit-content !important">
+        <header class="panel-head">
+          <span class="label">Generated Table Query</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-query
+            endpoint="../data/sample-data.ttl"
+            sparql="PREFIX schema: <http://schema.org/>
+                    SELECT ?name ?gender ?location WHERE {
+                      ?p a schema:Person ;
+                         schema:name ?name ;
+                         schema:gender ?gender ;
+                         schema:homeLocation ?location .
+                    } LIMIT 3"
+            view="table"
+          ></sol-query>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated Auto-complete Query</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-query
+            endpoint="../data/sample-data.ttl"
+            sparql="PREFIX schema: <http://schema.org/>
+                    SELECT ?id ?label WHERE { ?id schema:name ?label. }"
+            view="auto-complete"
+            placeholder="type to search names ..."
+            go-label="go"
+          ></sol-query>
+        </div>
+      </section>
+<!--
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Query Component HTML (auto-complete)</span>
+        </header>
+        <div class="panel-body">
+          <pre>Same as above except view="auto-complete"</pre>
+        </div>
+      </section>
+-->
+    </div>
+  </div>

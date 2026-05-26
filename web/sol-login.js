@@ -272,8 +272,14 @@ class SolLogin extends HTMLElement {
       this._render();
       const attr = this.getAttribute('issuers');
       if (attr) this._issuers = attr.split(',').map(s => s.trim()).filter(Boolean);
+      // Self-listeners broadcast our own login/logout to the
+      // same-origin BroadcastChannel so other windows / iframes light
+      // up their login button green ('external-auth' attribute).
+      this.addEventListener('sol-login',  (e) => this._broadcastLogin(e));
+      this.addEventListener('sol-logout', ()  => this._broadcastLogout());
     }
     this._attachAuthNeededListener();
+    this._setupAuthChannel();
   }
 
   disconnectedCallback() {
@@ -282,6 +288,73 @@ class SolLogin extends HTMLElement {
       this._popupMsgHandler = null;
     }
     this._detachAuthNeededListener();
+    if (this._authChannel) {
+      this._authChannel.close();
+      this._authChannel = null;
+    }
+  }
+
+  /* ── cross-window auth signaling ───────────────────────────────────
+   * BroadcastChannel('sol-auth') carries login/logout across every
+   * same-origin tab, window, and iframe (including mashlib in the
+   * dk-solidos iframe, which broadcasts via pages/solidos-host.html).
+   * On receipt of a foreign login, if THIS sol-login has no own
+   * logged-in session, we set the `external-auth` attribute — pure
+   * CSS in sol-login-css.js paints the button green to invite the
+   * user to log in here too. */
+  _setupAuthChannel() {
+    if (this._authChannel) return;
+    if (typeof BroadcastChannel === 'undefined') return;
+    try { this._authChannel = new BroadcastChannel('sol-auth'); }
+    catch (_) { return; }
+    this._authChannel.addEventListener('message', (e) => this._onAuthMessage(e));
+    // Ask any already-logged-in window to announce itself, so our
+    // newly-connected element doesn't miss state established before
+    // we mounted.
+    try { this._authChannel.postMessage({ type: 'hello' }); } catch (_) {}
+  }
+
+  _broadcastLogin(e) {
+    if (!this._authChannel) return;
+    try {
+      this._authChannel.postMessage({
+        type: 'login',
+        webId: e?.detail?.webId,
+        side: e?.detail?.side ?? this._side,
+      });
+    } catch (_) {}
+    // We're now the source; clear any prior external-auth on self.
+    this.removeAttribute('external-auth');
+  }
+
+  _broadcastLogout() {
+    if (!this._authChannel) return;
+    try { this._authChannel.postMessage({ type: 'logout' }); } catch (_) {}
+  }
+
+  _onAuthMessage(e) {
+    const d = e?.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'hello') {
+      // Reply to newcomers if we hold a session.
+      const s = this._auth.getFirstLoggedIn();
+      if (s && this._authChannel) {
+        try {
+          this._authChannel.postMessage({
+            type: 'login', webId: s.info?.webId, side: this._side,
+          });
+        } catch (_) {}
+      }
+      return;
+    }
+    if (d.type === 'login') {
+      if (this._auth.getFirstLoggedIn()) return;
+      this.setAttribute('external-auth', d.webId || '');
+    } else if (d.type === 'logout') {
+      // Conservative: clear immediately. If a different window is
+      // still logged in, its next 'hello' / 'login' event repaints.
+      this.removeAttribute('external-auth');
+    }
   }
 
   /* ── sol-auth-needed listener ──────────────────────────────────────

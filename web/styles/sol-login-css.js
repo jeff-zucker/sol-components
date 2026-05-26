@@ -10,13 +10,25 @@ export const CSS = BTN_CSS + `
      with style="display: inline-flex". */
   :host { display: none; }
   :host([active]),
-  :host([visible]) {
+  :host([visible]),
+  :host([external-auth]) {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-family: system-ui, -apple-system, sans-serif;
     /* Anchor to the theme font token so the button scales with it. */
     font-size: var(--font-size, 20px);
+  }
+
+  /* Another same-origin window/tab/iframe holds a logged-in session
+     (signaled via BroadcastChannel('sol-auth')). Surface the chip and
+     paint the button green so the user can choose to also log in
+     here. Suppressed while this element's own auth flow is in flight
+     (host has [active]) — that UI takes precedence. */
+  :host([external-auth]:not([active])) .auth-btn {
+    box-shadow: 0 0 0 2px var(--success, #388e3c);
+    border-color: var(--success, #388e3c);
+    color: var(--success, #388e3c);
   }
 
   .auth-status {

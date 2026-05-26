@@ -1,0 +1,88 @@
+<link rel="stylesheet" href="../../web/styles/help.css">
+<style>
+.panel {width:fit-content !important; margin-bottom:2rem; }
+.panel-body { padding:0 !important; }
+.panel-body pre { margin:0 !important; padding:1rem; font-size:.8rem; }
+h1 { margin-top:0 !important; margin-bottom:0.25rem; !important; }
+p { margin-top:0; }
+</style>
+
+
+<h1>sol-weather</h1>
+<p>View temperature & chance of rain at a location you choose.</p>
+
+
+  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
+    <div class="demo-grid">
+
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Weather Component HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-weather
+    source="../data/weather-demo.ttl#Settings"
+>&lt;/sol-form></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated Weather HTML</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-weather source="../data/weather-demo.ttl#Settings"></sol-form>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Weather Form Component HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-form
+    subject="../data/weather-demo.ttl#Settings"
+    shape="../../shapes/weather-settings.shacl"
+>&lt;/sol-form></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated Weather Form</span>
+        </header>
+        <div class="panel-body">
+          <sol-form id="form-host"
+                    subject="../data/weather-demo.ttl#Settings"
+                    shape="../../shapes/weather-settings.shacl"
+                    noedit></sol-form>
+        </div>
+      </section>
+<!--
+      <section class="panel" style="width:fit-content !important">
+        <header class="panel-head">
+          <span class="label">SHACLC Shape (abbreviated)</span>
+        </header>
+        <pre id="shacl-source">shape <#WeatherSettingsShape> {
+    geo:lat xsd:decimal [1..1] %  sh:name "Latitude";
+        sh:description "Decimal latitude (-90 to 90)"
+    % .
+    geo:long xsd:decimal [1..1] % sh:name "Longitude" ;
+	sh:description "Decimal longitude (-180 to 180)"
+    % .
+    schema:addressLocality xsd:string [1..1] % sh:name "Place" ;
+	sh:description "Display name shown on the weather card"
+    % .
+    ui:temperatureUnit ui:TemperatureUnit [1..1] % sh:name "Temperature unit" ;
+	sh:description "Fahrenheit, Celsius, or Both"
+    % .
+    time:hours xsd:integer [1..1] % sh:name "Forecast window (hours)" ;
+	sh:description "Max-precipitation lookahead, in hours"
+    % .
+}</pre>
+      </section>
+-->
+
+    </div>
+  </div>

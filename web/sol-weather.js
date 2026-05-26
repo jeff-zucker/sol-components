@@ -262,8 +262,8 @@ class SolWeather extends HTMLElement {
       this._render(data, { lat: Number(lat), lon: Number(lon) });
     } catch (err) {
       if (err.name === 'AbortError') return;
-      this._el.place.textContent = '';
-      this._showError(err.message || String(err));
+      this._clearError();
+      this._card.style.display = 'none';
     }
   }
 

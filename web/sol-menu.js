@@ -128,8 +128,8 @@ class SolMenu extends HTMLElement {
     const orient = this.getAttribute('orientation') === 'horizontal' ? 'horizontal' : 'vertical';
     const root = this.shadowRoot;
     root.innerHTML = `
-      <div class="sol-menu-nav" role="menubar" aria-orientation="${orient}"></div>
-      <div class="sol-menu-content" role="region"></div>`;
+      <div class="sol-menu-nav" part="nav" role="menubar" aria-orientation="${orient}"></div>
+      <div class="sol-menu-content" part="content" role="region"></div>`;
     adopt(root, { sheet: menuSheet, css: MENU_CSS });
     this._rendered = true;
     this._onDocClick = (e) => {

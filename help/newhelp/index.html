@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-form Component</title>
+  <link rel="stylesheet" href="../../web/styles/root.css">
+  <link rel="stylesheet" href="../../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../../web/styles/help.css">
+  <script src="../../web/scripts/prefs.js"></script>
+
+  <!-- core/shape-to-form.js needs rdflib at runtime AND solid-ui's
+       fieldFunction for widget rendering (window.UI.widgets.fieldFunction).
+       solid-logic supplies the singleton store solid-ui's enumerators walk.
+       Paths are relative to this file (help/ is one level below project root). -->
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib":               "../../dist/vendor/rdflib.js",
+      "n3":                   "../../dist/vendor/n3.js",
+      "solid-ui":             "../../dist/vendor/solid-ui.js",
+      "solid-logic":          "../../dist/vendor/solid-logic.js",
+      "rdf-validate-shacl":   "../../dist/vendor/rdf-validate-shacl.js",
+      "marked":               "../../dist/vendor/marked.js",
+      "dompurify":            "../../dist/vendor/dompurify.js",
+      "@comunica/query-sparql": "../../dist/vendor/@comunica-query-sparql.js"
+    }
+  }
+  </script>
+  <script type="module">
+    // Side-effect imports needed by <sol-form>:
+    //   solid-ui sets window.UI on first eval (fieldFunction lives here).
+    //   solid-logic is exposed on window.solidLogic so swc's core/rdf.js
+    //     rendezvous on the same store.
+    // Then register <sol-form> by importing its module for its
+    // customElements.define side effect.
+    import 'solid-ui';
+    import * as solidLogic from 'solid-logic';
+    if (typeof window !== 'undefined') window.solidLogic = solidLogic;
+    import '../../web/sol-form.js';
+    import '../../web/sol-weather.js';
+    import '../../web/sol-search.js';
+    import '../../web/sol-query.js';
+    import '../../web/sol-include.js';
+    import '../../web/sol-menu.js';
+    import '../../web/sol-pod.js';
+  </script>
+
+</head>
+<style>
+.panel {width:fit-content !important; margin-bottom:2rem; }
+.panel-body { padding:0 !important; }
+pre { margin:0 !important; }
+h1 { margin-top:0 !important; }
+</style>
+
+<body class="tabbed-help">
+  <sol-menu orientation="horizontal" handler="sol-include">
+    <a href="search.html" trusted>Search</a>
+    <a href="query.html" trusted>Query</a>
+    <a href="menu.html" trusted>Menu</a>
+    <a href="pod.html" trusted>Pod</a>
+  </sol-menu>
+
+  <script type="module">
+    // pod.html is loaded via sol-include's innerHTML — inline <script>
+    // there doesn't execute, so we wire podClickAction from the host.
+    // sol-menu mounts the tab content inside its own SHADOW root, so a
+    // document.body observer never sees the sol-pod. We observe the
+    // menu's shadowRoot too. The results target #pod-demo-results
+    // lives in that same shadow subtree, so we lookup() relative to
+    // the pod's host root rather than document.
+    const wirePodHandler = (pod) => {
+      if (pod.__demoWired) return;
+      pod.__demoWired = true;
+      pod.podClickAction = (item) => {
+        const root = pod.getRootNode() || document;
+        const out = root.querySelector?.('#pod-demo-results')
+                 || document.querySelector('#pod-demo-results');
+        if (!out) return;
+        out.replaceChildren();
+        const row = (label, value) => {
+          const d = document.createElement('div');
+          const b = document.createElement('b');
+          b.textContent = label + ': ';
+          d.appendChild(b);
+          d.appendChild(document.createTextNode(value));
+          out.appendChild(d);
+        };
+        // Render every key the item carries — so new fields surface
+        // automatically. Format known shapes nicely (size in bytes,
+        // mtime as epoch seconds → ISO, types array → joined).
+        const humanSize = (bytes) => {
+          if (bytes < 1024) return bytes + ' B';
+          const units = ['KB', 'MB', 'GB', 'TB', 'PB'];
+          let n = bytes / 1024, i = 0;
+          while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+          // Drop trailing .0 — "1 KB" reads better than "1.0 KB".
+          const s = n >= 100 ? n.toFixed(0) : n.toFixed(1).replace(/\.0$/, '');
+          return s + ' ' + units[i] + ' (' + bytes.toLocaleString() + ' B)';
+        };
+        const format = (k, v) => {
+          if (v === null || v === undefined) return '—';
+          if (k === 'isContainer')             return v ? 'Container' : 'Resource';
+          if (k === 'size' && typeof v === 'number')
+            return humanSize(v);
+          if (k === 'mtime' && typeof v === 'number')
+            return new Date(v * 1000).toISOString();
+          if (Array.isArray(v))                return v.length ? v.join(', ') : '—';
+          return String(v);
+        };
+        const labels = {
+          url:          'url',
+          name:         'name',
+          displayName:  'display name',
+          isContainer:  'resource type',
+          contentType:  'content type',
+          size:         'size',
+          modified:     'modified',
+          mtime:        'mtime',
+          types:        'types',
+        };
+        // Stable order for known keys, then any unknown extras at the end.
+        const known = Object.keys(labels);
+        const extras = Object.keys(item).filter(k => !known.includes(k));
+        for (const k of [...known, ...extras]) {
+          if (!(k in item)) continue;
+          row(labels[k] || k, format(k, item[k]));
+        }
+      };
+    };
+    const scan = (root) => {
+      if (!root || root.nodeType !== 1 && root.nodeType !== 11) return;
+      if (root.localName === 'sol-pod') wirePodHandler(root);
+      root.querySelectorAll?.('sol-pod').forEach(wirePodHandler);
+    };
+    const observed = new WeakSet();
+    const observe = (target) => {
+      if (!target || observed.has(target)) return;
+      observed.add(target);
+      new MutationObserver((ms) => {
+        for (const m of ms) for (const n of m.addedNodes) scan(n);
+      }).observe(target, { childList: true, subtree: true });
+      scan(target);
+    };
+    observe(document.body);
+    // Catch sol-menu the moment it (and its shadowRoot) exists.
+    const attachToMenu = () => {
+      document.querySelectorAll('sol-menu').forEach(m => {
+        if (m.shadowRoot) observe(m.shadowRoot);
+      });
+    };
+    attachToMenu();
+    // sol-menu is in static HTML so its shadowRoot is present at
+    // module-script time, but cover the general case in case the
+    // menu is added later or its shadow is attached lazily.
+    new MutationObserver(attachToMenu).observe(document.body, { childList: true, subtree: true });
+  </script>
+</body>
+</html>

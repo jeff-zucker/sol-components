@@ -1,0 +1,66 @@
+<link rel="stylesheet" href="../../web/styles/help.css">
+<style>
+.panel {width:fit-content !important; margin-bottom:2rem; }
+.panel.panel-wide { width:40rem !important; }
+.panel-body { padding:0 !important; }
+.panel-body pre { margin:0 !important; padding:1rem; font-size:.8rem; }
+h1 { margin-top:0 !important; margin-bottom:0.25rem; }
+p { margin-top:0; }
+</style>
+
+<h1>sol-search</h1>
+<p>Pick a search engine and run a query against it.</p>
+
+
+  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
+    <div class="demo-grid">
+
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Search Component HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-search
+    source="../data/search-engines.ttl#SearchEngines"
+>&lt;/sol-search></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Generated Search HTML</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-search view="inline" source="../data/search-engines.ttl#SearchEngines"></sol-search>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head">
+          <span class="label">Search Engines Rolodex HTML</span>
+        </header>
+        <div class="panel-body">
+          <pre>&lt;sol-form
+    source="../data/search-engines.ttl"
+    shape="../../shapes/search-engine.shacl"
+    view="rolodex"
+>&lt;/sol-form></pre>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <header class="panel-head">
+          <span class="label">Generated Search Engines Rolodex</span>
+        </header>
+        <div class="panel-body" style="padding:1rem !important">
+          <sol-form view="rolodex"
+                    source="../data/search-engines.ttl"
+                    shape="../../shapes/search-engine.shacl"
+                    style="display:block; width:100%"
+                    ></sol-form>
+        </div>
+      </section>
+
+    </div>
+  </div>

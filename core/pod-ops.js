@@ -8,6 +8,14 @@ import { rdf } from './rdf.js';
 const LDP_CONTAINS = 'http://www.w3.org/ns/ldp#contains';
 const OWL_SAME_AS  = 'http://www.w3.org/2002/07/owl#sameAs';
 const PIM_STORAGE  = 'http://www.w3.org/ns/pim/space#storage';
+// Per-resource metadata predicates emitted by Solid LDP servers in
+// container listings. POSIX_* is the canonical pair (CSS, and NSS via
+// the same URI even though it imports as `stat:`). DCT_MODIFIED is
+// the human-readable ISO-datetime mirror.
+const POSIX_SIZE    = 'http://www.w3.org/ns/posix/stat#size';
+const POSIX_MTIME   = 'http://www.w3.org/ns/posix/stat#mtime';
+const DCT_MODIFIED  = 'http://purl.org/dc/terms/modified';
+const RDF_TYPE      = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
 // ── MIME types ────────────────────────────────────────────────────────
 
@@ -58,15 +66,36 @@ async function fetchContainerRaw(url, fetchFn) {
 
   const store = rdf.graph();
   rdf.parse(text, store, url, 'text/turtle');
-  return store.each(rdf.sym(url), rdf.sym(LDP_CONTAINS), null, null).map(n => n.value);
+  const container = rdf.sym(url);
+  return store.each(container, rdf.sym(LDP_CONTAINS), null, null).map(n => {
+    const sub = rdf.sym(n.value);
+    const num = (pred) => {
+      const v = store.any(sub, rdf.sym(pred), null, null);
+      if (!v) return null;
+      const x = Number(v.value);
+      return Number.isFinite(x) ? x : null;
+    };
+    const str = (pred) => {
+      const v = store.any(sub, rdf.sym(pred), null, null);
+      return v ? v.value : null;
+    };
+    return {
+      url:      n.value,
+      size:     num(POSIX_SIZE),
+      mtime:    num(POSIX_MTIME),
+      modified: str(DCT_MODIFIED),
+      types:    store.each(sub, rdf.sym(RDF_TYPE), null, null).map(t => t.value),
+    };
+  });
 }
 
 function tryDecode(s) {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
-function mapResources(resourceUrls) {
-  return resourceUrls.map(url => {
+function mapResources(resources) {
+  return resources.map(r => {
+    const url = r.url;
     const isContainer = url.endsWith('/');
     const name = isContainer ? url.split('/').slice(-2)[0] : url.split('/').pop();
     const displayName = tryDecode(name);
@@ -74,7 +103,10 @@ function mapResources(resourceUrls) {
     // an extensionless file is 'application/octet-stream'; HEAD the url for
     // the server's authoritative Content-Type.
     const contentType = isContainer ? 'text/turtle' : contentTypeFor(name);
-    return { url, name, displayName, isContainer, contentType };
+    return {
+      url, name, displayName, isContainer, contentType,
+      size: r.size, mtime: r.mtime, modified: r.modified, types: r.types,
+    };
   }).sort((a, b) => {
     if (a.isContainer === b.isContainer) return a.displayName.localeCompare(b.displayName);
     return a.isContainer ? -1 : 1;
@@ -82,8 +114,8 @@ function mapResources(resourceUrls) {
 }
 
 export async function fetchContainer(url, fetchFn) {
-  const urls = await fetchContainerRaw(url, fetchFn);
-  return mapResources(urls);
+  const resources = await fetchContainerRaw(url, fetchFn);
+  return mapResources(resources);
 }
 
 // ── File operations ───────────────────────────────────────────────────
@@ -114,9 +146,9 @@ export async function copyFolder(sourceUrl, targetContainerUrl, folderName, fetc
   if (onProgress) onProgress(`Copying folder ${folderName}...`);
 
   const sourceFetch = fetchFnForUrl(sourceUrl);
-  let childUrls;
+  let children;
   try {
-    childUrls = await fetchContainerRaw(sourceUrl, sourceFetch);
+    children = await fetchContainerRaw(sourceUrl, sourceFetch);
   } catch (e) {
     return { success: false, error: e.message };
   }
@@ -131,7 +163,8 @@ export async function copyFolder(sourceUrl, targetContainerUrl, folderName, fetc
   }
 
   let failed = 0;
-  for (const childUrl of childUrls) {
+  for (const child of children) {
+    const childUrl = child.url;
     const isContainer = childUrl.endsWith('/');
     const name = isContainer ? childUrl.split('/').slice(-2)[0] : childUrl.split('/').pop();
     if (isContainer) {

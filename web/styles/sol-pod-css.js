@@ -84,6 +84,7 @@ export const CSS = BTN_CSS + `
   }
   .breadcrumb button:hover { background: var(--hover, #f0f0f0); color: var(--accent, #2196f3); }
   .breadcrumb .crumb-gear { margin-left: auto; margin-right: 0; font-size: 1.05em; line-height: 1; }
+  .breadcrumb .crumb-gear img { display: block; width: 1.1em; height: 1.1em; pointer-events: none; }
 
   .pod-filter-row {
     padding: 6px 14px;

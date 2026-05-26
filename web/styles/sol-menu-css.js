@@ -34,12 +34,17 @@ export const CSS = `
   }
   :host([orientation="horizontal"]) > .sol-menu-nav {
     flex-direction: row;
+    flex-wrap: wrap;
     min-width: 0; max-width: 100%;
     padding: var(--space-sm, 4px) var(--space-lg, 12px);
     gap: var(--space-sm, 4px);
     border-right: none;
     border-bottom: var(--menu-nav-border-bottom, 1px solid var(--border, #e0e0e0));
-    overflow-x: auto; overflow-y: hidden;
+    /* No overflow scroll on the nav itself — when items don't fit
+       the row (large font, narrow chrome) they wrap onto a second
+       row. Scroll bars belong inside component content (sol-pod's
+       tree, etc.), not on layout chrome. */
+    overflow: visible;
   }
 
   .sol-menu-nav button {
@@ -123,7 +128,12 @@ export const CSS = `
     flex: 1 1 0; min-height: 0; min-width: 0;
     max-width: 100%;
     display: flex; flex-direction: column;
-    overflow: auto;
+    /* overflow:hidden (not auto) by default: demo / app chrome
+       doesn't scroll; components placed inside scroll on their own.
+       Hosts that want the old "tab body scrolls" behavior can opt
+       in via the exposed "content" part hook with
+       sol-menu::part(content) { overflow: auto }. */
+    overflow: hidden;
     padding: var(--menu-content-padding, var(--space-xl, 16px) var(--space-xl, 16px));
     box-sizing: border-box;
   }

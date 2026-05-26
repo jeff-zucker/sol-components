@@ -2,12 +2,33 @@ import { sheetFrom } from '../../core/adopt.js';
 
 export const CSS = `
   :host {
-    display: block;
+    /* flex column so sol-include propagates a definite height from a
+       flex parent (sol-menu's content area, dk's app-shell, etc.)
+       down to its slotted content — components placed inside (sol-pod,
+       sol-menu, etc.) can then fill and scroll on their own. In a
+       block-flow parent this still behaves like a block-level box,
+       just with flex internals — no visible change. */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     color: var(--text, #212121);
     font-family: var(--font-ui, system-ui, sans-serif);
     font-size: var(--font-size, var(--medium-font, 20px));
   }
-  .si-content { }
+  /* The .si-content wrapper. In untrusted mode it's a shadow-DOM
+     child of sol-include; in trusted mode it's a slotted light-DOM
+     child. Style both forms — the bare selector matches in shadow,
+     ::slotted reaches it through the <slot>. Without this rule for
+     the slotted case, page content inside (e.g. sol-pod via help
+     demos) loses its height anchor and collapses to zero. */
+  .si-content,
+  ::slotted(.si-content) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
   .si-raw {
     white-space: pre-wrap;
     font-family: var(--font-mono, monospace);

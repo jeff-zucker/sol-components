@@ -218,6 +218,18 @@ class SolPod extends HTMLElement {
         this._loginEl.addEventListener('sol-logout', reload);
         this._loginEl.initialize().catch(() => {});
       }
+
+      // Kick off discovery + first-container load on mount so the
+      // pod always resolves out of its "Loading pods..." placeholder.
+      // Deferred to a microtask so JS callers that set
+      // `podClickAction` / other properties between `appendChild` and
+      // the next turn of the microtask queue still land their setup
+      // before init runs. `initialize()` is single-flight so an
+      // explicit `await pod.initialize()` from such a caller just
+      // awaits the same in-flight promise rather than triggering a
+      // duplicate discovery.
+      queueMicrotask(() => this.initialize().catch((err) =>
+        console.warn('[sol-pod] init failed:', err)));
     }
   }
 
@@ -264,8 +276,17 @@ class SolPod extends HTMLElement {
     }
   }
 
-  /** Initialize the component — discovers pods and loads initial view. */
-  async initialize() {
+  /** Initialize the component — discovers pods and loads initial view.
+   *  Single-flight: subsequent calls return the same in-flight (or
+   *  resolved) promise, so the connectedCallback auto-init and an
+   *  explicit `await pod.initialize()` from a caller share one pass. */
+  initialize() {
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = this._doInitialize();
+    return this._initPromise;
+  }
+
+  async _doInitialize() {
     if (this._sources().length) {
       // An explicit `source` lists exactly the pods to use — skip
       // discovery. An absent or empty `source` falls through to it.
@@ -285,10 +306,11 @@ class SolPod extends HTMLElement {
     // found" rather than leave the initial "Loading pods..." placeholder.
     this._populateSelect(pods);
     if (pods.length > 0) {
-      this._rootUrl = pods[0];
+      const start = this._pickStartPath(pods[0]);
+      this._rootUrl = this._rootForPath(start, pods) || pods[0];
       const sel = this.shadowRoot.querySelector('.pod-select');
       if (sel) sel.value = this._rootUrl;
-      await this.loadContainer(this._rootUrl);
+      await this.loadContainer(start);
     }
   }
 
@@ -320,11 +342,15 @@ class SolPod extends HTMLElement {
     const sources = this._sources();
     if (!sources.length) return;
     this._registry?.addAll(sources);
-    this._rootUrl = sources[0];
+    const start = this._pickStartPath(sources[0]);
+    // Align the selected pod root with whichever storage the
+    // remembered path is under, so the dropdown matches the
+    // breadcrumb on a "return to last visited" boot.
+    this._rootUrl = this._rootForPath(start, sources) || sources[0];
     this._populateSelect(this.storages);
     const sel = this.shadowRoot.querySelector('.pod-select');
     if (sel) sel.value = this._rootUrl;
-    await this.loadContainer(this._rootUrl);
+    await this.loadContainer(start);
   }
 
   async loadContainer(url) {
@@ -334,6 +360,7 @@ class SolPod extends HTMLElement {
       const items = await fetchContainer(url, fetchFn);
       this._rawItems = items;            // unfiltered — kept so prefs can re-apply
       this._currentPath = url;
+      this._rememberPath(url);
       this._items = this._filterItems(items);
       this._allItems = this._items;
       // New container = fresh context; clear any in-flight filter.
@@ -359,6 +386,40 @@ class SolPod extends HTMLElement {
         this._showMessage(`Failed to load: ${e.message}`, true);
       }
     }
+  }
+
+  /* ── last-visited path memory ──────────────────────────────────────
+   * Persist the current container URL in localStorage keyed by
+   * (pods-group, side) so the next page load can restore the user
+   * where they were. Multiple sol-pods sharing the same group/side
+   * share the memory — same context, same recall. Wrapped against
+   * environments where localStorage is unavailable (private mode,
+   * partitioned iframes). */
+  _pathStorageKey() {
+    return 'sol-pod:lastPath:' + (this._group || '__default__') + ':' + (this._side || 'default');
+  }
+
+  _rememberPath(url) {
+    try { localStorage.setItem(this._pathStorageKey(), url); } catch (_) {}
+  }
+
+  _recallPath() {
+    try { return localStorage.getItem(this._pathStorageKey()) || null; } catch (_) { return null; }
+  }
+
+  /** Pick the remembered path if it sits under one of the available
+   *  pod storages — otherwise the caller's fallback (root) wins. */
+  _pickStartPath(fallback) {
+    const remembered = this._recallPath();
+    if (!remembered) return fallback;
+    if (this._rootForPath(remembered, this.storages)) return remembered;
+    return fallback;
+  }
+
+  /** Return whichever root URL in `pods` contains `path`, or null. */
+  _rootForPath(path, pods) {
+    if (!path || !pods?.length) return null;
+    return pods.find(root => path === root || path.startsWith(root)) || null;
   }
 
   _filterItems(items) {
@@ -570,15 +631,33 @@ class SolPod extends HTMLElement {
       });
     }
 
-    // Gear at the right edge — opens the sol-pod-ops modal for the
-    // currently-viewed container (works at home / root too).
+    // Gear at the right edge — activates the current container (host
+    // podClickAction first, else the sol-pod-ops modal). Same icon
+    // treatment as per-item gears so a `gear-icon` attribute applies
+    // consistently across the whole view.
     const gear = document.createElement('button');
-    gear.textContent = '⚙';
     gear.className = 'sol-btn sol-btn-sm sol-btn-ghost crumb-gear';
     gear.title = 'Edit this folder';
     gear.setAttribute('aria-label', 'Edit this folder');
+    this._paintGearIcon(gear);
     gear.onclick = () => this._openCurrentContainerModal();
     el.appendChild(gear);
+  }
+
+  /** Paint a gear button using the `gear-icon` attribute (URL → img,
+   *  short string → text, absent → default ⚙). Shared by per-item
+   *  and breadcrumb gears. */
+  _paintGearIcon(btn) {
+    btn.textContent = '';
+    const iconAttr = this.getAttribute('gear-icon');
+    if (iconAttr && /\/|\.(svg|png|jpe?g|gif|webp)$/i.test(iconAttr)) {
+      const img = document.createElement('img');
+      img.src = iconAttr;
+      img.alt = '';
+      btn.appendChild(img);
+    } else {
+      btn.textContent = iconAttr || '⚙';
+    }
   }
 
   _openCurrentContainerModal() {
@@ -588,7 +667,11 @@ class SolPod extends HTMLElement {
     const name = trimmed.split('/').pop() || u;
     let displayName;
     try { displayName = decodeURIComponent(name); } catch { displayName = name; }
-    this._openItemModal({
+    // Route through _activateItem so a host-supplied podClickAction
+    // (e.g. dk-solidos navigating the iframe to this container) gets
+    // first refusal — same precedence as per-item activation. Falls
+    // through to the pod-ops modal when no handler is wired.
+    this._activateItem({
       url: u,
       name,
       displayName,
@@ -769,15 +852,7 @@ class SolPod extends HTMLElement {
     const gear = document.createElement('button');
     gear.className = 'item-gear';
     gear.title = 'Actions';
-    const iconAttr = this.getAttribute('gear-icon');
-    if (iconAttr && /\/|\.(svg|png|jpe?g|gif|webp)$/i.test(iconAttr)) {
-      const img = document.createElement('img');
-      img.src = iconAttr;
-      img.alt = '';
-      gear.appendChild(img);
-    } else {
-      gear.textContent = iconAttr || '\u2699';
-    }
+    this._paintGearIcon(gear);
     gear.onclick = openItemAction;
     li.appendChild(gear);
 
