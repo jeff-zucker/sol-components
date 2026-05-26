@@ -174,7 +174,10 @@ describe('trusted attribute', () => {
   test('renders HTML without sanitization when trusted', async () => {
     mockFetch('<div>Trusted content</div>', { contentType: 'text/html' });
     const el = await mount({ source: 'https://example.org/page.html', trusted: true });
-    expect(shadowHTML(el)).toContain('Trusted content');
+    // Trusted content renders into LIGHT DOM (see sol-include.js:_showHtml)
+    // so host stylesheets reach it; the shadow holds only a <slot>.
+    expect(el.innerHTML).toContain('Trusted content');
+    expect(el.querySelector('.si-content')).not.toBeNull();
   });
 });
 
