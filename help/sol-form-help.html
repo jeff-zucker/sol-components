@@ -18,6 +18,8 @@
     "imports": {
       "rdflib":             "../dist/vendor/rdflib.js",
       "n3":                 "../dist/vendor/n3.js",
+      "dompurify":          "../dist/vendor/dompurify.js",
+      "marked":             "../dist/vendor/marked.js",
       "solid-ui":           "../dist/vendor/solid-ui.js",
       "solid-logic":        "../dist/vendor/solid-logic.js",
       "rdf-validate-shacl": "../dist/vendor/rdf-validate-shacl.js"
@@ -25,17 +27,19 @@
   }
   </script>
   <script type="module">
-    // Side-effect imports needed by <sol-form>:
-    //   solid-ui sets window.UI on first eval (fieldFunction lives here).
-    //   solid-logic is exposed on window.solidLogic so swc's core/rdf.js
-    //     rendezvous on the same store.
-    // Then register <sol-form> by importing its module for its
-    // customElements.define side effect.
-    import 'solid-ui';
+    // BYO peers in the singleton-handshake order rdflib → solid-logic →
+    // solid-ui: solid-logic self-registers its singleton store
+    // (Symbol.for('solid-logic-singleton')) that swc's core/rdf.js adopts;
+    // solid-ui then sets window.UI (fieldFunction) that sol-form renders
+    // through. (rdflib is pulled in transitively by both, via the importmap.)
     import * as solidLogic from 'solid-logic';
+    import 'solid-ui';
     if (typeof window !== 'undefined') window.solidLogic = solidLogic;
-    import '../web/sol-form.js';
-    import '../web/sol-include.js';
+    // Register the curated component set via the sol-basic ESM ENTRY — not the
+    // IIFE bundle. The bundle is a classic script that would define sol-form
+    // before this deferred module sets window.UI, racing the auto-rendering
+    // demo; the ESM entry shares this module graph so init order holds.
+    import '../web/sol-basic.js';
   </script>
 
 </head>

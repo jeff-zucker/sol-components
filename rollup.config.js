@@ -256,6 +256,27 @@ export default [
       inlineDynamicImports: true,
     },
   },
+  // ── sol-basic (curated subset: include/button/menu/login/form/settings +
+  //    the helpers those six instantiate by tag: accordion/modal/window/
+  //    tree-edit). dompurify/marked/n3/rdf-validate-shacl are bundled IN;
+  //    rdflib stays the lone BYO peer ($rdf global). solid-ui/solid-logic/
+  //    auth are runtime globals the components probe — never imported, so
+  //    there is nothing to externalize for them. ─────────────────────────────
+  {
+    input:   'web/sol-basic.js',
+    external: (id) => id === 'rdflib' || id.startsWith('https://esm.sh/'),
+    plugins: bundlePlugins,
+    output: {
+      file:      minify
+        ? 'dist/sol-basic.bundle.min.js'
+        : 'dist/sol-basic.bundle.js',
+      format:    'iife',
+      name:      'SolBasic',
+      exports:   'named',
+      inlineDynamicImports: true,
+      globals:   { rdflib: '$rdf' },
+    },
+  },
   // ── all-in-one bundle: every component, rdflib externalized as $rdf ─────────
   // rdflib is treated as a runtime peer (BYO), shipped as
   // `dist/vendor/rdflib.umd.js` which self-publishes `window.$rdf`. Page

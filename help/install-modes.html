@@ -74,6 +74,7 @@
 
   <nav class="page-nav" aria-label="Page sections">
     <a href="#one-tag">One script tag</a>
+    <a href="#app-bundle">App bundle (sol-basic)</a>
     <a href="#per-component">Per-component (smaller)</a>
     <a href="#bundler">With a bundler</a>
     <a href="#importmap">ES modules + importmap</a>
@@ -90,7 +91,7 @@
 &lt;sol-query   endpoint="data.ttl" pattern="?s ?p ?o"&gt;&lt;/sol-query&gt;
 &lt;sol-menu&gt;...&lt;/sol-menu&gt;</code></pre>
     <div class="note-box">
-      <strong>What's included:</strong> sol-menu, sol-include, sol-query, sol-login plus every dep they need at runtime. Auth (the inrupt OIDC client) is bring-your-own — drop in <code>dist/vendor/@inrupt-solid-client-authn-browser.umd.js</code> as a separate <code>&lt;script&gt;</code> tag <em>before</em> the bundle if you need login. Components requiring extra externals (sol-form needs solid-ui; sol-solidos needs mashlib) aren't in this bundle yet — use the importmap path for those.
+      <strong>What's included:</strong> sol-menu, sol-include, sol-query, sol-login plus every dep they need at runtime. Auth (the inrupt OIDC client) is bring-your-own — drop in <code>dist/vendor/@inrupt-solid-client-authn-browser.umd.js</code> as a separate <code>&lt;script&gt;</code> tag <em>before</em> the bundle if you need login. Components requiring extra externals aren't in this bundle: <code>sol-form</code> / <code>sol-settings</code> need solid-ui + solid-logic — use the <a href="#app-bundle"><code>sol-basic</code> app bundle</a> for those; <code>sol-solidos</code> needs mashlib — use the importmap path.
     </div>
 
     <h3>Auth fetch propagation</h3>
@@ -99,6 +100,73 @@
 &lt;sol-login id="alt"&gt;&lt;/sol-login&gt;
 
 &lt;sol-query login="#alt" endpoint="https://other.pod/data.ttl" ...&gt;&lt;/sol-query&gt;</code></pre>
+  </div>
+
+  <h2 id="app-bundle">1b. App bundle — <code>sol-basic</code> (adds forms &amp; settings)</h2>
+  <div class="api-block">
+    <p>For building an actual app, not just dropping in one widget.
+    <code>dist/sol-basic.bundle.min.js</code> is a curated set:
+    <code>sol-include</code>, <code>sol-button</code>, <code>sol-menu</code>,
+    <code>sol-login</code>, <code>sol-form</code>, and <code>sol-settings</code>
+    — plus the helpers they compose internally (modal / floating surfaces, the
+    menu editor, accordion, breadcrumb, shared defaults). Unlike the all-in-one
+    bundle above, this one <strong>includes <code>sol-form</code> and
+    <code>sol-settings</code></strong>, so you get editable, self-configuring
+    components. Bundled in: <code>dompurify</code>, <code>marked</code>,
+    <code>n3</code>, <code>rdf-validate-shacl</code>. Deliberately excluded:
+    <code>sol-query</code>, <code>sol-feed</code>, <code>sol-pod*</code>,
+    <code>sol-tabs</code>, the chrome widgets (weather / time / calendar) — load
+    those separately if you need them.</p>
+    <p><strong>Bring-your-own peers, in this order</strong> — a singleton
+    handshake; get it wrong and you get two rdflib stores:</p>
+<pre><code>rdflib  →  solid-logic  →  solid-ui</code></pre>
+
+    <h3>Light subset (include / button / menu / login)</h3>
+    <p>These never touch <code>window.UI</code>, so all you need is the rdflib
+    UMD (plus the auth UMD for login):</p>
+<pre><code>&lt;script src="../dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
+&lt;script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"&gt;&lt;/script&gt;  &lt;!-- only for sol-login --&gt;
+&lt;script src="../dist/sol-basic.bundle.min.js"&gt;&lt;/script&gt;
+
+&lt;sol-login&gt;&lt;/sol-login&gt;
+&lt;sol-menu from-rdf="data/menu.ttl#Main" region="#content"&gt;&lt;/sol-menu&gt;</code></pre>
+
+    <h3>Forms &amp; settings (sol-form / sol-settings)</h3>
+    <p><code>solid-ui</code> and <code>solid-logic</code> ship only as ESM, so a
+    page that edits data needs an importmap for those two plus a small bootstrap
+    module. Load the bundle through its <strong>ES-module entry</strong>
+    (<code>web/sol-basic.js</code>), not the IIFE file, so init order is
+    guaranteed:</p>
+<pre><code>&lt;script src="../dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
+&lt;script type="importmap"&gt;
+{ "imports": {
+  "rdflib":             "../dist/vendor/rdflib.js",
+  "n3":                 "../dist/vendor/n3.js",
+  "dompurify":          "../dist/vendor/dompurify.js",
+  "marked":             "../dist/vendor/marked.js",
+  "solid-ui":           "../dist/vendor/solid-ui.js",
+  "solid-logic":        "../dist/vendor/solid-logic.js",
+  "rdf-validate-shacl": "../dist/vendor/rdf-validate-shacl.js"
+} }
+&lt;/script&gt;
+&lt;script type="module"&gt;
+  import * as solidLogic from 'solid-logic';   // solid-logic BEFORE solid-ui
+  import 'solid-ui';                            // sets window.UI
+  import '../web/sol-basic.js';                 // the ESM entry
+&lt;/script&gt;
+
+&lt;sol-form shape="shapes/x.shacl" subject="data/x.ttl#It"&gt;&lt;/sol-form&gt;
+&lt;sol-settings&gt;&lt;/sol-settings&gt;</code></pre>
+    <div class="note-box">
+      <strong>Why two recipes?</strong> The IIFE bundle is a classic script that
+      defines its elements during parse, so an auto-rendering
+      <code>&lt;sol-form&gt;</code> would run before a deferred module could set
+      <code>window.UI</code>. The ESM entry shares the module graph, so
+      <code>solid-ui</code> is guaranteed to load first. The live demos on the
+      <a href="sol-button-help.html">button</a> /
+      <a href="sol-login-help.html">login</a> pages use the light recipe; the
+      <a href="sol-form-help.html">form</a> page uses the module recipe.
+    </div>
   </div>
 
   <h2 id="per-component">2. Per-component bundle (smaller)</h2>

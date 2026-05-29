@@ -8,22 +8,12 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <script type="importmap">
-  {
-    "imports": {
-      "rdflib":     "../dist/vendor/rdflib.js",
-      "n3":         "../dist/vendor/n3.js",
-      "dompurify":  "../dist/vendor/dompurify.js",
-      "marked":     "../dist/vendor/marked.js"
-    }
-  }
-  </script>
-  <script type="module">
-    import '../web/sol-include.js';
-    import '../web/sol-modal.js';
-    import '../web/sol-window.js';
-    import '../web/sol-button.js';
-  </script>
+  <!-- sol-basic bundle registers sol-button + its display surfaces
+       (sol-include / sol-modal / sol-window are bundled in). rdflib UMD
+       first: the bundle reads window.$rdf. No window.UI needed here —
+       buttons don't render forms. -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+  <script src="../dist/sol-basic.bundle.min.js"></script>
 </head>
 <body class="scroll-help">
 
