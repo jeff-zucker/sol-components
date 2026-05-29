@@ -55,10 +55,22 @@
 sol-weather::part(desc) { display: inline; } /* show verbose description */</code></pre>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- rdflib (peer dep) : publishes window.$rdf — reads the settings TTL. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <!-- sol-weather + sol-include, from the sol-full bundle. -->
-  <script src="../dist/sol-full.umd.min.js?v=1"></script>
+  <!-- sol-weather isn't in sol-full (chrome widget); load it + sol-include
+       as ESM, with vendored deps mapped for their bare specifiers. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib":    "../dist/vendor/rdflib.js",
+      "n3":        "../dist/vendor/n3.js",
+      "dompurify": "../dist/vendor/dompurify.js",
+      "marked":    "../dist/vendor/marked.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import '../web/sol-include.js';
+    import '../web/sol-weather.js';
+  </script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

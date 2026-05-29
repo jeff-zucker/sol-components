@@ -98,10 +98,23 @@
   Teams, Whereby); then any URL in the description.</p>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- rdflib (peer dep) : publishes window.$rdf — reads the settings TTL. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <!-- sol-calendar + sol-include, from the sol-full bundle. -->
-  <script src="../dist/sol-full.umd.min.js?v=1"></script>
+  <!-- sol-calendar isn't in sol-full (chrome widget, ical dep); load it +
+       sol-include as ESM, with vendored deps mapped for their bare specifiers. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib":    "../dist/vendor/rdflib.js",
+      "n3":        "../dist/vendor/n3.js",
+      "dompurify": "../dist/vendor/dompurify.js",
+      "marked":    "../dist/vendor/marked.js",
+      "ical.js":   "../dist/vendor/ical.js.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import '../web/sol-include.js';
+    import '../web/sol-calendar.js';
+  </script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>
