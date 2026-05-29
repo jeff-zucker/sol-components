@@ -12,15 +12,19 @@
  * tearing it down and rebuilding.
  *
  * Reserved attributes (consumed by sol-button itself):
- *   handler  — tag name of the component to mount (required)
- *   target   — CSS selector for the mount container (required)
+ *   handler  — tag name of the component to mount (optional; when absent,
+ *              inferred from `source`: same-origin → sol-include, external
+ *              → iframe)
+ *   region   — where the content surfaces. A CSS selector (a pane the page
+ *              declares) OR a keyword that conjures an ephemeral surface with
+ *              no author-placed element: modal | floating | tab | window.
+ *              Resolved by cascade — this attribute, else a parent container,
+ *              else an enclosing <sol-menu>, else <sol-default>.
  *   name     — wrapper identifier (data-menu-item); defaults to the
  *              element's id if set, otherwise to a slug of source
- *   source   — convenience: copied through to the handler as `source`
- *   replace  — boolean: rebuild the wrapper's contents on every click
- *              instead of reusing them. Pair with a shared `name`
- *              (e.g. "external") so several buttons can write into the
- *              same scratch tab.
+ *   source   — forwarded to the handler (e.g. sol-include's `source`)
+ *   replace  — boolean: rebuild a pane wrapper's contents on every click
+ *              instead of reusing them.
  *
  * Every OTHER attribute on sol-button is forwarded as-is to the handler
  * element, so authoring is just like inlining the handler:
@@ -42,9 +46,9 @@
 
 import { define } from '../core/define.js';
 import { ensureHandler } from '../core/rdf-render.js';
-import { mountInTarget } from '../core/component-mount.js';
+import { displayItem, isExternal } from '../core/display-target.js';
 
-const RESERVED = new Set(['handler', 'target', 'name', 'replace', 'class', 'style']);
+const RESERVED = new Set(['handler', 'region', 'name', 'replace', 'class', 'style']);
 
 class SolButton extends HTMLElement {
   constructor() {
@@ -90,26 +94,9 @@ class SolButton extends HTMLElement {
   }
 
   _activate() {
-    const handler = this.getAttribute('handler');
-    const targetSel = this.getAttribute('target');
-    if (!handler) {
-      console.warn('<sol-button> requires a `handler` attribute (component tag to mount).');
-      return;
-    }
-    if (!targetSel) {
-      console.warn('<sol-button> requires a `target` attribute (CSS selector for mount container).');
-      return;
-    }
-    const target = document.querySelector(targetSel);
-    if (!target) {
-      console.warn(`<sol-button> target "${targetSel}" not found.`);
-      return;
-    }
-
-    ensureHandler(handler, this, import.meta.url, 'sol-button');
-
-    const name = this._resolveName();
-    const replace = this.hasAttribute('replace');
+    const href = this.getAttribute('source') || null;
+    const explicit = this.getAttribute('handler');
+    const ensure = (t) => ensureHandler(t, this, import.meta.url, 'sol-button');
 
     // Forward every non-reserved attribute through to the handler.
     const attrs = [];
@@ -119,10 +106,31 @@ class SolButton extends HTMLElement {
       attrs.push([a.name, a.value]);
     }
 
-    const wrapper = mountInTarget({ target, name, tag: handler, attrs, replace });
+    // Content element: explicit handler wins; else infer from origin
+    // (same-origin → trusted sol-include, external → iframe).
+    let tag, replace = this.hasAttribute('replace');
+    if (explicit) {
+      tag = explicit;
+    } else if (href && isExternal(href)) {
+      tag = 'iframe';
+      attrs.push(['src', href]);
+      replace = true;
+    } else {
+      tag = 'sol-include';
+      if (href && !attrs.some(([k]) => k === 'trusted')) attrs.push(['trusted', 'true']);
+    }
+    ensure(tag);
+
+    const name = this._resolveName();
+    const wrapper = displayItem({
+      launcher: this, id: null, name, tag, attrs, href, replace, ensure,
+    });
+    if (wrapper == null) {
+      console.warn('<sol-button>: no region resolved — set region= on the button, a container, <sol-menu>, or <sol-default>.');
+    }
     this.dispatchEvent(new CustomEvent('sol-button-activate', {
       bubbles: true, composed: true,
-      detail: { name, handler, wrapper },
+      detail: { name, handler: tag, wrapper },
     }));
   }
 }

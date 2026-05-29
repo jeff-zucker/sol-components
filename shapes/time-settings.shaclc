@@ -4,15 +4,12 @@ PREFIX schema: <http://schema.org/>
 PREFIX wd: <http://www.wikidata.org/entity/>
 
 shape <#TimeSettingsFileShape> -> <urn:swc:shape:time-settings:TimeSettingsFile> {
-	foaf:primaryTopic [1..1] @<#TimeSettingsShape> .
+    foaf:primaryTopic [1..1] @<#TimeSettingsShape> .
 }
 shape <#TimeSettingsShape> {
-	schema:timezone xsd:string [1..1] %
-		sh:name "Extra timezone (IANA name)" ;
-		sh:description "An IANA timezone identifier like 'Asia/Kolkata' or 'America/New_York'. sol-time always renders local + UTC; this adds a third clock for the named zone."
-	% .
+    schema:timezone xsd:string [1..1] % sh:name "Extra timezone (IANA name)" ; sh:description "An IANA timezone identifier like 'Asia/Kolkata' or 'America/New_York'. sol-time always renders local + UTC; this adds a third clock for the named zone." % .
 }
 
 <urn:swc:shape:time-settings:TimeSettingsFile> a rdfs:Class ;
-	rdfs:subClassOf wd:Q1193846 .
+    rdfs:subClassOf wd:Q1193846 .
 

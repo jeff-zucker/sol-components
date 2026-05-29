@@ -53,7 +53,7 @@ export function pruneSiblings(target, activeName) {
  *     (e.g. external menu links, ad-hoc launchers).
  *
  * @param {object}      o
- * @param {HTMLElement} o.target       Where to mount (typically a linkTarget).
+ * @param {HTMLElement} o.target       Where to mount (typically a region pane).
  * @param {string}      o.name         Wrapper id (data-menu-item value).
  * @param {string}      o.tag          Custom-element tag of the component.
  * @param {Iterable<[string, string]>} [o.attrs]  Attributes to set on

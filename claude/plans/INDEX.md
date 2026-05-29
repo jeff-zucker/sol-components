@@ -6,7 +6,6 @@ Quick map of what's in `claude/plans/` and where each plan stands.
 
 | Plan | Status | Estimate | Summary |
 |---|---|---|---|
-| [PLAN-sol-settings](PLAN-sol-settings.md) | Not started | ~6 h | New `<sol-settings>` swc component: accordion of `<sol-form>` children. Supersedes dk-specific dk-settings.js. |
 | [PLAN-sol-form-redesign](PLAN-sol-form-redesign.md) | Not started | (large) | Two-attribute API (`shape` + `data`), `view=record/rolodex/table/accordion/auto-complete`, `dry-run` attribute. Subsumes sol-tree-edit. |
 | [PLAN-shape-file-consolidation](PLAN-shape-file-consolidation.md) | Not started | ~10 h | One SHACL file per editable type, `sh:targetClass` dispatch + `swc:` linkage predicates (`children`, `childClasses`, `drillDown`, `displayLabel`). Prereq for `view=accordion`. |
 | [PLAN-shape2form-or-and](PLAN-shape2form-or-and.md) | Not started | ~10–11 h | `sh:or`/`sh:and` support in shape2form (and the renaming from shape**cl**2form). Path to optional ShEx down the road. |
@@ -17,6 +16,7 @@ Quick map of what's in `claude/plans/` and where each plan stands.
 
 | Plan | Completed | Notes |
 |---|---|---|
+| [PLAN-sol-settings](PLAN-sol-settings.md) | 2026-05 (shipped); follow-ups closed 2026-05-26 | Discovery-driven `<sol-settings>` (walks doc + shadow roots for `static editor`/`static shape`), accordion with lazy-mount per panel, `sol-tab-activate` re-discovery, public `refresh()` method. All discoverable widgets confirmed to implement `reload()` for post-save refresh. |
 | sol-pod/sol-login/sol-menu/sol-include polish + cross-window auth (no dedicated plan) | 2026-05-26 | Tactical pass on dk-solidos auth wiring + supporting swc work. sol-pod: auto-init + single-flight `initialize()`, last-visited-path memory (per pods-group/side), breadcrumb gear routes through `_activateItem` (honors `podClickAction`), container items now carry size/mtime/modified/types from posix:size/posix:mtime/dct:modified/rdf:type, shared `_paintGearIcon` for per-item + breadcrumb gears. sol-login: `BroadcastChannel('sol-auth')` cross-window signaling + `external-auth` attribute (green-button cue) — same channel used by mashlib-in-iframe via `pages/solidos-host.html`. sol-menu: `part="content"`/`part="nav"` hooks; default `.sol-menu-content` overflow flipped to hidden; horizontal nav wraps instead of scrolling. sol-include: `:host` + `.si-content` are flex columns (including via `::slotted` in trusted mode) so children get a definite-height parent. sol-weather: silent fail (hide card on fetch error). New newhelp/* tabbed help pages (pod / menu / query / search / weather). |
 | [PLAN-sol-include-trusted-lightdom](PLAN-sol-include-trusted-lightdom.md) | 2026-05-24 | `trusted` content now renders to light DOM (via a shadow `<slot>`) so host CSS reaches in. dk Settings smoke test passes; sol-include help page documents the coupling. |
 | [PLAN-vocab-migration](PLAN-vocab-migration.md) | 2026-05 | Migrated weather/time/calendar/menu shapes from `schema:additionalProperty` indirection to direct W3C/Schema.org/DCT/QUDT/OWL-Time predicates. |

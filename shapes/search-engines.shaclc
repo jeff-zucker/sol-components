@@ -5,25 +5,11 @@ PREFIX schema: <http://schema.org/>
 PREFIX ui: <http://www.w3.org/ns/ui#>
 
 shape <#SearchEnginesShape> -> schema:ItemList {
-	schema:name xsd:string [1..1] %
-		sh:name "Topic label"
-	% .
-	schema:itemListElement @<#EngineShape> %
-		sh:name "Engines" ;
-		sh:description "Search engines in the list. Each row edits one hydra:IriTemplate." ;
-		ui:sortedBy schema:position
-	% .
+    schema:name xsd:string [1..1] % sh:name "Topic label" % .
+    schema:itemListElement @<#EngineShape> % sh:name "Engines" ; sh:description "Search engines in the list. Each row edits one hydra:IriTemplate." ; ui:sortedBy schema:position % .
 }
 shape <#EngineShape> {
-	dct:title xsd:string [1..1] %
-		sh:name "Title"
-	% .
-	hydra:template xsd:string [1..1] %
-		sh:name "URL template" ;
-		sh:description "RFC 6570 template. {query} is substituted with the URI-encoded search term."
-	% .
-	schema:position xsd:integer [0..1] %
-		sh:name "Position" ;
-		sh:description "Display order (lower first). Used with schema:itemListOrder on the list."
-	% .
+    dct:title xsd:string [1..1] % sh:name "Title" % .
+    hydra:template xsd:string [1..1] % sh:name "URL template" ; sh:description "RFC 6570 template. {query} is substituted with the URI-encoded search term." % .
+    schema:position xsd:integer [0..1] % sh:name "Position" ; sh:description "Display order (lower first). Used with schema:itemListOrder on the list." % .
 }

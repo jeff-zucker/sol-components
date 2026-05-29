@@ -47,8 +47,9 @@ The <i>sol-menu</i> web component can be used with a single <i>from-rdf</i> attr
 The value is a URI with a fragment identifier (e.g. <i>menu.ttl#MainMenu</i>) 
 pointing to the root <i>ui:Menu</i> subject.</p>
 <p>
-The selected menu item can be shown in an inline panel or if the RDF menu definition
-specifies a <i>ui:displayTarget</i>, it will be shown there instead.
+The selected menu item is shown in the menu's own panel, or — when the host page
+gives the <i>&lt;sol-menu&gt;</i> a <i>region="#selector"</i> (or a parent declares
+one) — in that region instead.
 </p>
 </div>
 
@@ -60,14 +61,12 @@ specifies a <i>ui:displayTarget</i>, it will be shown there instead.
 <pre><b>ui:Menu</b>
   ui:label       # (required) display name
   ui:parts       # (required) ordered rdf:Collection of ui:Link, ui:Component, and/or ui:Menu items
-  ui:orientation # (optional) "horizontal" (default) or "vertical"
-  ui:linkTarget  # (optional) CSS selector; content renders there instead of the built-in panel
+  ui:orientation # (optional) ui:Horizontal (default) or ui:Vertical
 
 <b>ui:Link</b>
   ui:label       # (required) display name
-  ui:href        # (optional) URL to load (via handler component or default sol-include)
+  ui:href        # (optional) URL to load (same-origin → sol-include, external → iframe)
   ui:contents    # (optional) literal HTML rendered inline directly
-  ui:handler     # (optional) a ui:Component used to render the href
   ui:icon        # (optional) icon URL
 
   <b>note:</b> a ui:Link must have either a ui:href or a ui:contents triple.

@@ -1,10 +1,11 @@
 /**
  * @jest-environment jsdom
+ * @jest-environment-options {"url": "http://example.org/"}
  *
  * Tests for <sol-menu>:
  *   - RDF loading and menu construction
  *   - Fragment-based subject selection
- *   - ui:linkTarget, ui:orientation, ui:contents, ui:handler/ui:Component, ui:icon
+ *   - region= / data-for routing, ui:orientation, ui:contents, ui:Component, ui:icon
  *   - Submenu (nested ui:Menu) handling
  *   - Fallback when no fragment provided
  *   - observedAttributes / attributeChangedCallback
@@ -12,8 +13,8 @@
  *   - Keyboard navigation (arrow keys, Home, End, Escape)
  *   - Declarative HTML API (_harvestItems)
  *   - Imperative items setter API
- *   - Multiple ui:parameter on a handler
- *   - Handler without ui:handler (default fallback)
+ *   - Multiple ui:attribute on a ui:Component
+ *   - Link href defaults to sol-include (origin-inferred)
  *   - Edge cases (select non-existent, empty RDF, single item hides nav)
  *   - disconnectedCallback cleanup
  *   - Submenu toggle (open/close/aria-expanded)
@@ -76,14 +77,11 @@ function buildStore() {
   store.add(s(BASE + '#Light'), s(UI + 'label'), l('Light'));
   store.add(s(BASE + '#Light'), s(UI + 'contents'), l('light content'));
 
-  store.add(s(BASE + '#About'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#About'), s(RDF + 'type'), s(UI + 'Component'));
   store.add(s(BASE + '#About'), s(UI + 'label'), l('About'));
-  store.add(s(BASE + '#About'), s(UI + 'href'), s('http://example.org/about.ttl'));
-  store.add(s(BASE + '#About'), s(UI + 'handler'), s(BASE + '#AboutHandler'));
-  store.add(s(BASE + '#AboutHandler'), s(RDF + 'type'), s(UI + 'Component'));
-  store.add(s(BASE + '#AboutHandler'), s(UI + 'label'), l('sol-query'));
+  store.add(s(BASE + '#About'), s(UI + 'name'), l('sol-query'));
   const param1 = s(BASE + '#_param1');
-  store.add(s(BASE + '#AboutHandler'), s(UI + 'parameter'), param1);
+  store.add(s(BASE + '#About'), s(UI + 'attribute'), param1);
   store.add(param1, s(SCHEMA + 'name'), l('pattern'));
   store.add(param1, s(SCHEMA + 'value'), l('?s ?p ?o'));
 
@@ -204,22 +202,19 @@ describe('SolMenu — from-rdf loading', () => {
     await flush();
 
     el.select('Light');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     expect(body.innerHTML).toBe('light content');
   });
 
-  test('ui:handler creates component with label as tag and parameters as attributes', async () => {
+  test('ui:Component renders the named element with its attributes', async () => {
     const el = attached(document.createElement('sol-menu'));
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
     el.select('About');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
-    const handler = body.querySelector('sol-query');
-    expect(handler).toBeTruthy();
-    expect(handler.getAttribute('source')).toBe('http://example.org/about.ttl');
-    expect(handler.getAttribute('endpoint')).toBe('http://example.org/about.ttl');
-    expect(handler.getAttribute('pattern')).toBe('?s ?p ?o');
+    const cmp = el.querySelector('.sol-menu-content sol-query');
+    expect(cmp).toBeTruthy();
+    expect(cmp.getAttribute('pattern')).toBe('?s ?p ?o');
   });
 
   test('defaults to horizontal orientation', async () => {
@@ -276,7 +271,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const panel = el.shadowRoot.querySelector('.sol-menu-content');
+    const panel = el.querySelector('.sol-menu-content');
     expect(panel.getAttribute('role')).toBe('region');
     expect(panel.getAttribute('aria-label')).toMatch(/^Content: /);
   });
@@ -309,7 +304,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const panel = el.shadowRoot.querySelector('.sol-menu-content');
+    const panel = el.querySelector('.sol-menu-content');
     expect(panel.getAttribute('aria-label')).toBe('Content: Home');
   });
 
@@ -499,25 +494,37 @@ describe('SolMenu — keyboard navigation', () => {
   });
 });
 
-// ── linkTarget ──────────────────────────────────────────────────────────────
+// ── region (HTML) and data-for routing ───────────────────────────────────────
 
-describe('SolMenu — from-rdf with ui:linkTarget', () => {
-  beforeEach(() => {
-    mockStore = buildStore();
-    mockStore.add(rdflib.sym(BASE + '#Main'), rdflib.sym(UI + 'linkTarget'), rdflib.literal('#target-div'));
-  });
+describe('SolMenu — region= on the element', () => {
+  beforeEach(() => { mockStore = buildStore(); });
 
-  test('renders content into external target element', async () => {
+  test('renders content into the region pane', async () => {
     const target = document.createElement('div');
     target.id = 'target-div';
     document.body.appendChild(target);
+
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('region', '#target-div');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    el.select('Light');
+    expect(target.innerHTML).toBe('light content');
+  });
+
+  test('a data-for host claims a specific item by id', async () => {
+    const host = document.createElement('div');
+    host.id = 'claim';
+    host.setAttribute('data-for', 'Light');
+    document.body.appendChild(host);
 
     const el = attached(document.createElement('sol-menu'));
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
     el.select('Light');
-    expect(target.innerHTML).toBe('light content');
+    expect(host.innerHTML).toBe('light content');
   });
 });
 
@@ -526,10 +533,10 @@ describe('SolMenu — from-rdf with ui:linkTarget', () => {
 describe('SolMenu — from-rdf with ui:orientation', () => {
   beforeEach(() => {
     mockStore = buildStore();
-    mockStore.add(rdflib.sym(BASE + '#Main'), rdflib.sym(UI + 'orientation'), rdflib.literal('vertical'));
+    mockStore.add(rdflib.sym(BASE + '#Main'), rdflib.sym(UI + 'orientation'), rdflib.sym(UI + 'Vertical'));
   });
 
-  test('applies orientation from RDF', async () => {
+  test('applies orientation from RDF (ui:Orientation instance)', async () => {
     const el = attached(document.createElement('sol-menu'));
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
@@ -633,7 +640,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     attached(el);
 
     el.select('Data');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     const handler = body.querySelector('sol-query');
     expect(handler).toBeTruthy();
     expect(handler.getAttribute('source')).toBe('data.ttl');
@@ -646,7 +653,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     attached(el);
 
     el.select('Data');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     expect(body.querySelector('sol-query')).toBeTruthy();
     expect(body.querySelector('sol-include')).toBeFalsy();
   });
@@ -657,7 +664,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     attached(el);
 
     el.select('Data');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     const child = body.querySelector('.sol-menu-embed');
     expect(child.getAttribute('pattern')).toBe('?s ?p ?o');
     expect(child.getAttribute('view')).toBe('table');
@@ -718,16 +725,16 @@ describe('SolMenu — imperative items setter', () => {
   });
 });
 
-// ── Multiple parameters on ui:handler ───────────────────────────────────────
+// ── Multiple ui:attribute on a ui:Component ──────────────────────────────────
 
-describe('SolMenu — multiple ui:parameter', () => {
+describe('SolMenu — multiple ui:attribute', () => {
   beforeEach(() => { mockStore = buildStore(); });
 
-  test('all parameters set as attributes on handler element', async () => {
+  test('all attributes set on the component element', async () => {
     const s = (v) => rdflib.sym(v);
     const l = (v) => rdflib.literal(v);
     const param2 = s(BASE + '#_param2');
-    mockStore.add(s(BASE + '#AboutHandler'), s(UI + 'parameter'), param2);
+    mockStore.add(s(BASE + '#About'), s(UI + 'attribute'), param2);
     mockStore.add(param2, s(SCHEMA + 'name'), l('view'));
     mockStore.add(param2, s(SCHEMA + 'value'), l('table'));
 
@@ -736,7 +743,7 @@ describe('SolMenu — multiple ui:parameter', () => {
     await flush();
 
     el.select('About');
-    const handler = el.shadowRoot.querySelector('.sol-menu-content sol-query');
+    const handler = el.querySelector('.sol-menu-content sol-query');
     expect(handler.getAttribute('pattern')).toBe('?s ?p ?o');
     expect(handler.getAttribute('view')).toBe('table');
   });
@@ -765,36 +772,12 @@ describe('SolMenu — handler fallback (no ui:handler)', () => {
     await flush();
 
     el.select('Page');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     const child = body.querySelector('sol-include');
     expect(child).toBeTruthy();
     expect(child.getAttribute('source')).toBe('http://example.org/page.html');
   });
 
-  test('uses handler attribute on sol-menu as fallback', async () => {
-    const store = rdflib.graph();
-    const s = (v) => rdflib.sym(v);
-    const l = (v) => rdflib.literal(v);
-    const base = 'http://example.org/simple.ttl';
-    store.add(s(base + '#M'), s(RDF + 'type'), s(UI + 'Menu'));
-    store.add(s(base + '#M'), s(UI + 'label'), l('simple'));
-    const lb = s(base + '#_l1');
-    store.add(s(base + '#M'), s(UI + 'parts'), lb);
-    store.add(lb, s(RDF + 'first'), s(base + '#Item'));
-    store.add(lb, s(RDF + 'rest'), s(RDF + 'nil'));
-    store.add(s(base + '#Item'), s(UI + 'label'), l('Page'));
-    store.add(s(base + '#Item'), s(UI + 'href'), s('http://example.org/page.ttl'));
-    mockStore = store;
-
-    const el = attached(document.createElement('sol-menu'));
-    el.setAttribute('handler', 'sol-query');
-    el.setAttribute('from-rdf', base + '#M');
-    await flush();
-
-    el.select('Page');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
-    expect(body.querySelector('sol-query')).toBeTruthy();
-  });
 });
 
 // ── Edge cases ──────────────────────────────────────────────────────────────
@@ -853,7 +836,7 @@ describe('SolMenu — edge cases', () => {
     await flush();
 
     el.select('Home');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     const child = body.querySelector('sol-include');
     expect(child).toBeTruthy();
     expect(child.getAttribute('source')).toBe('http://example.org/home.html');
@@ -881,7 +864,7 @@ describe('SolMenu — edge cases', () => {
     await flush();
 
     el.select('Empty');
-    const body = el.shadowRoot.querySelector('.sol-menu-content');
+    const body = el.querySelector('.sol-menu-content');
     expect(body.children.length).toBe(0);
   });
 });
@@ -1023,7 +1006,7 @@ describe('SolMenu — ARIA state updates on re-select', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const panel = el.shadowRoot.querySelector('.sol-menu-content');
+    const panel = el.querySelector('.sol-menu-content');
     expect(panel.getAttribute('aria-label')).toBe('Content: Home');
 
     el.select('About');

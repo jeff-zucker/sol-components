@@ -7,32 +7,17 @@ PREFIX ui: <http://www.w3.org/ns/ui#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 
 shape <#WeatherSettingsFileShape> -> <urn:swc:shape:weather-settings:WeatherSettingsFile> {
-	foaf:primaryTopic [1..1] @<#WeatherSettingsShape> .
+    foaf:primaryTopic [1..1] @<#WeatherSettingsShape> .
 }
 shape <#WeatherSettingsShape> {
-	geo:lat xsd:decimal [1..1] %
-		sh:name "Latitude" ;
-		sh:description "Decimal latitude (-90 to 90)"
-	% .
-	geo:long xsd:decimal [1..1] %
-		sh:name "Longitude" ;
-		sh:description "Decimal longitude (-180 to 180)"
-	% .
-	schema:addressLocality xsd:string [1..1] %
-		sh:name "Place" ;
-		sh:description "Display name shown on the weather card"
-	% .
-	ui:temperatureUnit ui:TemperatureUnit [1..1] %
-		sh:name "Temperature unit" ;
-		sh:description "Fahrenheit, Celsius, or Both"
-	% .
-	time:hours xsd:integer [1..1] %
-		sh:name "Forecast window (hours)" ;
-		sh:description "Max-precipitation lookahead, in hours"
-	% .
+    geo:lat xsd:decimal [1..1] % sh:name "Latitude" ; sh:description "Decimal latitude (-90 to 90)" % .
+    geo:long xsd:decimal [1..1] % sh:name "Longitude" ; sh:description "Decimal longitude (-180 to 180)" % .
+    schema:addressLocality xsd:string [1..1] % sh:name "Place" ; sh:description "Display name shown on the weather card" % .
+    ui:temperatureUnit ui:TemperatureUnit [1..1] % sh:name "Temperature unit" ; sh:description "Fahrenheit, Celsius, or Both" % .
+    time:hours xsd:integer [1..1] % sh:name "Forecast window (hours)" ; sh:description "Max-precipitation lookahead, in hours" % .
 }
 
 <> owl:imports <../data/ui-vocab.ttl> .
 <urn:swc:shape:weather-settings:WeatherSettingsFile> a rdfs:Class ;
-	rdfs:subClassOf wd:Q1193846 .
+    rdfs:subClassOf wd:Q1193846 .
 

@@ -2,8 +2,12 @@
 
 ## Status
 
-**Designed, not built.** Triggered by the dk-settings Main Menu redesign
-discussion (2026-05-24). User wants to edit one thing at a time across
+**Built (2026-05-29).** `sol-breadcrumb` + `sol-tree-edit` exist and drive dk's
+Main Menu editor. Note: head/item shapes were later consolidated to a single
+`menu.shacl` (see PLAN-shape-file-consolidation.md) — `sol-tree-edit` now
+selects the head NodeShape by the root's `sh:targetClass` and excludes the
+items predicate from the head form. Originally triggered by the dk-settings
+Main Menu redesign discussion (2026-05-24). User wants to edit one thing at a time across
 hierarchical data; the pattern recurs enough across swc consumers
 that the implementation should live in swc, not in dk.
 

@@ -1,9 +1,10 @@
 /**
  * @jest-environment jsdom
+ * @jest-environment-options {"url": "http://example.org/"}
  *
  * Tests for <sol-tabs>:
  *   - from-rdf loading of the shared ui:Menu RDF shape
- *   - ui:Link (href / contents), ui:Component, ui:handler, ui:orientation
+ *   - ui:Link (href / contents), ui:Component, ui:orientation
  *   - Nested ui:Menu → a tab whose body is a <sol-tabs variant="sub"> strip
  *   - Fragment-based subject selection + fallback when no fragment
  *   - observedAttributes / attributeChangedCallback
@@ -35,7 +36,7 @@ const { SolTabs } = await import('../../web/sol-tabs.js');
 //   #Home     ui:Link      href + icon
 //   #Settings ui:Menu      nested: ( #Light #Dark ) both ui:contents links
 //   #Table    ui:Component ui:name "sol-query" + ui:attribute endpoint
-//   #About    ui:Link      href + ui:handler Component "sol-query" + param
+//   #About    ui:Component ui:name "sol-query" + ui:attribute pattern
 function buildStore() {
   const store = rdflib.graph();
   const s = (v) => rdflib.sym(v);
@@ -89,14 +90,11 @@ function buildStore() {
   store.add(attr1, s(SCHEMA + 'name'), l('endpoint'));
   store.add(attr1, s(SCHEMA + 'value'), s('http://example.org/data.ttl'));
 
-  store.add(s(BASE + '#About'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#About'), s(RDF + 'type'), s(UI + 'Component'));
   store.add(s(BASE + '#About'), s(UI + 'label'), l('About'));
-  store.add(s(BASE + '#About'), s(UI + 'href'), s('http://example.org/about.ttl'));
-  store.add(s(BASE + '#About'), s(UI + 'handler'), s(BASE + '#AboutHandler'));
-  store.add(s(BASE + '#AboutHandler'), s(RDF + 'type'), s(UI + 'Component'));
-  store.add(s(BASE + '#AboutHandler'), s(UI + 'label'), l('sol-query'));
+  store.add(s(BASE + '#About'), s(UI + 'name'), l('sol-query'));
   const param1 = s(BASE + '#_p1');
-  store.add(s(BASE + '#AboutHandler'), s(UI + 'parameter'), param1);
+  store.add(s(BASE + '#About'), s(UI + 'attribute'), param1);
   store.add(param1, s(SCHEMA + 'name'), l('pattern'));
   store.add(param1, s(SCHEMA + 'value'), l('?s ?p ?o'));
 
@@ -186,7 +184,7 @@ describe('SolTabs — from-rdf loading', () => {
     expect(embed.getAttribute('endpoint')).toBe('http://example.org/data.ttl');
   });
 
-  test('ui:handler on a link wraps the href in that component with params', async () => {
+  test('ui:Component renders the named element with its attributes', async () => {
     const el = attached(document.createElement('sol-tabs'));
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
@@ -194,7 +192,6 @@ describe('SolTabs — from-rdf loading', () => {
     el.switchTab('About');
     const embed = content(el).querySelector('.sol-tab-embed');
     expect(embed.tagName.toLowerCase()).toBe('sol-query');
-    expect(embed.getAttribute('source')).toBe('http://example.org/about.ttl');
     expect(embed.getAttribute('pattern')).toBe('?s ?p ?o');
   });
 });

@@ -193,7 +193,13 @@ class SolTreeEdit extends HTMLElement {
     if (!this._headShapeText) {
       const headUri = new URL(this.getAttribute('head-shape'), document.baseURI).href;
       this._headShapeText = await (await fetch(headUri)).text();
-      this._headParsed = await parseShape(this._headShapeText, headUri);
+      // Pass the root subject so parseShape selects the container NodeShape by
+      // sh:targetClass (e.g. ui:Menu → MenuShape) rather than falling back to
+      // the first sh:node-referenced shape — essential when head-shape is a
+      // multi-NodeShape file like menu.shacl.
+      this._headParsed = await parseShape(this._headShapeText, headUri, {
+        subject: rdf.sym(rootAbs), dataStore: rdf.store,
+      });
     }
     if (!this._itemShapeText) {
       const itemUri = new URL(this.getAttribute('item-shape'), document.baseURI).href;
@@ -299,7 +305,14 @@ class SolTreeEdit extends HTMLElement {
     const headAccordion = document.createElement('sol-accordion');
     const headPanel = this._buildAccordionPanel(headLabel, () => {
       const body = document.createElement('div');
-      renderRecordForm(body, rdf.store, subject, this._headParsed.properties, {
+      // The items predicate (ui:parts) is the tree's own list, edited as the
+      // item panels below — not a scalar head field. Drop it so a combined
+      // shape (e.g. menu.shacl, whose ui:Menu NodeShape includes ui:parts)
+      // can serve as both head- and item-shape.
+      const partsPred = this._partsPredicate().value;
+      const headProps = (this._headParsed.properties || [])
+        .filter((p) => !(p.path && p.path.value === partsPred));
+      renderRecordForm(body, rdf.store, subject, headProps, {
         doc: rdf.sym(this._currentDoc()),
         onChange: () => this._onChange(),
       });

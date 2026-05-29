@@ -66,13 +66,17 @@ walk off.
 
 ## Open follow-ups
 
-- Discovery only sees widgets currently in the DOM. dk's tabs are
-  keep-alive so this Just Works — hidden tabs are still in DOM.
-  Other apps may need to invoke discovery again when their content
-  changes (an attribute or method for that hasn't been needed yet).
-- Per-component `reload()` is the post-save refresh hook;
+- ~~Discovery only sees widgets currently in the DOM.~~ Tab activation
+  triggers re-discovery via `sol-tab-activate`, and a public
+  `refresh()` method lets consumers force re-walk when they mount a
+  new editable widget after sol-settings connected. (No DOM-wide
+  MutationObserver — not needed yet.)
+- ~~Per-component `reload()` is the post-save refresh hook;
   components without one are still editable, just without the
-  in-place re-render.
+  in-place re-render.~~ All current discoverable components
+  (sol-calendar/default/time/search/weather/tabs/menu) implement
+  `reload()` (audited 2026-05-26). sol-feed opts out via
+  `editor: { inline: true }`.
 - See `swc/data/menu-items.shacl` for the `sh:node`-driven nested
   PropertyValue rendering that powers per-menu-item attribute
   editing inside `<sol-tree-edit>` — this is the editor

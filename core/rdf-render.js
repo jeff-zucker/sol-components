@@ -14,7 +14,7 @@
 //                 ('sol-menu-embed' / 'sol-tab-embed')
 
 import { siblingUrl } from './here.js';
-import { mountInTarget } from './component-mount.js';
+import { displayItem, contentForHref } from './display-target.js';
 
 /**
  * Lazy-import a sibling sol-* handler module on first use, so authors
@@ -38,106 +38,62 @@ export function ensureHandler(tag, host, baseUrl, sourceName) {
   });
 }
 
-// Resolve the element a part renders into: an explicit ui:linkTarget
-// selector, or the host-provided body when none is given.
-function resolveTarget(linkTarget, body) {
-  return linkTarget ? document.querySelector(linkTarget) : body;
-}
-
 /**
- * Build a render closure for a ui:Component part.
+ * Build a render closure for a ui:Component part. Placement is resolved from
+ * the HTML at click time by the dispatcher (region= cascade off the host,
+ * `data-for` claim by this item's id, or the host's own body as fallback).
+ * Components default to keep-alive.
  *
- * When `linkTarget` is set, each item gets its own
- * `<div data-menu-item="Name">` wrapper inside the target. Items
- * marked `keepAlive` keep their wrapper mounted across nav (just
- * toggled `hidden`); non-keep-alive items are recreated on each
- * activation. Without `linkTarget`, the host body is wiped and the
- * component appended directly (legacy behavior).
- *
- * @param {object} desc { name, tag, params, linkTarget, keepAlive }
+ * @param {object} desc { id, name, tag, params }
  * @param {object} ctx  { host, baseUrl, sourceName, embedClass }
  * @returns {(body: HTMLElement) => void}
  */
 export function renderComponentItem(desc, ctx) {
   return (body) => {
-    const { name, tag, params, linkTarget } = desc;
+    const { id, name, tag, params } = desc;
     if (!tag) return;
-    ensureHandler(tag, ctx.host, ctx.baseUrl, ctx.sourceName);
-
-    if (!linkTarget) {
-      const el = document.createElement(tag);
-      for (const [k, v] of params) el.setAttribute(k, v);
-      el.classList.add(ctx.embedClass);
-      if (!body) return;
-      body.innerHTML = '';
-      body.appendChild(el);
-      return;
-    }
-
-    const target = document.querySelector(linkTarget);
-    if (!target) return;
-    mountInTarget({ target, name, tag, attrs: params, embedClass: ctx.embedClass });
+    const ensure = (t) => ensureHandler(t, ctx.host, ctx.baseUrl, ctx.sourceName);
+    ensure(tag);
+    displayItem({
+      launcher: ctx.host, id, name: name || id,
+      tag, attrs: params, replace: false,
+      embedClass: ctx.embedClass, fallbackEl: body, ensure,
+    });
   };
 }
 
 /**
  * Build a render closure for a ui:Link part. A `ui:contents` literal is
- * injected as HTML; otherwise the `ui:href` is wrapped in a handler
- * component (the part's ui:handler, the host's `handler` attribute, or
- * <sol-include>), forwarded as both `source` and `endpoint`.
+ * injected as HTML; otherwise the `ui:href` is rendered by the origin-inferred
+ * element (same-origin → trusted `sol-include`, external → `iframe`). A
+ * non-default viewer is expressed as a `ui:Component`, not a handler.
+ * Placement is resolved from the HTML by the dispatcher (region= / data-for).
  *
- * @param {object} desc { href, contents, handlerTag, handlerParams, linkTarget }
+ * @param {object} desc { id, name, href, contents }
  * @param {object} ctx  { host, baseUrl, sourceName, embedClass }
  * @returns {(body: HTMLElement) => void}
  */
 export function renderLinkItem(desc, ctx) {
   return (body) => {
-    const { name, href, contents, handlerTag, handlerParams, linkTarget } = desc;
-    if (contents) {
-      const target = resolveTarget(linkTarget, body);
-      if (target) target.innerHTML = contents;
+    const { id, name, href, contents } = desc;
+    const ensure = (t) => ensureHandler(t, ctx.host, ctx.baseUrl, ctx.sourceName);
+
+    if (contents != null) {
+      displayItem({
+        launcher: ctx.host, id, name: name || id, contents,
+        embedClass: ctx.embedClass, fallbackEl: body, ensure,
+      });
       return;
     }
     if (!href) return;
-    const tag = handlerTag || ctx.host.getAttribute('handler') || 'sol-include';
-    ensureHandler(tag, ctx.host, ctx.baseUrl, ctx.sourceName);
 
-    if (!linkTarget) {
-      const el = document.createElement(tag);
-      el.setAttribute('source', href);
-      el.setAttribute('endpoint', href);
-      for (const [k, v] of handlerParams) el.setAttribute(k, v);
-      el.classList.add(ctx.embedClass);
-      if (!body) return;
-      body.innerHTML = '';
-      body.appendChild(el);
-      return;
-    }
+    const { tag, attrs, replace } = contentForHref(href);
+    ensure(tag);
 
-    const target = document.querySelector(linkTarget);
-    if (!target) return;
-    const linkAttrs = [['source', href], ['endpoint', href], ...handlerParams];
-    // External links share a single "external" wrapper and overwrite
-    // each other; same-origin links keep their own persistent tab.
-    const external = isExternalHref(href);
-    mountInTarget({
-      target,
-      name: external ? 'external' : name,
-      tag,
-      attrs: linkAttrs,
-      embedClass: ctx.embedClass,
-      replace: external,
+    displayItem({
+      launcher: ctx.host, id, name: name || id,
+      tag, attrs, href, replace,
+      embedClass: ctx.embedClass, fallbackEl: body, ensure,
     });
   };
-}
-
-function isExternalHref(href) {
-  if (!href) return false;
-  try {
-    const u = new URL(href, document.baseURI);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-    return u.origin !== location.origin;
-  } catch {
-    return false;
-  }
 }

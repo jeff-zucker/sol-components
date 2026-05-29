@@ -18,23 +18,23 @@ ui:Link      a :MenuItemType ; rdfs:label "Link" .
 ui:Component a :MenuItemType ; rdfs:label "Component" .
 ui:Menu      a :MenuItemType ; rdfs:label "Sub-menu" .
 
+ui:Horizontal a ui:Orientation ; rdfs:label "Horizontal" .
+ui:Vertical   a ui:Orientation ; rdfs:label "Vertical"   .
+
 :MenuForm a ui:Form ;
   ui:label "Menu Editor" ;
-  ui:parts ( :labelField :orientationField :linkTargetField :partsMultiple ) .
+  ui:parts ( :labelField :orientationField :partsMultiple ) .
 
 :labelField a ui:SingleLineTextField ;
   ui:property ui:label ;
   ui:label "Menu Label" ;
   ui:required true .
 
-:orientationField a ui:SingleLineTextField ;
+:orientationField a ui:Choice ;
   ui:property ui:orientation ;
-  ui:label "Orientation (horizontal or vertical)" ;
-  ui:default "horizontal" .
-
-:linkTargetField a ui:SingleLineTextField ;
-  ui:property ui:linkTarget ;
-  ui:label "Link Target (CSS selector)" .
+  ui:from ui:Orientation ;
+  ui:label "Orientation" ;
+  ui:default ui:Horizontal .
 
 :partsMultiple a ui:Multiple ;
   ui:property ui:parts ;
@@ -65,7 +65,7 @@ ui:Menu      a :MenuItemType ; rdfs:label "Sub-menu" .
 # ── Link ──
 
 :linkForm a ui:Group ;
-  ui:parts ( :linkLabelField :hrefField :contentsField :linkHandlerField :linkIconField ) .
+  ui:parts ( :linkLabelField :hrefField :contentsField :linkIconField ) .
 
 :linkLabelField a ui:SingleLineTextField ;
   ui:property ui:label ;
@@ -79,10 +79,6 @@ ui:Menu      a :MenuItemType ; rdfs:label "Sub-menu" .
 :contentsField a ui:MultiLineTextField ;
   ui:property ui:contents ;
   ui:label "Inline HTML (contents)" .
-
-:linkHandlerField a ui:SingleLineTextField ;
-  ui:property ui:handler ;
-  ui:label "Handler component (e.g. sol-query)" .
 
 :linkIconField a ui:SingleLineTextField ;
   ui:property ui:icon ;
@@ -135,10 +131,11 @@ ui:Menu      a :MenuItemType ; rdfs:label "Sub-menu" .
   ui:label "Label" ;
   ui:required true .
 
-:subOrientationField a ui:SingleLineTextField ;
+:subOrientationField a ui:Choice ;
   ui:property ui:orientation ;
-  ui:label "Orientation (horizontal or vertical)" ;
-  ui:default "vertical" .
+  ui:from ui:Orientation ;
+  ui:label "Orientation" ;
+  ui:default ui:Vertical .
 
 :subPartsMultiple a ui:Multiple ;
   ui:property ui:parts ;

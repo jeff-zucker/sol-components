@@ -1,7 +1,6 @@
 <#MyMenu> a **ui:Menu**; ui:label "main-menu" ;
-  ui:parts ( <#MyPlainLink> <#MySubmenu> <#MyComponentLink> ) ;
-  ui:style "text-align:right;" ;
-  **ui:linkTarget** "#myDisplayArea" .
+  ui:parts ( <#MyPlainLink> <#MySubmenu> <#MyComponentItem> ) ;
+  ui:style "text-align:right;" .
   
 <#MyPlainLink> a **ui:Link**; ui:label "Home" ;
   **ui:href** <./data/home.html> ;
@@ -10,9 +9,9 @@
 <#MySubMenu> a ui:Menu; ui:label "Settings" ;
   ui:parts ( <#Light> <#Dark> );
 
-<#MyComponentLink> a ui:Link;  ui:label "sample data table" ;
-  ui:href <./data/sample-data.ttl> ;
-  **ui:component** "sol-table" .
+<#MyComponentItem> a **ui:Component**;  ui:label "sample data table" ;
+  **ui:name** "sol-table" ;
+  **ui:attribute** [ schema:name "source" ; schema:value "./data/sample-data.ttl" ] .
 
 <#Light> a ui:Link; ui:label "Light" ;
   ui:contents "you chose the 'Light' side)" .

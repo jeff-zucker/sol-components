@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-settings Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>sol-settings component</h1>
+  <p>A zero-config settings page. Drop one <code>&lt;sol-settings&gt;</code> on a
+  page and it discovers every editable <code>sol-*</code> widget already in the
+  DOM and renders one accordion panel to edit each — no wiring, no per-widget
+  configuration.</p>
+
+  <h2>Usage</h2>
+  <pre><code>&lt;sol-weather place="Portland, OR"&gt;&lt;/sol-weather&gt;
+&lt;sol-menu from-rdf="data/menu.ttl#MainMenu" region="#main"&gt;&lt;/sol-menu&gt;
+
+&lt;sol-settings&gt;&lt;/sol-settings&gt;</code></pre>
+  <p>On connect, <code>sol-settings</code> walks the document — <b>crossing into
+  every shadow root</b> — for elements whose custom-element class declares an
+  editor. Here it finds the weather card and the menu, and builds a panel for
+  each. It takes <b>no attributes</b>.</p>
+
+  <h2>How a component becomes editable</h2>
+  <p>A component opts in by declaring, on its class, one of:</p>
+  <table class="attr-table">
+    <thead><tr><th>Declaration</th><th>Editor used</th></tr></thead>
+    <tbody>
+      <tr><td><code>static get shape()</code> → a SHACL URL</td>
+          <td><code>sol-form</code> in shape-driven mode (e.g. sol-weather, sol-time).</td></tr>
+      <tr><td><code>static get editor()</code> → <code>{ tag, subjectAttr, attrs }</code></td>
+          <td>that explicit editor element (e.g. sol-menu → <code>sol-tree-edit</code> over <code>menu.shacl</code>).</td></tr>
+      <tr><td><code>static get editor()</code> → a <code>ui:Form</code> TTL URL</td>
+          <td><code>sol-form</code> in form-driven mode (legacy).</td></tr>
+      <tr><td><code>static get editor()</code> → <code>{ inline: true }</code></td>
+          <td>opts out — not shown in settings.</td></tr>
+    </tbody>
+  </table>
+  <p>Each panel's editor is <b>lazy-mounted on first expand</b>, wired with the
+  host widget's <code>source</code> / <code>from-rdf</code> as the subject being
+  edited. The panel label comes from the widget's <code>label</code> attribute,
+  else its tag name.</p>
+
+  <h2>Saving</h2>
+  <p>Edits save through the editor's normal path (sol-form PATCHes via
+  <code>kb.updater</code>). When an embedded editor emits
+  <code>sol-form-save</code>, <code>sol-settings</code> calls
+  <code>reload()</code> on the corresponding live widget so the page reflects
+  the change immediately.</p>
+
+  <h2>Discovery timing</h2>
+  <p>Discovery only sees widgets present in the DOM when it runs. Two notes:</p>
+  <ul>
+    <li>Widgets kept in a <b>keep-alive region pane</b> (mounted but hidden) stay
+    discoverable across navigation; widgets torn down on nav-away are not.</li>
+    <li><code>refresh()</code> re-walks and rebuilds if the widget set changed —
+    cheap no-op otherwise. It runs automatically on <code>sol-tab-activate</code>
+    (so navigating to the settings tab picks up newly-mounted widgets); call it
+    yourself after mounting an editable widget late.</li>
+  </ul>
+
+  <p>See it in context in data-kitchen's Settings, which lists every chrome
+  widget (menu, weather, clock, search, proxy defaults, …) from a single
+  <code>&lt;sol-settings&gt;</code>.</p>
+
+</body>
+</html>

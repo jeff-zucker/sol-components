@@ -45,19 +45,37 @@ export function rdfComponent(store, node) {
   return { tag, params };
 }
 
+// The fragment of a subject IRI (e.g. ".../menu.ttl#Settings" → "Settings"),
+// used as the item's stable id so an HTML region can claim it via data-for.
+function fragmentOf(node) {
+  const v = (node && node.value) || '';
+  const i = v.indexOf('#');
+  return i >= 0 ? v.slice(i + 1) : null;
+}
+
+// Normalize a ui:orientation value to the "horizontal"/"vertical" token used
+// by the HTML attribute layer. Accepts a ui:Orientation instance IRI
+// (ui:Horizontal → "horizontal") or a legacy literal ("horizontal").
+function orientationToken(v) {
+  if (!v) return null;
+  const local = v.includes('#') ? v.slice(v.indexOf('#') + 1) : v;
+  return local.toLowerCase();
+}
+
 /**
  * Parse a ui:Menu's parts into a tree of plain item descriptions.
  *
  * Each description has one of these shapes (no functions, no DOM):
  *
- *   { type: 'submenu',   name, children: [...] }
- *   { type: 'component', name, icon, tag, params, linkTarget }
- *   { type: 'link',      name, icon, href, contents, handlerTag, handlerParams, linkTarget }
+ *   { type: 'submenu',   id, name, children: [...] }
+ *   { type: 'component', id, name, icon, tag, params }
+ *   { type: 'link',      id, name, icon, href, contents }
  *
- * The host element is responsible for wrapping leaves with their render
- * closures (it owns the DOM and any handler-loading logic).
+ * No display info lives in the RDF — `where/how/lifetime` are resolved from
+ * the HTML at render time (region= cascade, data-for, surface keywords). `id`
+ * is the item's IRI fragment, the join key an HTML region uses to claim it.
  */
-export function parseMenuItems(store, menuNode, rootLinkTarget = null) {
+export function parseMenuItems(store, menuNode) {
   const partsNode = store.any(menuNode, rdf.sym(UI + 'parts'));
   if (!partsNode) return [];
   const parts = rdfListElements(store, partsNode);
@@ -68,47 +86,24 @@ export function parseMenuItems(store, menuNode, rootLinkTarget = null) {
 
   for (const part of parts) {
     const partType = store.any(part, typeNode);
+    const id       = fragmentOf(part);
     const label    = rdfVal(store, part, 'label') || part.value;
     const icon     = rdfVal(store, part, 'icon');
 
     if (partType && partType.value === menuType.value) {
-      items.push({
-        type: 'submenu',
-        name: label,
-        children: parseMenuItems(store, part, rootLinkTarget),
-      });
+      items.push({ type: 'submenu', id, name: label, children: parseMenuItems(store, part) });
       continue;
     }
 
     if (partType && partType.value === componentType.value) {
       const { tag, params } = rdfComponent(store, part);
-      const keepAliveLit = rdfVal(store, part, 'keepAlive');
-      items.push({
-        type: 'component',
-        name: label,
-        icon,
-        tag,
-        params,
-        linkTarget: rootLinkTarget,
-        keepAlive: keepAliveLit === 'true' || keepAliveLit === '1',
-      });
+      items.push({ type: 'component', id, name: label, icon, tag, params });
       continue;
     }
 
-    const href        = rdfVal(store, part, 'href');
-    const handlerNode = store.any(part, rdf.sym(UI + 'handler'));
-    const { tag: handlerTag, params: handlerParams } = rdfComponent(store, handlerNode);
-    const contents    = rdfVal(store, part, 'contents');
-    items.push({
-      type: 'link',
-      name: label,
-      icon,
-      href,
-      contents,
-      handlerTag,
-      handlerParams,
-      linkTarget: rootLinkTarget,
-    });
+    const href     = rdfVal(store, part, 'href');
+    const contents = rdfVal(store, part, 'contents');
+    items.push({ type: 'link', id, name: label, icon, href, contents });
   }
   return items;
 }
@@ -117,7 +112,7 @@ export function parseMenuItems(store, menuNode, rootLinkTarget = null) {
  * Resolve `uri` (optionally relative to `baseUri`), fetch the RDF doc,
  * locate the menu root (by fragment or by ui:Menu type), and parse it.
  *
- * @returns {Promise<null | { items, orientation, linkTarget }>}
+ * @returns {Promise<null | { items, orientation }>}
  *   `null` if no ui:Menu is found in the document.
  */
 export async function loadMenuFromUri(uri, baseUri = null) {
@@ -143,8 +138,7 @@ export async function loadMenuFromUri(uri, baseUri = null) {
   }
   if (!root) return null;
 
-  const linkTarget  = rdfVal(store, root, 'linkTarget');
-  const orientation = rdfVal(store, root, 'orientation') || 'horizontal';
-  const items       = parseMenuItems(store, root, linkTarget);
-  return { items, orientation, linkTarget };
+  const orientation = orientationToken(rdfVal(store, root, 'orientation')) || 'horizontal';
+  const items       = parseMenuItems(store, root);
+  return { items, orientation };
 }

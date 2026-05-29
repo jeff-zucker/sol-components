@@ -5,92 +5,41 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX ui: <http://www.w3.org/ns/ui#>
 
 shape <#MenuShape> -> ui:Menu {
-	ui:label xsd:string [1..1] %
-		sh:name "label" ;
-		sh:description "The display label for the menu"
-	% .
-	ui:parts [1..1] @<#MenuPartsCollectionShape> %
-		sh:name "parts" ;
-		sh:description "Ordered collection of ui:Link, ui:Component, and/or ui:Menu items"
-	% .
-	ui:orientation xsd:string [0..1] in=["horizontal" "vertical"] %
-		sh:name "orientation" ;
-		sh:description "Layout orientation: horizontal (default) or vertical"
-	% .
-	ui:linkTarget xsd:string [0..1] %
-		sh:name "link target" ;
-		sh:description "CSS selector where content should render instead of built-in panel"
-	% .
+    ui:label xsd:string [1..1] % sh:name "label" ; sh:description "The display label for the menu" % .
+    ui:parts [1..1] @<#MenuPartsCollectionShape> % sh:name "parts" ; sh:description "Ordered collection of ui:Link, ui:Component, and/or ui:Menu items" % .
+    ui:orientation [0..1] in=[ui:Horizontal ui:Vertical] % sh:name "orientation" ; sh:description "Layout orientation: ui:Horizontal (default) or ui:Vertical" % .
 }
 shape <#MenuPartsCollectionShape> {
-	rdf:rest* hasValue=rdf:nil .
-	rdf:first ui:Link|ui:Component|ui:Menu .
+    rdf:rest* hasValue=rdf:nil .
+    rdf:first ui:Link|ui:Component|ui:Menu .
 }
 shape <#LinkShape> -> ui:Link ;
-	sh:xone ([
-		sh:property [
-			sh:path ui:href ;
-			sh:minCount 1
-		]
-	] [
-		sh:property [
-			sh:path ui:contents ;
-			sh:minCount 1
-		]
-	]) {
-	message="A ui:Link must have either ui:href or ui:contents" .
-	ui:label xsd:string [1..1] %
-		sh:name "label" ;
-		sh:description "The display label for the link"
-	% .
-	ui:href xsd:anyURI [0..1] %
-		sh:name "href" ;
-		sh:description "URL to load (via handler component if present)"
-	% .
-	ui:contents rdf:HTML [0..1] %
-		sh:name "contents" ;
-		sh:description "Literal HTML rendered inline (sanitized by default)"
-	% .
-	ui:handler ui:Component [0..1] %
-		sh:name "handler" ;
-		sh:description "Component used to render the href once fetched"
-	% .
-	ui:icon xsd:anyURI [0..1] %
-		sh:name "icon" ;
-		sh:description "Icon URL"
-	% .
-	rdfs:comment xsd:string [0..1] %
-		sh:description "Description of the Link"
-	% .
-	dcterms:subject skos:Concept %
-		sh:description "Categories associated with the Link"
-	% .
+    sh:xone ([
+        sh:property [
+            sh:path ui:href ;
+            sh:minCount 1
+        ]
+    ] [
+        sh:property [
+            sh:path ui:contents ;
+            sh:minCount 1
+        ]
+    ]) {
+    message="A ui:Link must have either ui:href or ui:contents" .
+    ui:label xsd:string [1..1] % sh:name "label" ; sh:description "The display label for the link" % .
+    ui:href xsd:anyURI [0..1] % sh:name "href" ; sh:description "URL to load (via handler component if present)" % .
+    ui:contents rdf:HTML [0..1] % sh:name "contents" ; sh:description "Literal HTML rendered inline (sanitized by default)" % .
+    ui:icon xsd:anyURI [0..1] % sh:name "icon" ; sh:description "Icon URL" % .
+    rdfs:comment xsd:string [0..1] % sh:description "Description of the Link" % .
+    dcterms:subject skos:Concept % sh:description "Categories associated with the Link" % .
 }
 shape <#ComponentShape> -> ui:Component {
-	ui:label xsd:string [1..1] %
-		sh:name "label" ;
-		sh:description "Display name shown in the menu"
-	% .
-	ui:name xsd:string [1..1] %
-		sh:name "name" ;
-		sh:description "Custom element tag name (e.g., 'sol-query', 'pos-picture')"
-	% .
-	ui:attribute @<#PropertyValueShape> %
-		sh:name "attribute" ;
-		sh:description "Attributes passed to the element as schema:PropertyValue pairs"
-	% .
-	ui:icon xsd:anyURI [0..1] %
-		sh:name "icon" ;
-		sh:description "Icon URL"
-	% .
+    ui:label xsd:string [1..1] % sh:name "label" ; sh:description "Display name shown in the menu" % .
+    ui:name xsd:string [1..1] % sh:name "name" ; sh:description "Custom element tag name (e.g., 'sol-query', 'pos-picture')" % .
+    ui:attribute @<#PropertyValueShape> % sh:name "attribute" ; sh:description "Attributes passed to the element as schema:PropertyValue pairs" % .
+    ui:icon xsd:anyURI [0..1] % sh:name "icon" ; sh:description "Icon URL" % .
 }
 shape <#PropertyValueShape> {
-	schema:name xsd:string [1..1] %
-		sh:name "name" ;
-		sh:description "Attribute name"
-	% .
-	schema:value [1..1] %
-		sh:name "value" ;
-		sh:description "Attribute value"
-	% .
+    schema:name xsd:string [1..1] % sh:name "name" ; sh:description "Attribute name" % .
+    schema:value [1..1] % sh:name "value" ; sh:description "Attribute value" % .
 }

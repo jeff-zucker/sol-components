@@ -30,17 +30,9 @@
   sh:property [
     sh:path ui:orientation ;
     sh:maxCount 1 ;
-    sh:datatype xsd:string ;
-    sh:in ( "horizontal" "vertical" ) ;
+    sh:in ( ui:Horizontal ui:Vertical ) ;
     sh:name "orientation" ;
-    sh:description "Layout orientation: horizontal (default) or vertical" ;
-  ] ;
-  sh:property [
-    sh:path ui:linkTarget ;
-    sh:maxCount 1 ;
-    sh:datatype xsd:string ;
-    sh:name "link target" ;
-    sh:description "CSS selector where content should render instead of built-in panel" ;
+    sh:description "Layout orientation: ui:Horizontal (default) or ui:Vertical" ;
   ] .
 
 :MenuPartsCollectionShape
@@ -82,13 +74,6 @@
     sh:datatype rdf:HTML ;
     sh:name "contents" ;
     sh:description "Literal HTML rendered inline (sanitized by default)" ;
-  ] ;
-  sh:property [
-    sh:path ui:handler ;
-    sh:maxCount 1 ;
-    sh:class ui:Component ;
-    sh:name "handler" ;
-    sh:description "Component used to render the href once fetched" ;
   ] ;
   sh:property [
     sh:path ui:icon ;

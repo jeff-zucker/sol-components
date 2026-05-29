@@ -124,28 +124,20 @@ export const CSS = `
     display: flex;
   }
 
-  .sol-menu-content {
+  /* The content area is a light-DOM child of <sol-menu>, projected through
+     the shadow slot, so menu-click results land in light DOM and are
+     reachable by page CSS and document queries. Style it directly with
+     sol-menu > .sol-menu-content { ... } — there is no part() hook.
+     overflow:hidden (not auto) by default: app chrome doesn't scroll;
+     components placed inside scroll on their own. */
+  slot { display: contents; }
+  ::slotted(.sol-menu-content) {
     flex: 1 1 0; min-height: 0; min-width: 0;
     max-width: 100%;
     display: flex; flex-direction: column;
-    /* overflow:hidden (not auto) by default: demo / app chrome
-       doesn't scroll; components placed inside scroll on their own.
-       Hosts that want the old "tab body scrolls" behavior can opt
-       in via the exposed "content" part hook with
-       sol-menu::part(content) { overflow: auto }. */
     overflow: hidden;
     padding: var(--menu-content-padding, var(--space-xl, 16px) var(--space-xl, 16px));
     box-sizing: border-box;
-  }
-  .sol-menu-content > * {
-    min-width: 0; max-width: 100%;
-  }
-  .sol-menu-content img,
-  .sol-menu-content video,
-  .sol-menu-content iframe,
-  .sol-menu-content table,
-  .sol-menu-content pre {
-    max-width: 100%;
   }
 `;
 

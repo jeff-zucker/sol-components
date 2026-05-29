@@ -5,25 +5,10 @@ PREFIX time: <http://www.w3.org/2006/time#>
 PREFIX ui: <http://www.w3.org/ns/ui#>
 
 shape <#CalendarSettingsShape> {
-	targetSubjectsOf=dct:source .
-	dct:source IRI [1..*] %
-		sh:name "Source feed URL" ;
-		sh:description "ICS feed URL. Repeats — one value per feed."
-	% .
-	dct:format xsd:string [1..1] in=["ics" "google"] %
-		sh:name "Feed format" ;
-		sh:description "ics or google — selects the parser sol-calendar uses."
-	% .
-	ui:view xsd:string [1..1] in=["agenda" "month" "week" "day"] %
-		sh:name "View" ;
-		sh:description "Display mode: agenda, month, week, or day."
-	% .
-	time:days xsd:integer [1..1] %
-		sh:name "Window (days)" ;
-		sh:description "How many days of events to fetch and display."
-	% .
-	schema:numberOfItems xsd:integer [0..1] %
-		sh:name "Max events" ;
-		sh:description "Optional cap on rendered events."
-	% .
+    targetSubjectsOf=dct:source .
+    dct:source IRI [1..*] % sh:name "Source feed URL" ; sh:description "ICS feed URL. Repeats — one value per feed." % .
+    dct:format xsd:string [1..1] in=["ics" "google"] % sh:name "Feed format" ; sh:description "ics or google — selects the parser sol-calendar uses." % .
+    ui:view xsd:string [1..1] in=["agenda" "month" "week" "day"] % sh:name "View" ; sh:description "Display mode: agenda, month, week, or day." % .
+    time:days xsd:integer [1..1] % sh:name "Window (days)" ; sh:description "How many days of events to fetch and display." % .
+    schema:numberOfItems xsd:integer [0..1] % sh:name "Max events" ; sh:description "Optional cap on rendered events." % .
 }

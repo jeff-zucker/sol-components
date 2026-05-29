@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-button Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "rdflib":     "../dist/vendor/rdflib.js",
+      "n3":         "../dist/vendor/n3.js",
+      "dompurify":  "../dist/vendor/dompurify.js",
+      "marked":     "../dist/vendor/marked.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import '../web/sol-include.js';
+    import '../web/sol-modal.js';
+    import '../web/sol-window.js';
+    import '../web/sol-button.js';
+  </script>
+</head>
+<body class="scroll-help">
+
+  <h1>sol-button component</h1>
+  <p>A declarative launcher: a trigger button that, on click, renders content
+  into a <b>region</b>. What renders is the <code>handler</code> (a component,
+  defaulting to <code>sol-include</code>); where it lands is <code>region</code>
+  — a CSS selector (a pane on the page) or a keyword that conjures an ephemeral
+  surface (<code>modal</code> / <code>floating</code> / <code>tab</code> /
+  <code>window</code>) with no host element to author.</p>
+
+  <h2>Live demo</h2>
+  <div class="demo-area" style="display:flex; gap:1rem; align-items:flex-start;">
+    <sol-button source="../shapes/menu-terms.md" raw region="modal" name="Menu terms">Open in a modal →</sol-button>
+    <sol-button source="../shapes/menu-terms.md" raw region="#bt-pane" name="terms">Load into the pane →</sol-button>
+  </div>
+  <div id="bt-pane" style="margin-top:.5rem; border:1px solid var(--border,#ccc); min-height:3rem; padding:.5rem;"></div>
+
+  <h2>Attributes</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>handler</code></td>
+          <td>Tag of the component to mount. Optional — when omitted it's inferred
+              from <code>source</code>: same-origin → trusted <code>sol-include</code>,
+              external URL → <code>iframe</code>.</td></tr>
+      <tr><td><code>region</code></td>
+          <td>Where the result surfaces. A <b>CSS selector</b> → render into that
+              pane (a keep-alive tab). Or a <b>keyword</b> — <code>modal</code>,
+              <code>floating</code>, <code>tab</code>, <code>window</code> — conjured
+              on click, no host element needed. Resolved by cascade: this attribute
+              → a parent <code>[region]</code> container → an enclosing
+              <code>&lt;sol-menu&gt;</code> → <code>&lt;sol-default region&gt;</code>.</td></tr>
+      <tr><td><code>source</code></td>
+          <td>Forwarded to the handler (e.g. <code>sol-include</code>'s <code>source</code>).</td></tr>
+      <tr><td><code>name</code></td>
+          <td>Wrapper id (<code>data-menu-item</code>) for the pane tab; defaults to
+              the element's <code>id</code>, else a slug of <code>source</code>.</td></tr>
+      <tr><td><code>replace</code></td>
+          <td>Rebuild a pane wrapper's contents on every click instead of reusing
+              (keep-alive) them.</td></tr>
+    </tbody>
+  </table>
+  <p>Every <i>other</i> attribute is forwarded to the handler element, so authoring
+  a launcher is like inlining the handler. The trigger is exposed as
+  <code>::part(trigger)</code>. On activation it fires <code>sol-button-activate</code>
+  (detail: <code>{ name, handler, wrapper }</code>).</p>
+
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- same-origin page into a pane (trusted sol-include) --&gt;
+&lt;sol-button source="pages/settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
+
+&lt;!-- pop a component in a modal, no host element --&gt;
+&lt;sol-button handler="sol-query" source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;
+
+&lt;!-- external site → iframe inferred --&gt;
+&lt;sol-button source="https://solidproject.org" region="#main"&gt;Website&lt;/sol-button&gt;
+
+&lt;!-- a group of buttons sharing one region, declared once --&gt;
+&lt;div data-region="#aux"&gt;
+  &lt;sol-button source="a.html"&gt;A&lt;/sol-button&gt;
+  &lt;sol-button source="b.html"&gt;B&lt;/sol-button&gt;
+&lt;/div&gt;</code></pre>
+
+  <p>A pane region is an element the page declares (<code>&lt;main id="main"&gt;</code>);
+  the keyword surfaces (<code>modal</code>/<code>floating</code>) are the
+  <code>&lt;sol-modal&gt;</code> / <code>&lt;sol-window&gt;</code> hosts, conjured per
+  click. Style a pane's contents directly with ordinary CSS — the mounted result
+  is light DOM.</p>
+
+</body>
+</html>

@@ -49,6 +49,7 @@
 import { CSS, sheet as MODAL_SHEET } from './styles/sol-modal-css.js';
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
+import './sol-include.js'; // source mode renders content through <sol-include>
 
 const OWN_ATTRS = new Set(['title', 'size', 'component', 'content', 'source', 'handler']);
 
@@ -172,14 +173,16 @@ class SolModal extends HTMLElement {
         body.appendChild(el);
         host._emitReady(body, 'component', el);
       } else if (source != null) {
-        body.textContent = 'Loading...';
-        fetch(source)
-          .then(r => r.text())
-          .then(html => {
-            body.innerHTML = html;
-            host._emitReady(body, 'source', null);
-          })
-          .catch(() => { body.textContent = 'Failed to load ' + source; });
+        // Render through <sol-include> rather than a bare fetch, so the
+        // modal gets HTML/Markdown handling, the `selector` filter,
+        // DOMPurify sanitization (unless `trusted`), and Solid auth-fetch.
+        const inc = document.createElement('sol-include');
+        inc.setAttribute('source', source);
+        if (host.hasAttribute('selector')) inc.setAttribute('selector', host.getAttribute('selector'));
+        if (host.hasAttribute('trusted'))  inc.setAttribute('trusted', '');
+        inc.className = 'modal-body-component';
+        body.appendChild(inc);
+        host._emitReady(body, 'source', inc);
       } else if (content != null) {
         body.innerHTML = content;
         host._emitReady(body, 'content', null);

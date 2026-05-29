@@ -1,0 +1,145 @@
+@prefix schema: <http://schema.org/> .
+@prefix : <#> .
+
+# Settings for <sol-calendar>. Each setting is a schema:PropertyValue with
+# a schema:name (the label the component dispatches on) and a schema:value
+# (the actual value). <#Settings> is the container subject the `source`
+# attribute resolves to via its #fragment.
+#
+# ─────────────────────────────────────────────────────────────────────
+# `source` must be an iCalendar (ICS) export URL — a feed that returns
+# `text/calendar` starting with BEGIN:VCALENDAR. **It is NOT the URL of
+# the calendar page in your browser** (those look like
+# https://calendar.google.com/calendar/u/0/r/month/…, return HTML, and
+# will fail with "Proxy returned a non-ICS body" or similar).
+#
+# Where to find the right URL:
+#
+#   Google
+#     calendar.google.com → hover the calendar in "My calendars" → ⋮ →
+#     Settings and sharing → scroll to "Integrate calendar".
+#       • "Secret address in iCal format"  — works for ANY calendar
+#         (public or private). The long token in the URL IS the
+#         credential, so being logged in to Google in another tab does
+#         NOT grant access — the secret URL does. Treat it like a
+#         password: don't commit it to a public repo, don't share it.
+#         Rotate it from the same settings page if it leaks.
+#       • "Public address in iCal format" — only after ticking "Make
+#         available to public" above. Safe to share.
+#     Shortcut: for a PUBLIC calendar, set provider="google" +
+#     calendar-id="<email-or-id>" and omit `source`; the component
+#     builds the public URL itself. Secret URLs must be pasted into
+#     `source` verbatim.
+#
+#   Apple iCloud — Calendar app → right-click the calendar → Share
+#     Calendar → Public Calendar → copy URL → swap `webcal://` for
+#     `https://`.
+#
+#   Outlook — outlook.live.com → Settings → Calendar → Shared
+#     calendars → Publish a calendar → copy the ICS link.
+#
+#   Proton  — calendar.proton.me → calendar settings → Share publicly
+#     → copy the "Subscribe with calendar app" link.
+#
+#   Self-hosted / Solid pod — any URL that returns text/calendar.
+#
+# Sanity check: `curl <url>` should print lines starting with
+# BEGIN:VCALENDAR, VERSION:2.0, ... If it returns HTML, you grabbed a
+# UI link — go back and look for "iCal" / "ICS" / "Subscribe".
+# ─────────────────────────────────────────────────────────────────────
+#
+# Names in use:
+#   "source"       — the ICS URL to fetch (see above)
+#   "provider"     — "google" | "apple" | "outlook" | "proton" | "ics".
+#                    Drives the header label and, for "google", lets
+#                    you supply calendar-id instead of a full URL.
+#   "calendar-id"  — provider-specific id; for provider="google" only,
+#                    the URL is built as
+#                    https://calendar.google.com/calendar/ical/<id>/public/basic.ics
+#                    and "source" can be omitted (public calendars only)
+#   "view"         — "agenda" (only value supported in v1)
+#   "window-days"  — agenda lookahead in days
+#   "max-events"   — cap on rendered events
+#   "proxy"        — CORS proxy pattern; supports {url} token or appended URL.
+#                    Required for every provider above except a Solid
+#                    pod that sends Access-Control-Allow-Origin.
+#   "time-zone"    — IANA TZ override (defaults to browser)
+#   "locale"       — BCP-47 locale (defaults to browser)
+#
+# Any HTML attribute on the element overrides the matching PropertyValue.
+# The PropertyValue pattern keeps the file free of invented predicates —
+# only standard schema.org terms appear in predicate position.
+#
+# Four records below — three single-source feeds (one per Solid-
+# community calendar from https://solidproject.org/events) plus an
+# amalgamated record that merges all three into one agenda. Point
+# `source` at whichever fragment you want the dashboard to show:
+#
+#   source="data/calendar-settings.ttl#All"       All three merged (default for dashboard)
+#   source="data/calendar-settings.ttl#SolidCG"   Solid Community Group (W3C)
+#   source="data/calendar-settings.ttl#LWS"       Linked Web Storage Working Group (W3C)
+#   source="data/calendar-settings.ttl#Extra"     "Extra Solid Events" (Google Calendar)
+#
+# Per-record settings live in blank-node PropertyValues so the records
+# don't share / collide on per-setting subject URIs. The proxy URL is
+# repeated in each record because each <#…> is a self-contained
+# settings block — sol-calendar reads only the one its fragment names.
+#
+# Multi-source: a single record may declare the "source" PropertyValue
+# more than once (or once with multiple schema:value statements) — see
+# <#All> below. sol-calendar fetches every URL in parallel, merges
+# events, and sorts by start time. A flaky single feed doesn't blank
+# the others — its failure is logged and counted in the status strip.
+
+# Amalgamated record — three "source" PropertyValues in one block.
+# sol-calendar fetches all three URLs in parallel and merges events.
+<#All>
+  schema:additionalProperty
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://www.w3.org/groups/cg/solid/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://www.w3.org/groups/wg/lws/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://calendar.google.com/calendar/ical/c_bfb1bff94af78734820e9fe79db6057dc445ae82fda9beb80b70cf67945df491%40group.calendar.google.com/public/basic.ics" ],
+    [ a schema:PropertyValue ; schema:name "provider"@en     ; schema:value "ics"      ],
+    [ a schema:PropertyValue ; schema:name "view"@en         ; schema:value "agenda"   ],
+    [ a schema:PropertyValue ; schema:name "window-days"@en  ; schema:value 60         ],
+    [ a schema:PropertyValue ; schema:name "max-events"@en   ; schema:value 200        ],
+    [ a schema:PropertyValue ; schema:name "proxy"@en        ;
+      schema:value "http://localhost:3002/proxy?uri=" ] .
+
+<#SolidCG>
+  schema:additionalProperty
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://www.w3.org/groups/cg/solid/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "provider"@en     ; schema:value "ics"      ],
+    [ a schema:PropertyValue ; schema:name "view"@en         ; schema:value "agenda"   ],
+    [ a schema:PropertyValue ; schema:name "window-days"@en  ; schema:value 30         ],
+    [ a schema:PropertyValue ; schema:name "proxy"@en        ;
+      schema:value "http://localhost:3002/proxy?uri=" ] .
+
+<#LWS>
+  schema:additionalProperty
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://www.w3.org/groups/wg/lws/calendar/export/" ],
+    [ a schema:PropertyValue ; schema:name "provider"@en     ; schema:value "ics"      ],
+    [ a schema:PropertyValue ; schema:name "view"@en         ; schema:value "agenda"   ],
+    [ a schema:PropertyValue ; schema:name "window-days"@en  ; schema:value 30         ],
+    [ a schema:PropertyValue ; schema:name "proxy"@en        ;
+      schema:value "http://localhost:3002/proxy?uri=" ] .
+
+# "Extra Solid Events" is a Google group-calendar. We could use
+# provider="google" + calendar-id="c_bfb1bf…@group.calendar.google.com"
+# and let the helper build the public-basic.ics URL, but the explicit
+# `source` is easier to verify against solidproject.org/events. The
+# provider field still drives the header label (now hidden by
+# `hide-header` in the dashboard, but useful in other pages).
+<#Extra>
+  schema:additionalProperty
+    [ a schema:PropertyValue ; schema:name "source"@en       ;
+      schema:value "https://calendar.google.com/calendar/ical/c_bfb1bff94af78734820e9fe79db6057dc445ae82fda9beb80b70cf67945df491%40group.calendar.google.com/public/basic.ics" ],
+    [ a schema:PropertyValue ; schema:name "provider"@en     ; schema:value "google"   ],
+    [ a schema:PropertyValue ; schema:name "view"@en         ; schema:value "agenda"   ],
+    [ a schema:PropertyValue ; schema:name "window-days"@en  ; schema:value 30         ],
+    [ a schema:PropertyValue ; schema:name "proxy"@en        ;
+      schema:value "http://localhost:3002/proxy?uri=" ] .

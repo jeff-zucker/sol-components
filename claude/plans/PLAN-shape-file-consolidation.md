@@ -1,5 +1,13 @@
 # Shape-file consolidation — one shape per type, `sh:targetClass` dispatch
 
+> **STATUS (2026-05-29): IMPLEMENTED.** `menu-head.shacl` + `menu-items.shacl`
+> removed; `menu.shacl` is the single source (targetClass-keyed Menu/Link/
+> Component NodeShapes). `sol-tree-edit` selects the head NodeShape by the
+> root's `sh:targetClass` (passes `{subject, dataStore}` to `parseShape`) and
+> drops the items predicate (`ui:parts`) from the head form. `sol-menu`'s
+> editor points both `head-shape` and `item-shape` at `menu.shacl`. Verified
+> live in dk.
+
 ## Motivation
 
 Today, editable trees need **two separate SHACL files** that have

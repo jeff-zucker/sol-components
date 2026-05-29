@@ -2,7 +2,7 @@
 @prefix schema: <http://schema.org/> .
 
 <#MainMenu> a ui:Menu; ui:label "demo-menu" ;
-  ui:orientation "horizontal" ;
+  ui:orientation ui:Horizontal ;
   ui:parts ( <#Home> <#DataMenu> <#About> ) .
 
 <#Home> a ui:Link; ui:label "Home" ;
@@ -27,9 +27,8 @@
 <#SampleTriples> a ui:Link; ui:label "People (raw triples)" ;
   ui:href <./sample-data.ttl> .
 
-<#About> a ui:Link; ui:label "About" ;
-  ui:href <./sample-buttons.html> ;
-  ui:handler [
-    ui:name "sol-include" ;
-    ui:attribute [ schema:name "trusted" ; schema:value "" ]
-  ] .
+<#About> a ui:Component; ui:label "About" ;
+  ui:name "sol-include" ;
+  ui:attribute
+    [ schema:name "source" ; schema:value "./sample-buttons.html" ] ,
+    [ schema:name "trusted" ; schema:value "" ] .

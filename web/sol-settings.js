@@ -11,12 +11,20 @@
  *
  * No configuration: drop a `<sol-settings></sol-settings>` anywhere
  * on the page; widgets elsewhere on the page are picked up
- * automatically. Hosts can use `sol-menu`'s `ui:keepAlive` so widgets
- * stay mounted (hidden) when the user navigates to the settings page;
+ * automatically. Hosts can render widgets into a keep-alive region pane so
+ * they stay mounted (hidden) when the user navigates to the settings page;
  * otherwise discovery only sees widgets currently in the DOM.
  *
  * Attributes:
  *   none
+ *
+ * Methods:
+ *   refresh() — re-walk and rebuild the accordion if the widget set
+ *               has changed (signature: tag + subject). Cheap no-op
+ *               when nothing changed. Use from consumer code when a
+ *               new editable widget is mounted after sol-settings
+ *               connected. (Tab activation triggers this automatically
+ *               via the sol-tab-activate listener.)
  *
  * Events (consumed):
  *   sol-form-save — bubbling from any embedded editor; triggers
@@ -90,6 +98,8 @@ class SolSettings extends HTMLElement {
     if (sig === this._lastSignature) return;
     this._build();
   }
+
+  refresh() { this._rebuildIfChanged(); }
 
   _empty() {
     const note = document.createElement('p');

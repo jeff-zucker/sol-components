@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-include Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+
+
+<body>
+
+  <h1>sol-include component</h1>
+  <p> Fetches any text-based document and displays its content inline.
+  Supports authenticated Solid fetch; DOMPurify sanitization; CSS/RDFa 
+  selector to filter documents before rendering.  Using <i>sol-include</i> 
+  to nest components supports robust modular page creation.
+  </ul>
+<!-- 
+<sol-include source="data/sample-html.html"></sol-include>
+<sol-include source="data/sample-html.html" trusted></sol-include>
+-->
+  <div class="api-block">
+    <table class="attr-table">
+      <thead><tr><th>Attribute</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="#source">source</a></td>
+          <td>The URL of a text-based file to fetch and render inline.</td>
+        </tr>
+        <tr>
+          <td><a href="#selector">selector</a></td>
+          <td>A CSS/RDFa selector applied as a filter to the content.</td>
+        </tr>
+        <tr>
+          <td><a href="#raw">raw</a></td>
+          <td>Display source text verbatim in a <i>&lt;pre&gt;</i> block sanitized, but not parsed.</td>
+        </tr>
+        <tr>
+          <td><a href="#trusted">trusted</a></td>
+          <td>Skip DOMPurify sanitization.</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+<!--
+  <nav class="page-nav" aria-label="Page sections">
+    Required attribute : <a href="#source">source</a>
+    Optional attributes : <a href="#selector">selector</a> <a href="#raw">raw</a> <a href="#trusted">trusted</a>
+  </nav>
+-->
+  <nav class="page-nav" aria-label="Page sections">
+    <b>See Also : <a href="#components">including nested components</a></b>
+  </nav>
+
+<h2>Attributes</h2>
+
+<h3 id="source">source attribute</h3>
+<p>The <code>source</code> attribute is the URL of a text-based file to fetch and render inline. If the source is markdown, it will be converted to HTML.</p>
+<div class="usage-section">
+    Fetch and render an HTML page inline.
+    <pre><code>&lt;sol-include <i>source</i>="https://example.org/article.html"&gt;&lt;/sol-include&gt;</code></pre>
+</div>
+
+<h3 id="selector">selector attribute</h3>
+<p>The <code>selector</code> attribute is a CSS/RDFa selector applied as a filter to the content.</p>
+<div class="usage-section">
+   Fetch an HTML page but only render the first &lt;article&gt.
+    <pre><code>&lt;sol-include
+  source="https://example.org/blog.html"
+  <i>selector</i>="article:first-of-type"
+&gt;&lt;/sol-include&gt;</code></pre>
+Fetch an HTML page and filter by an RDFa attribute.
+<pre><code>&lt;sol-include
+    source="https://solidproject.org/TR/index.html"
+   <i>selector</i>='a[typeof="doap:Specification"]'
+>&lt;/sol-include></code></pre>
+</div>
+
+<h3  id="raw">raw attribute</h3>
+The <code>raw</code> attribute shows the source as plain text in a &lt;pre> block. Useful for displaying the raw source of Markdown/HTML.
+<div class="usage-section">
+    <pre><code>&lt;sol-include source="script.js" <i>raw</i>>&lt;/sol-include></code></pre>
+</div>
+
+<h3  id="trusted">trusted attribute</h3>
+The <code>trusted</code> attribute disables the DOMPurify sanitizer.  An HTML page containing javascript included without this attribute will treat the javascript a plain text.  With this attribute, the javasript will execute on load. Use only with trusted sources.
+<div class="usage-section">
+    <pre><code>&lt;sol-include source="script-containing.html" <i>trusted</i>>&lt;/sol-include></code></pre>
+</div>
+<p>
+<code>trusted</code> also switches the rendered content from
+<em>shadow DOM</em> to <em>light DOM</em>, so host stylesheets
+apply to the included markup. A consumer page can put
+<code>.my-class</code> rules in its main stylesheet and they
+reach the trusted content. Untrusted content stays in shadow
+for isolation, where it is reachable only through CSS custom
+properties.
+</p>
+
+<h2 id="components">Including nested components</h2>
+<p>It is possible to sol-include an html document that has its own sol-include statements as well as other web-components.  If, and only if, the document is marked as <code>trusted</code>, these components will be activated on inclusion.</p>
+<p style="border:1px solid green; padding:0.25rem; margin:auto; width:80%; font-weight:bold;margin-bottom:1rem;">
+This is a very powerful feature.  For example a main page might have sol-includes for header.html, body.html, and footer.html.  Header.html might contain a sol-login or  sol-menu component, sol-include a banner.  These includes do not need to be *sol-** components, they can be any custom element.
+</p>
+<p>
+As with Javascript, only use the <code>trusted</code> attribute for documentss you actually trust.
+</p>
+
+</body>
+</html>

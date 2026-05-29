@@ -57,14 +57,12 @@ Each <i>ui:Link</i> or <i>ui:Component</i> part becomes a tab. A nested
 <pre><b>ui:Menu</b>
   ui:label       # (required) display name
   ui:parts       # (required) ordered rdf:Collection of ui:Link, ui:Component, and/or ui:Menu items
-  ui:orientation # (optional) "horizontal" (default) or "vertical"
-  ui:linkTarget  # (optional) CSS selector; content renders there instead of the built-in panel
+  ui:orientation # (optional) ui:Horizontal (default) or ui:Vertical
 
 <b>ui:Link</b>
   ui:label       # (required) display name
-  ui:href        # (optional) URL to load (via handler component or default sol-include)
+  ui:href        # (optional) URL to load (same-origin → sol-include, external → iframe)
   ui:contents    # (optional) literal HTML rendered inline directly
-  ui:handler     # (optional) a ui:Component used to render the href
   ui:icon        # (optional) icon URL — shown by sol-menu; sol-tabs uses the label text
 
   <b>note:</b> a ui:Link must have either a ui:href or a ui:contents triple.

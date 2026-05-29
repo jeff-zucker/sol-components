@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-include Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+
+<!-- IMPORTED SCRIPTS ---------------------------------------------- -->
+  <!-- rdflib (required) : peer dep — publishes window.$rdf -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+
+  <!-- Comunica (optional) : load if using SPARQL
+  -->
+  <script src="../dist/vendor/@comunica-query-sparql.umd.js"></script>
+
+  <!-- Inrupt Auth (optional) : load if accesing restricted Solid resources
+  <script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"></script>
+  -->
+
+  <script src="../dist/solid-web-components.bundle.min.js"></script>
+<!-- ---------------------------------------------------------------- -->
+
+</head>
+<body class="query-help">
+
+  <h1>sol-query component</h1>
+
+<p>Query RDF documents and SPARQL endpoints using triple patterns, inline SPARQL strings, or stored SPARQL queries. Display results as a table, an auto-complete field, a rolodex, or other built-in or custom views. Federated queries (multiple endpoints) and replaceable query parameters are both supported. Queries are executed by Comunica and support Solid authenticated fetch when available and needed. 
+</p>
+
+  <div class="api-block">
+    <table class="attr-table">
+      <thead><tr><th>Attribute</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="#endpoint">endpoint</a></td>
+          <td>One or moe URI(s) of RDF documents or SPARQL endpoints. (required)</td>
+        </tr>
+        <tr>
+          <td><a href="#sparql">sparql</a></td>
+          <td>A SPARQL string, or URI of a stored query.</td>
+        </tr>
+        <tr>
+          <td><a href="#pattern">pattern</a></td>
+          <td>A triple pattern.</td>
+        </tr>
+        <tr>
+          <td><a href="#parameters">replaceable parameters</a></td>
+          <td>See below for using replaceable parameters.</td>
+        </tr>
+        <tr>
+          <td><a href="#view">view</a></td>
+          <td>The name of a built-in view or URI of a custom view.</td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+
+<h2>Attributes</h2>
+
+<h3 id="endpoint">endpoint attribute</h3>
+<p>The <code>endpoint</code> attribute is one or more URIs which may point to either RDF documents or SPARQL endpoints.
+<div class="usage-section">
+    Fetch all data in a single RDF document
+    <pre><code>&lt;sol-query <b>endpoint</b>="<b>https://example.org/data.ttl</b>"&gt;&lt;/sol-query&gt;</code></pre>
+</div>
+<div class="usage-section">
+    Fetch data on a single subject in an RDF document
+    <pre><code>&lt;sol-query <b>endpoint</b>="<b>https://example.org/data.ttl#MySubject</b>"&gt;&lt;/sol-query&gt;</code></pre>
+</div>
+<div class="usage-section">
+    Fetch results of query on multiple endpoints or documents
+    <pre><code>&lt;sol-query
+    <b>endpoint</b>="<b>https://example.org/endpoint1, https://example.org/endpoint2</b>"
+    sparql="https://example.org/myQueryLibrary.ttl#MyQuery"
+&gt;&lt;/sol-query&gt;</code></pre>
+</div>
+
+
+<h3 id="sparql">sparql attribute</h3>
+<p>The <code>sparql</code> attribute is either a literal SPARQL string, or the URI of a stored SPARQL query.
+
+<div class="usage-section">
+    Query using an inline SPARQL string.
+    <pre><code>&lt;sol-query
+    endpoint="https://example.org/myEndpoint"
+    <b>sparql</b>="<b>SELECT ?s ?p ?o WHERE {?s ?p ?o.}</b>"
+>&lt;/sol-query></code></pre>
+</div>
+
+<div class="usage-section">
+    Query using a stored SPARQL string.
+    <pre><code>&lt;sol-query
+    endpoint="https://example.org/myEndpoint"
+    <b>sparql</b>="<b>https://example.org/myQueryLibrary.ttl#MyQuery</b>"
+&gt;&lt;/sol-query&gt;</code></pre>
+<h4> Note </h4>When processing stored queries, the component expects the query string to be stored using the <code>rdfs:comment</code> predicate.  Consumers may want to use this <a href="../shapes/sparql.shacl">SHACL Shape for Query Libraries</a>.
+</div>
+
+<h3  id="pattern">pattern attribute</h3>
+The <code>pattern</code> attribute is a string triple pattern.
+<div class="usage-section">
+    Query using a triple pattern containing a known prefix.
+    <pre><code>&lt;sol-query
+    endpoint="https://example.org/myRDFdocument"
+    <b>pattern</b>="<b>?person schema:name ?name</b>"
+&gt;&lt;/sol-query&gt;</code></pre>
+</div>
+<div class="usage-section">
+    Query using a triple pattern containing an unknown prefix.
+    <pre><code>&lt;sol-query
+    endpoint="https://example.org/myRDFdocument"
+    <b>pattern</b>="<b>?person &lt;https://example.org/name&gt; ?name</b>"
+&gt;&lt;/sol-query&gt;</code></pre>
+</div>
+
+<h3  id="parameters">replaceable parameters</h3>
+Replaceable prameters can be specified using attributes starting with "var-".  For example, here is an HTML component specifying a parameter called "limit" to be used with the stored query shown below it.
+<div class="usage-section">
+    <pre><code>&lt;sol-query
+    endpoint="..."
+    sparql="data/myQueryLibrary.ttl#MyReplaceAbleQuery"
+    <b>var-limit="2"</b>
+&gt;&lt;/sol-query&gt;</code></pre>
+
+<pre><code><#MyReplaceAbleQuery>
+   a sparql:query ;
+   rdfs:comment """
+     PREFIX schema: &lt;http://schema.org/&gt;
+     SELECT ?name ?age ?location WHERE {
+       ?person a schema:Person;
+               schema:name ?name;
+               schema:age ?age;
+               schema:location ?location.
+     } LIMIT <b>{{limit}}</b>
+   """ .</code></pre>
+</div>
+
+<h3 id="view">view attribute</h3>
+<p>The <code>view</code> attribute is the name of a built-in view or the URI of a custom view.  Regardless of how the model is gathered (triple pattern, SPARQL, etc.) the results are presented in a view.  Here are examples of the same SPARQL query presented in a variety of interactive and non-interactive views
+
+<ul>
+<li><b>view="rolodex"</b>
+<sol-query 
+  endpoint="data/sample-data.ttl"
+  query="data/myQueries.ttl#MyBasicQuery"
+  view="rolodex"
+></sol-query>
+
+<li><b>view="auto-complete"</b>
+<sol-query
+  endpoint="data/sample-data.ttl"
+  sparql="
+     PREFIX schema: <http://schema.org/>
+     SELECT ?id ?label WHERE { ?id schema:name ?label. }
+  ";
+  placeholder="type to search names ..."
+  go-label="go"
+  view="auto-complete"
+  callback="autoCompleteCallback"
+></sol-query>
+<div id="autoCompleteResults"></div>
+<script>
+function autoCompleteCallback(uri,label){
+  const area = document.querySelector('#autoCompleteResults');
+  area.innerHTML = `<sol-query endpoint="${uri}" view="dl"></sol-query>`
+}
+</script>
+<li><b>view="table"</b>
+<sol-query 
+  endpoint="data/sample-data.ttl"
+  query="data/myQueries.ttl#MyBasicQuery"
+  view="table"
+></sol-query>
+<!--
+<sol-query 
+  endpoint="data/sample-data.ttl"
+></sol-query>
+-->
+<li><b>view="accordion"</b>
+<sol-query 
+  endpoint="data/sample-data.ttl"
+  query="data/myQueries.ttl#MyBasicQuery"
+  view="accordion"
+></sol-query>
+
+<li><b>view="dl"</b> (description list)
+<sol-query 
+  endpoint="data/sample-data.ttl"
+  query="data/myQueries.ttl#MyBasicQuery"
+  view="dl"
+></sol-query>
+</ul>
+</div>
+
+</body>
+</html>

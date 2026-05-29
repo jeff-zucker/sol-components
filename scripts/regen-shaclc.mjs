@@ -85,6 +85,18 @@ for (const shaclPath of targets) {
       cleaned = head + tail;
     }
 
+    // House style: collapse shaclc-write's multi-line `% … %` annotation
+    // blocks onto a single line — `prop type [card] % sh:name "x" ; … % .`
+    cleaned = cleaned.replace(
+      /[ ]*%\n((?:[ \t]+[^\n]*\n)+?)[ \t]*% \./g,
+      (_m, inner) => {
+        const body = inner.split('\n').map((s) => s.trim()).filter(Boolean).join(' ');
+        return ` % ${body} % .`;
+      },
+    );
+    // …and indent with 4 spaces, not tabs.
+    cleaned = cleaned.replace(/^\t+/gm, (t) => '    '.repeat(t.length));
+
     // No # comment header — per project rule, RDF files (incl. .shaclc)
     // carry no comments. The "auto-generated" fact is documented in
     // claude/ memory, not in the file.

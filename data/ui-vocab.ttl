@@ -3,72 +3,95 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-# Properties (the predicates themselves) for the chrome-level
-# preferences sol-* components consume. Declared here alongside the
-# value classes so a single owl:imports of this file gives the
-# preferences shape (and any other shape that wants these knobs)
-# everything it needs to render and validate.
+##########################
+# Configuration Settings #
+##########################
 
-ui:proxy a rdf:Property ;
+ui:proxy a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "proxy" ;
   rdfs:comment "URL prefix that wraps a target URL for CORS proxying; the target is URI-encoded onto the end." ;
   rdfs:range   xsd:string .
 
-ui:colorScheme a rdf:Property ;
+ui:colorScheme a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "color scheme" ;
-  rdfs:comment "Preferred page color scheme; the value is one of the ui:ColorScheme instances." ;
+  rdfs:comment "Preferred page color scheme; the value is a ui:ColorScheme instance, e.g. ui:DarkColorScheme." ;
   rdfs:range   ui:ColorScheme .
 
-ui:fontSize a rdf:Property ;
+ui:fontSize a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "font size" ;
-  rdfs:comment "Preferred page font size; the value is one of the ui:FontSize instances." ;
+  rdfs:comment "Preferred page font size; the value is a ui:FontSize instance, e.g. ui:SmallFont." ;
   rdfs:range   ui:FontSize .
 
-ui:editorKeys a rdf:Property ;
+ui:editorKeys a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "editor keys" ;
-  rdfs:comment "Preferred editor keybindings; the value is one of the ui:EditorKeys instances." ;
+  rdfs:comment "Preferred editor keybindings; the value is a ui:EditorKeys instance, e.g. ui:VimKeys." ;
   rdfs:range   ui:EditorKeys .
 
-ui:temperatureUnit a rdf:Property ;
+ui:temperatureUnit a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "temperature unit" ;
-  rdfs:comment "Display unit for temperature; the value is one of the ui:TemperatureUnit instances." ;
+  rdfs:comment "Display unit for temperature; the value is one a ui:TemperatureUnit instance, e.g. ui:Celcius." ;
   rdfs:range   ui:TemperatureUnit .
 
-ui:sortedBy a rdf:Property ;
+ui:sortedBy a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "sorted by" ;
-  rdfs:comment "On a SHACL sh:property describing a multi-valued container, names the inner predicate whose value orders the rolodex cards. shape-to-form sorts cards by that predicate's integer value, hides the matching inner field, and adds ↑/↓ buttons that swap values with the previous / next subject." ;
+  rdfs:comment "The field to sort on when using numbers to order, e.g schema:position for data like `<#item> schema:position 3.`" ;
   rdfs:range   rdf:Property .
 
-# Value classes — each root is an rdfs:Class whose instances are the
-# picker options. Shape files declare sh:class <root>; shape-to-form
-# translates that to ui:from <root> and solid-ui's Choice handler
-# enumerates instances at render time. Each instance's rdfs:label
-# drives the dropdown text.
-
-ui:ColorScheme a rdfs:Class ;
-  rdfs:label "Color scheme" .
+ui:ColorScheme a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Color scheme" .
+ui:FontSize a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Font size" .
+ui:EditorKeys a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Editor keys" .
+ui:TemperatureUnit a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Temperature unit" .
 
 ui:LightColorScheme  a ui:ColorScheme ; rdfs:label "Light"  .
 ui:DarkColorScheme   a ui:ColorScheme ; rdfs:label "Dark"   .
 ui:SystemColorScheme a ui:ColorScheme ; rdfs:label "System" .
 
-ui:FontSize a rdfs:Class ;
-  rdfs:label "Font size" .
-
 ui:SmallFont  a ui:FontSize ; rdfs:label "Small"  .
 ui:MediumFont a ui:FontSize ; rdfs:label "Medium" .
 ui:LargeFont  a ui:FontSize ; rdfs:label "Large"  .
-
-ui:EditorKeys a rdfs:Class ;
-  rdfs:label "Editor keys" .
 
 ui:DefaultKeys a ui:EditorKeys ; rdfs:label "Default" .
 ui:EmacsKeys   a ui:EditorKeys ; rdfs:label "Emacs"   .
 ui:VimKeys     a ui:EditorKeys ; rdfs:label "Vim"     .
 
-ui:TemperatureUnit a rdfs:Class ;
-  rdfs:label "Temperature unit" .
-
 ui:Fahrenheit a ui:TemperatureUnit ; rdfs:label "Fahrenheit" .
 ui:Celsius    a ui:TemperatureUnit ; rdfs:label "Celsius"    .
 ui:Both       a ui:TemperatureUnit ; rdfs:label "Both"       .
+
+ui:orientation a rdf:Property ; rdfs:isDefinedBy <> ;
+  rdfs:label   "orientation" ;
+  rdfs:comment "Menu layout direction; the value is a ui:Orientation instance (ui:Horizontal default, or ui:Vertical)." ;
+  rdfs:range   ui:Orientation .
+
+ui:Orientation a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Orientation" .
+ui:Horizontal a ui:Orientation ; rdfs:label "Horizontal" .
+ui:Vertical   a ui:Orientation ; rdfs:label "Vertical"   .
+
+###################
+# MENU DEFINITION #
+###################
+
+ui:Menu a rdfs:Class ; rdfs:label "Menu" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "A navigable menu or tab set consisting of ui:Links, ui:Menus, ui:Components" .
+
+ui:Link a rdfs:Class ; rdfs:label "Link" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "A menu item that loads a ui:href or renders a ui:contents literal." .
+
+ui:Component a rdfs:Class ; rdfs:label "Component" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "A menu item that instantiates the custom element named by ui:name, configured with ui:attribute pairs." .
+
+ui:href a rdf:Property ; rdfs:label "href" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "The URL a ui:Link loads." .
+
+ui:icon a rdf:Property ; rdfs:label "icon" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "Optional icon URL shown for a menu item." .
+
+
+ui:attribute a rdf:Property ; rdfs:label "attribute" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "An attribute passed to a ui:Component's element, given as a schema:PropertyValue (schema:name + schema:value)." .
+ui:parameter a rdf:Property ; rdfs:label "parameter" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "Alternate to ui:attribute for passing element parameters." .
+
+ui:view a rdf:Property ; rdfs:label "view" ; rdfs:isDefinedBy <> ;
+  rdfs:comment "A component's display mode, e.g. sol-calendar's \"agenda\" / \"month\" / \"week\" / \"day\"." .
+

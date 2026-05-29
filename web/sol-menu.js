@@ -70,10 +70,14 @@ import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-
  *
  * CSS Shadow Parts (outside theming hooks):
  *   - `nav`     — the .sol-menu-nav strip (the buttons row / column).
- *   - `content` — the .sol-menu-content body where tab content mounts.
- *     Default is `overflow: hidden` (demo / app chrome doesn't scroll);
- *     hosts that want the tab body to scroll opt in via
- *     `sol-menu::part(content) { overflow: auto }`.
+ *
+ * Content area: the `.sol-menu-content` body where a selection mounts is a
+ * LIGHT-DOM child of <sol-menu> (projected through the shadow slot), so
+ * results are reachable by page CSS / document queries. It is NOT a shadow
+ * part — style it directly, e.g. `sol-menu > .sol-menu-content { overflow: auto }`.
+ * Default is `overflow: hidden` (app chrome doesn't scroll; components
+ * inside scroll on their own). Authors may supply their own
+ * `.sol-menu-content` child; otherwise one is created.
  *
  * Horizontal-orientation nav now wraps (`flex-wrap: wrap`) instead of
  * showing a horizontal scrollbar — items overflow to a second row when
@@ -100,8 +104,8 @@ class SolMenu extends HTMLElement {
       tag: 'sol-tree-edit',
       subjectAttr: 'root',
       attrs: {
-        'head-shape':      new URL('../shapes/menu-head.shacl', import.meta.url).href,
-        'item-shape':      new URL('../shapes/menu-items.shacl', import.meta.url).href,
+        'head-shape':      new URL('../shapes/menu.shacl', import.meta.url).href,
+        'item-shape':      new URL('../shapes/menu.shacl', import.meta.url).href,
         'drill-when-type': 'http://www.w3.org/ns/ui#Menu',
         'head-label':      'Menu Heading',
         'items-label':     'menu items',
@@ -140,8 +144,17 @@ class SolMenu extends HTMLElement {
     const root = this.shadowRoot;
     root.innerHTML = `
       <div class="sol-menu-nav" part="nav" role="menubar" aria-orientation="${orient}"></div>
-      <div class="sol-menu-content" part="content" role="region"></div>`;
+      <slot></slot>`;
     adopt(root, { sheet: menuSheet, css: MENU_CSS });
+    // Content area lives in LIGHT DOM (projected through the slot) so
+    // menu-click results are reachable by page CSS / document queries. The
+    // author may supply their own `.sol-menu-content` child; else create one.
+    if (!this.querySelector(':scope > .sol-menu-content')) {
+      const content = document.createElement('div');
+      content.className = 'sol-menu-content';
+      content.setAttribute('role', 'region');
+      this.appendChild(content);
+    }
     this._rendered = true;
     this._onDocClick = (e) => {
       if (!this.contains(e.target) && !root.contains(e.target)) this._closeAllPopups();
@@ -329,7 +342,7 @@ class SolMenu extends HTMLElement {
   }
 
   get activeItem() { return this._active; }
-  get body() { return this.shadowRoot.querySelector('.sol-menu-content'); }
+  get body() { return this.querySelector(':scope > .sol-menu-content'); }
 
   _renderNav() {
     const root = this.shadowRoot;

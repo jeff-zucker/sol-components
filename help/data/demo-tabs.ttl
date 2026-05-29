@@ -7,7 +7,7 @@
 # <sol-tabs variant="sub"> strip of its own children.
 
 <#MainTabs> a ui:Menu; ui:label "demo-tabs" ;
-  ui:orientation "horizontal" ;
+  ui:orientation ui:Horizontal ;
   ui:parts ( <#Overview> <#DataGroup> <#About> ) .
 
 <#Overview> a ui:Link; ui:label "Overview" ;

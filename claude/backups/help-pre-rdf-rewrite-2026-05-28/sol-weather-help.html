@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-weather Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body class="tabbed-help help-sol-weather">
+
+  <h1>sol-weather component</h1>
+  <p class="page-intro">A compact current-conditions card: weather
+  icon &middot; place &middot; temperature &middot; max-precip
+  probability for the next <i>N</i> hours. Backed by the public
+  <a href="https://open-meteo.com/">Open-Meteo</a> API &mdash; no key
+  required. Pass <code>lat</code> + <code>lon</code> directly or let
+  the component geocode a <code>place</code> name. Refreshes every
+  ten minutes; aborts in-flight fetches on disconnect.</p>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="sol-weather documentation">
+    <button role="tab" aria-selected="true"  aria-controls="tab-card"   id="tabbtn-card">Card</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-attr"   id="tabbtn-attr"   tabindex="-1">Attributes</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-config" id="tabbtn-config" tabindex="-1">RDF config</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-data"   id="tabbtn-data"   tabindex="-1">Data source</button>
+    <button role="tab" aria-selected="false" aria-controls="tab-a11y"   id="tabbtn-a11y"   tabindex="-1">Accessibility</button>
+  </div>
+
+  <!-- ── Demo ──────────────────────────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-card" role="tabpanel" aria-labelledby="tabbtn-card" tabindex="0">
+    <div class="demo-area">
+      <sol-weather place="Portland, OR" units="both"></sol-weather>
+    </div>
+    <pre class="demo-code"><code>&lt;script src="dist/sol-full.umd.min.js"&gt;&lt;/script&gt;
+
+&lt;sol-weather
+  <i>place</i>="Portland, OR"
+  <i>units</i>="both"
+&gt;&lt;/sol-weather&gt;</code></pre>
+  </div>
+
+  <!-- ── Attributes ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
+    <div class="api-block">
+      <table class="attr-table">
+        <thead><tr><th>Attribute</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>lat</td>
+            <td>required (or <code>place</code>)</td>
+            <td>Decimal latitude (e.g. <code>45.52</code>).</td>
+          </tr>
+          <tr>
+            <td>lon</td>
+            <td>required (or <code>place</code>)</td>
+            <td>Decimal longitude (e.g. <code>-122.68</code>).</td>
+          </tr>
+          <tr>
+            <td>place</td>
+            <td>required (or <code>lat</code> + <code>lon</code>)</td>
+            <td>Free-text place name. Geocoded once via Open-Meteo;
+                also used as the card's label.</td>
+          </tr>
+          <tr>
+            <td>units</td>
+            <td>optional</td>
+            <td><code>metric</code> | <code>imperial</code> |
+                <code>both</code> (default <code>both</code>).</td>
+          </tr>
+          <tr>
+            <td>hours-window</td>
+            <td>optional</td>
+            <td>Max-precip lookahead in hours (default <code>12</code>).</td>
+          </tr>
+          <tr>
+            <td>source</td>
+            <td>optional</td>
+            <td><code>file.ttl#Subject</code> &mdash; a
+                <code>schema:PropertyValue</code> config block (see
+                <b>RDF config</b>). HTML attributes still win over
+                values from the TTL.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Examples</h3>
+    <pre><code>&lt;!-- Geocode a place name --&gt;
+&lt;sol-weather place="Portland, OR"&gt;&lt;/sol-weather&gt;
+
+&lt;!-- Pin coordinates (no geocode round-trip) --&gt;
+&lt;sol-weather lat="45.52" lon="-122.68" units="imperial"&gt;&lt;/sol-weather&gt;
+
+&lt;!-- Pull everything from a TTL config --&gt;
+&lt;sol-weather source="data/weather-settings.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
+
+    <h3>Theming via CSS parts</h3>
+    <p>The card and each cell are exposed as shadow parts:
+    <code>card</code>, <code>icon</code>, <code>place</code>,
+    <code>temp</code>, <code>desc</code>, <code>rain</code>.</p>
+    <pre><code>sol-weather::part(card)  { padding: 1rem; }
+sol-weather::part(temp)  { font-size: 1.4em; font-weight: 600; }
+sol-weather::part(desc)  { display: inline; } /* show the verbose
+                                                 description, hidden
+                                                 by default */</code></pre>
+  </div>
+
+  <!-- ── RDF config ─────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-config" role="tabpanel" aria-labelledby="tabbtn-config" tabindex="0">
+    <h2>Settings from RDF</h2>
+    <p>Point <code>source</code> at a Turtle file with a
+    <code>schema:PropertyValue</code> block. Setting names map to the
+    HTML attributes:</p>
+    <table class="attr-table">
+      <thead><tr><th>PropertyValue name</th><th>HTML attribute</th></tr></thead>
+      <tbody>
+        <tr><td><code>"latitude"</code></td>        <td><code>lat</code></td></tr>
+        <tr><td><code>"longitude"</code></td>       <td><code>lon</code></td></tr>
+        <tr><td><code>"place"</code></td>           <td><code>place</code></td></tr>
+        <tr><td><code>"units"</code></td>           <td><code>units</code></td></tr>
+        <tr><td><code>"forecast-window"</code></td> <td><code>hours-window</code></td></tr>
+      </tbody>
+    </table>
+
+    <pre><code>&lt;sol-weather source="data/weather-settings.ttl#Settings"&gt;&lt;/sol-weather&gt;</code></pre>
+
+    <p>And <code>data/weather-settings.ttl</code>:</p>
+    <pre><code>@prefix schema: &lt;http://schema.org/&gt; .
+
+&lt;#Settings&gt;
+  schema:additionalProperty
+    &lt;#latitude&gt;, &lt;#longitude&gt;, &lt;#place&gt;,
+    &lt;#units&gt;, &lt;#forecast-window&gt; .
+
+&lt;#latitude&gt;        a schema:PropertyValue ; schema:name "latitude"@en        ; schema:value 45.52 .
+&lt;#longitude&gt;       a schema:PropertyValue ; schema:name "longitude"@en       ; schema:value -122.68 .
+&lt;#place&gt;           a schema:PropertyValue ; schema:name "place"@en           ; schema:value "Portland, OR" .
+&lt;#units&gt;           a schema:PropertyValue ; schema:name "units"@en           ; schema:value "both" .
+&lt;#forecast-window&gt; a schema:PropertyValue ; schema:name "forecast-window"@en ; schema:value 12 .</code></pre>
+
+    <p>This path needs <code>rdflib</code> on the page (it publishes
+    <code>window.$rdf</code>). The schema.org namespace is always
+    <code>http://schema.org/</code>, not the HTTPS form.</p>
+  </div>
+
+  <!-- ── Data source ────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-data" role="tabpanel" aria-labelledby="tabbtn-data" tabindex="0">
+    <h2>Open-Meteo</h2>
+    <p>Forecast data and geocoding both come from
+    <a href="https://open-meteo.com/">Open-Meteo</a>, which is free
+    and requires no API key. The component hits two endpoints:</p>
+    <ul>
+      <li><code>https://geocoding-api.open-meteo.com/v1/search?name=&lt;q&gt;&amp;count=1</code>
+          &mdash; only when <code>place</code> is set and
+          <code>lat</code>/<code>lon</code> aren't.</li>
+      <li><code>https://api.open-meteo.com/v1/forecast?latitude=…&amp;longitude=…&amp;current_weather=true&amp;hourly=…&amp;timezone=auto</code>
+          &mdash; the actual weather, refreshed every 10 minutes.</li>
+    </ul>
+    <p>Hourly fields requested:
+    <code>temperature_2m</code>, <code>precipitation_probability</code>,
+    <code>weathercode</code>. Weather codes are mapped to a description
+    + emoji from the standard
+    <a href="https://open-meteo.com/en/docs#weathervariables">WMO 4677</a>
+    set (clear sky, partly cloudy, rain, snow, thunderstorm, etc.).</p>
+
+    <h3>Offline</h3>
+    <p>When <code>navigator.onLine</code> is <code>false</code>, the
+    card hides itself rather than displaying stale numbers as if they
+    were current. The next online refresh re-populates it.</p>
+
+    <h3>CORS</h3>
+    <p>Both Open-Meteo endpoints send
+    <code>Access-Control-Allow-Origin: *</code>, so no proxy is
+    needed &mdash; sol-weather fetches them directly from the
+    browser.</p>
+  </div>
+
+  <!-- ── Accessibility ──────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-a11y" role="tabpanel" aria-labelledby="tabbtn-a11y" tabindex="0">
+    <h2>Accessibility</h2>
+    <ul>
+      <li>The card is a labelled live region
+          (<code>role="region"</code> + <code>aria-live="polite"</code>),
+          so screen readers announce conditions when they change
+          rather than re-reading on every refresh.</li>
+      <li>Errors are announced via a separate
+          <code>role="alert"</code> strip that stays hidden until a
+          fetch fails.</li>
+      <li>Temperature values use
+          <code>font-variant-numeric: tabular-nums</code> so a
+          refresh doesn't horizontally shift the surrounding text.</li>
+      <li>All colours come from shared theme tokens, so the widget
+          follows the page's light / dark setting.</li>
+    </ul>
+  </div>
+
+<script>
+  (function () {
+    var tablist = document.getElementById('tabs');
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls'))
+                .classList.toggle('active', on);
+      });
+    }
+
+    tablist.addEventListener('click', function (e) {
+      var tab = e.target.closest('[role="tab"]');
+      if (tab) select(tab);
+    });
+
+    tablist.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (next) { e.preventDefault(); select(next); next.focus(); }
+    });
+  })();
+</script>
+
+<!-- IMPORTED SCRIPTS ------------------------------------------------- -->
+  <!-- rdflib (peer dep) : publishes window.$rdf — needed only when
+       source= points at a TTL config file. -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+
+  <!-- sol-weather as part of the sol-full bundle. -->
+  <script src="../dist/sol-full.umd.min.js?v=1"></script>
+<!-- ------------------------------------------------------------------ -->
+
+</body>
+</html>
