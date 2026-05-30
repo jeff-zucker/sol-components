@@ -344,6 +344,103 @@ export async function parseSourceList(sourceUri, { proxy } = {}) {
   return feedsFromRdf(fileUri, abs, await resp.text());
 }
 
+/**
+ * Like {@link parseSourceList}, but returns the **nested** topic tree rooted
+ * at the focus topic rather than a flat source list. `parseSourceList`
+ * collapses every leaf onto its immediate topic, which loses the upper
+ * grouping tiers; <sol-gallery> needs the full hierarchy (e.g. the
+ * Art / Life groups above each image sub-topic).
+ *
+ * Each node is `{ uri, label, topics: TreeNode[], collections: {label,url}[] }`.
+ * Leaves are `a ui:Link` with `bk:recalls` (the URL), `bk:hasTopic` (their
+ * topic), and `ui:label`. Subtree membership follows `bk:subTopicOf`
+ * (and the SKOS equivalents, for parity with parseSourceList).
+ *
+ * @param {string} sourceUri            `<rdfFile>#<TopicName>`
+ * @param {{proxy?: string}} [options]
+ * @returns {Promise<{uri:string,label:string,topics:Array,collections:Array}>}
+ */
+export async function parseBookmarkTree(sourceUri, { proxy } = {}) {
+  const abs = resolveUrl(sourceUri || '');
+  const hashIdx = abs.indexOf('#');
+  if (hashIdx === -1) {
+    throw new Error('A topic IRI is required — e.g. source="images.ttl#Images"');
+  }
+  const fileUri = abs.slice(0, hashIdx);
+  const resp = await feedFetch(fileUri, proxy);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching source list`);
+
+  let rdf;
+  try { ({ rdf } = await import('../../core/rdf.js')); }
+  catch { throw new Error('RDF source lists need rdflib on the page'); }
+  if (!rdf.isReady()) throw new Error('rdflib is not available');
+
+  const store = rdf.graph();
+  rdf.parse(await resp.text(), store, fileUri, 'text/turtle');
+  const sym = u => rdf.sym(u);
+  const valueOf = (subj, pred) => {
+    const o = store.any(subj, sym(pred), null);
+    return o ? o.value : '';
+  };
+
+  // Topic labels (bk:Topic / skos), preferring ui:label then skos:prefLabel.
+  const topicLabel = new Map();
+  for (const t of [NS.bk + 'Topic', NS.skos + 'Concept', NS.skos + 'ConceptScheme']) {
+    for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(t))) {
+      if (topicLabel.has(st.subject.value)) continue;
+      const label = valueOf(st.subject, NS.ui + 'label')
+        || valueOf(st.subject, NS.skos + 'prefLabel')
+        || lastSegment(st.subject.value);
+      topicLabel.set(st.subject.value, label);
+    }
+  }
+
+  // Direct child topics of a topic URI (subTopicOf + SKOS, both directions).
+  const childTopics = (uri) => {
+    const node = sym(uri);
+    const out = [];
+    for (const pred of [NS.bk + 'subTopicOf', NS.skos + 'broader', NS.skos + 'topConceptOf']) {
+      for (const st of store.statementsMatching(null, sym(pred), node)) {
+        if (st.subject.termType === 'NamedNode' && topicLabel.has(st.subject.value)) {
+          out.push(st.subject.value);
+        }
+      }
+    }
+    for (const pred of [NS.skos + 'narrower', NS.skos + 'hasTopConcept']) {
+      for (const st of store.statementsMatching(node, sym(pred), null)) {
+        if (st.object.termType === 'NamedNode' && topicLabel.has(st.object.value)) {
+          out.push(st.object.value);
+        }
+      }
+    }
+    return out;
+  };
+
+  // Collections (ui:Link leaves) grouped by their bk:hasTopic, in file order.
+  const byTopic = new Map();
+  for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.ui + 'Link'))) {
+    const subj = st.subject;
+    const url = valueOf(subj, NS.bk + 'recalls');
+    const topicUri = (store.any(subj, sym(NS.bk + 'hasTopic'), null) || {}).value || '';
+    if (!url || !topicUri) continue;
+    if (!byTopic.has(topicUri)) byTopic.set(topicUri, []);
+    byTopic.get(topicUri).push({ label: valueOf(subj, NS.ui + 'label') || lastSegment(url), url });
+  }
+
+  // Build the tree depth-first, guarding against cycles.
+  const seen = new Set();
+  const build = (uri) => {
+    seen.add(uri);
+    return {
+      uri,
+      label: topicLabel.get(uri) || lastSegment(uri),
+      collections: byTopic.get(uri) || [],
+      topics: childTopics(uri).filter(c => !seen.has(c)).map(build),
+    };
+  };
+  return build(abs);
+}
+
 /* ── schema:ItemList readers ──────────────────────────────────────────── */
 
 const SCHEMA = 'http://schema.org/';
