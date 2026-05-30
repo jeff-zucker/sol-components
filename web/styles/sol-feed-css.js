@@ -90,6 +90,10 @@ export const CSS = `
   .feed-link:hover { background: var(--hover, #eaf2fb); text-decoration: underline; }
   .feed-link.selected {
     background: var(--focus-bg, #ebf5fb);
+    /* Text on the selection fill. Defaults to the normal link colour so
+       existing consumers are unchanged; hosts that tint --focus-bg with
+       a strong colour can set --selected-fg for a readable contrast. */
+    color: var(--selected-fg, var(--link, var(--accent, #2980b9)));
     font-weight: 600;
   }
   .feed-link .feed-link-meta {
@@ -97,6 +101,56 @@ export const CSS = `
     font-size: .72em;
     color: var(--text-muted, #7f8c8d);
     font-weight: 400;
+  }
+
+  /* ── topics view ─────────────────────────────────────────────────────── */
+  /* A "newsstand": one column per topic across the top (each listing its
+     sources), with the shared .feed-articles card grid below. The columns
+     band reuses the all-view's darker top-bar tint; together with the
+     lighter articles strip they read as one two-tone panel. */
+  .sol-feed-list.topics { gap: 0; }
+  .feed-topic-columns {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .8rem .9rem;
+    background: var(--feed-top-bar-bg,
+                    color-mix(in srgb, var(--bg, #f5f5f5) 75%, #000));
+    border-radius: var(--radius-md, 6px) var(--radius-md, 6px) 0 0;
+  }
+  .feed-topic-column {
+    flex: 1 1 12rem;
+    min-width: 0;
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: 6px;
+    background: var(--surface, #fff);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .feed-topic-head {
+    margin: 0;
+    padding: .4rem .7rem;
+    font-size: .74em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted, #7f8c8d);
+    border-bottom: 1px solid var(--border, #d0d0d0);
+  }
+  /* Caps each column ~6 sources tall; the rest scroll within the column. */
+  .feed-topic-col-list { max-height: 14rem; overflow: auto; }
+
+  /* News cards: shorter boxes; the title tracks the host font size
+     (1em = --font-size, set by the text-size setter) rather than the
+     all-view's smaller .88em. Scoped to topics so other views are
+     unchanged. */
+  .sol-feed-list.topics .feed-card { aspect-ratio: 9 / 4; }
+  .sol-feed-list.topics .feed-card-title {
+    font-size: 1em;
+    -webkit-line-clamp: 3;
   }
 
   /* ── all view ───────────────────────────────────────────────────────── */

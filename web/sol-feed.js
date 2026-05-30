@@ -13,8 +13,12 @@
  *                   articles are merged, randomised, and shown as image
  *                   cards with a description that reveals on hover or
  *                   keyboard focus.
+ *   view="topics" — a "newsstand": one column per topic in the subtree,
+ *                   each listing that topic's sources. Clicking a source
+ *                   shows its articles as image cards (same cards as
+ *                   `all`) in a grid below the columns.
  *
- * For `topic` and `all` the `source` must include a `#TopicName` fragment
+ * For `topic`, `topics` and `all` the `source` must include a `#TopicName` fragment
  * pointing at a `bk:Topic` in an RDF/Turtle bookmark document (see
  * data/feeds.ttl). Feeds whose `bk:hasTopic` is outside the subtree or
  * isn't a defined topic show up under a catch-all "Other" group.
@@ -29,6 +33,11 @@
  *                     empty). Case-insensitive substring match against
  *                     each feed's label OR URL. Falls back to checking
  *                     the first feed when no item matches.
+ *   select-first      (view="topics" only) boolean — when present and no
+ *                     source is remembered, auto-select the first source
+ *                     and load its articles (a cold start lands on real
+ *                     articles). Off by default, so mounting stays
+ *                     network-free until the user picks a source.
  *
  * @element sol-feed
  *
@@ -234,6 +243,7 @@ class SolFeed extends HTMLElement {
 
     try {
       if (view === 'topic') await this.renderTopic();
+      else if (view === 'topics') await this.renderTopics();
       else if (view === 'all') await this.renderAll();
       else await this.renderFeed();
     } catch (e) {
@@ -793,6 +803,140 @@ class SolFeed extends HTMLElement {
       articles.replaceChildren(emptyEl('Select a feed to see articles'));
       this.setStatus('');
     }
+  }
+
+  /* ── view: topics ─────────────────────────────────────────────────── */
+
+  /**
+   * "Newsstand" view: one column per topic in the source subtree, each
+   * listing that topic's sources. Clicking a source loads its articles
+   * into an image-card grid below the columns — the same cards as the
+   * `all` view (so `newsCard` wires the shared reader window for free).
+   * No source is auto-selected, so mounting issues no feed network calls
+   * until the user picks one.
+   */
+  async renderTopics() {
+    const wrap = document.createElement('div');
+    wrap.className = 'sol-feed-list topics';
+
+    const columns = document.createElement('div');
+    columns.className = 'feed-topic-columns';
+    columns.setAttribute('role', 'tablist');
+    columns.setAttribute('aria-label', 'Topics');
+
+    const articles = document.createElement('div');
+    articles.className = 'feed-articles';
+    articles.setAttribute('part', 'articles');
+    articles.setAttribute('aria-label', 'Articles');
+
+    wrap.append(columns, articles);
+    this._root.replaceChildren(wrap);
+
+    /** Loading / error / empty messages land in the articles area (where
+     *  the cards will appear) rather than the status strip above the
+     *  topic columns. */
+    const showMsg = (text, isError = false) => {
+      const el = emptyEl(text);
+      if (isError) el.setAttribute('data-error', '');
+      articles.replaceChildren(el);
+    };
+
+    if (!this.source) { showMsg('No feed source specified', true); return; }
+
+    showMsg('Loading feeds…');
+    let sources;
+    try {
+      sources = await this.resolveSources();
+    } catch (e) {
+      showMsg(e.message || String(e), true);
+      return;
+    }
+    if (!sources.length) { showMsg('No feeds found', true); return; }
+
+    /** Every source anchor (to clear others' highlight) plus src↔anchor
+     *  pairs (to restore the remembered selection on mount). */
+    const allLinks = [];
+    const entries = [];
+
+    /** Render one source's items into the grid, newest first. */
+    const renderArticles = (items) => {
+      if (!items.length) { articles.replaceChildren(emptyEl('No articles')); return; }
+      const sorted = items.slice().sort((a, b) => dateMs(b.pubDate) - dateMs(a.pubDate));
+      articles.replaceChildren(...sorted.map(it => this.newsCard(it)));
+    };
+
+    const selectSource = async (src, anchor) => {
+      allLinks.forEach(a => {
+        const on = a === anchor;
+        a.classList.toggle('selected', on);
+        if (on) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      });
+      try { localStorage.setItem(this.topicsSelectionKey, src.url); } catch {}
+      articles.setAttribute('aria-busy', 'true');
+      showMsg(`Loading ${src.label}…`);
+      try {
+        if (!this._cache.has(src.url)) await this.ensureSource(src);
+        renderArticles(this._cache.get(src.url) || []);
+      } catch (e) {
+        showMsg(`${src.label}: ${e.message}`, true);
+      } finally {
+        articles.setAttribute('aria-busy', 'false');
+      }
+    };
+
+    // One column per topic, in first-seen (file) order.
+    for (const group of this.groupByTopic(sources)) {
+      const col = document.createElement('section');
+      col.className = 'feed-topic-column';
+
+      const head = document.createElement('h2');
+      head.className = 'feed-topic-head';
+      head.textContent = group.topic || 'Sources';
+      col.appendChild(head);
+
+      const list = document.createElement('ul');
+      list.className = 'feed-source-list feed-topic-col-list';
+      for (const src of group.feeds) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'feed-link';
+        a.href = src.url;
+        a.textContent = src.label;
+        a.setAttribute('role', 'tab');
+        a.addEventListener('click', ev => { ev.preventDefault(); selectSource(src, a); });
+        allLinks.push(a);
+        entries.push({ src, a });
+        li.appendChild(a);
+        list.appendChild(li);
+      }
+      col.appendChild(list);
+      columns.appendChild(col);
+    }
+
+    // Restore the last-selected source (and reload its articles) if it's
+    // still present; otherwise prompt for a pick.
+    let remembered = null;
+    try { remembered = localStorage.getItem(this.topicsSelectionKey); } catch {}
+    const match = remembered && entries.find(e => e.src.url === remembered);
+    if (match) {
+      selectSource(match.src, match.a);
+      // Bring the restored source into view within its scrollable column
+      // (the highlight is otherwise easy to miss below the fold).
+      requestAnimationFrame(() => match.a.scrollIntoView({ block: 'nearest' }));
+    } else if (this.hasAttribute('select-first') && entries.length) {
+      // Opt-in: with nothing remembered, open the first source so a cold
+      // start lands on real articles instead of a "pick a source" prompt.
+      // (Off by default — keeps mounting network-free for other consumers.)
+      selectSource(entries[0].src, entries[0].a);
+    } else {
+      showMsg('Select a source to see articles');
+    }
+  }
+
+  /** localStorage key for the topics-view selected source (one URL). */
+  get topicsSelectionKey() {
+    return `sol-feed:topic-source:${this.source || location.pathname}`;
   }
 
   /** localStorage key for this element's all-view source selection. */
