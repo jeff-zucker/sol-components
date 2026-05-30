@@ -194,7 +194,30 @@ export const CSS = `
     object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    cursor: zoom-in;
   }
+
+  /* Actual-size (100%) view: full-bleed, natural pixels, scroll to pan. */
+  .gallery-lightbox.zoomed {
+    padding: 0;
+    display: block;          /* a block scroll container, not the flex box */
+    overflow: auto;
+  }
+  .gallery-lightbox.zoomed img {
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
+    object-fit: none;
+    border-radius: 0;
+    margin: auto;            /* centre when smaller than the viewport */
+    cursor: zoom-out;
+  }
+  .gallery-lightbox.zoomed .gallery-lb-caption,
+  .gallery-lightbox.zoomed .gallery-lb-prev,
+  .gallery-lightbox.zoomed .gallery-lb-next { display: none; }
+  /* Keep Close reachable while the overlay scrolls. */
+  .gallery-lightbox.zoomed .gallery-lb-close { position: fixed; z-index: 1001; }
   .gallery-lb-caption {
     margin-top: .8rem;
     max-width: 60rem;

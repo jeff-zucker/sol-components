@@ -397,6 +397,9 @@ class SolGallery extends HTMLElement {
     next.addEventListener('click', () => this.stepLightbox(1));
     close.addEventListener('click', () => this.closeLightbox());
     lb.addEventListener('click', (e) => { if (e.target === lb) this.closeLightbox(); });
+    // Click the image to toggle a full-bleed, actual-size (100%) view that
+    // pans via scroll; click again (or page / Esc) to return to fit.
+    img.addEventListener('click', (e) => { e.stopPropagation(); this.setZoom(!this._lbZoom); });
 
     this._onKey = (e) => {
       if (this._lb.lb.hidden) return;
@@ -426,10 +429,26 @@ class SolGallery extends HTMLElement {
     this.showLightboxImage();
   }
 
+  /** Toggle the actual-size (100%) view. When on, the overlay goes
+   *  full-bleed, the image renders at its natural pixel size, and the
+   *  overlay scrolls to pan; the centre is brought into view. */
+  setZoom(on) {
+    this._lbZoom = on;
+    const { lb, img } = this._lb;
+    lb.classList.toggle('zoomed', on);
+    if (on) {
+      requestAnimationFrame(() => {
+        lb.scrollLeft = Math.max(0, (img.scrollWidth - lb.clientWidth) / 2);
+        lb.scrollTop = Math.max(0, (img.scrollHeight - lb.clientHeight) / 2);
+      });
+    }
+  }
+
   showLightboxImage() {
     const imgs = this._activeImages;
     const it = imgs[this._lbIndex];
     if (!it) return;
+    this.setZoom(false);                 // each image starts fit-to-screen
     this._lb.img.src = it.full || it.thumb;
     this._lb.img.alt = it.title;
     const bits = [it.title];
@@ -449,6 +468,7 @@ class SolGallery extends HTMLElement {
   }
 
   closeLightbox() {
+    this.setZoom(false);
     this._lb.lb.hidden = true;
     this._lb.img.removeAttribute('src');
   }
