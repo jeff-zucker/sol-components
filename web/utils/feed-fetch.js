@@ -177,6 +177,7 @@ const NS = {
   bk:   'http://www.w3.org/2002/01/bookmark#',
   skos: 'http://www.w3.org/2004/02/skos/core#',
   dct:  'http://purl.org/dc/terms/',
+  dcat: 'http://www.w3.org/ns/dcat#',
 };
 
 /** Last path / fragment segment of a URI — a readable fallback label. */
@@ -199,10 +200,14 @@ function dedupeFeeds(feeds) {
  *   :00012   a ui:Link  ; ui:label "NY Times" ;
  *            bk:recalls <https://…/World.xml> ; bk:hasTopic <#News> .
  *
- *   # SKOS form
+ *   # SKOS / DCAT form (feed IRI is the URL)
  *   <#Feeds> a skos:ConceptScheme ; skos:prefLabel "Feeds" .
  *   <#News>  a skos:Concept ; skos:prefLabel "News" ; skos:topConceptOf <#Feeds> .
  *   <https://…/World.xml> dct:title "NY Times" ; dct:subject <#News> .
+ *
+ *   # SKOS / DCAT form (local node — the feed URL is an editable property)
+ *   <#nyt> a dcat:Dataset, rss:channel ; dct:title "NY Times" ;
+ *          dcat:accessURL <https://…/World.xml> ; dcat:theme <#News> .
  *
  * Feeds whose topic falls outside the focus subtree (or isn't a defined
  * topic) are dropped. Requires rdflib on the page.
@@ -282,21 +287,31 @@ async function feedsFromRdf(fileUri, focusUri, text) {
     });
   }
 
-  // SKOS feeds: any subject with dct:subject pointing into the subtree.
-  // The feed's IRI is its URL; the label is dct:title (fallback rdfs:label).
-  for (const st of store.statementsMatching(null, sym(NS.dct + 'subject'), null)) {
-    const subj = st.subject;
-    if (subj.termType !== 'NamedNode') continue;
-    const topicUri = st.object.value;
-    if (!subtree.has(topicUri)) continue;
-    feeds.push({
-      label: valueOf(subj, NS.dct + 'title')
-        || valueOf(subj, 'http://www.w3.org/2000/01/rdf-schema#label')
-        || lastSegment(subj.value),
-      url: subj.value,
-      topic: topicLabel.get(topicUri) || lastSegment(topicUri),
-      topicUri,
-    });
+  // SKOS / DCAT feeds: any subject categorised into the subtree via
+  // dcat:theme or dct:subject. The fetch URL is dcat:accessURL (the feed
+  // endpoint) or dcat:landingPage, falling back to the subject's own IRI
+  // for the legacy "feed IRI is the URL" form. Label is dct:title.
+  const seenFeed = new Set();
+  for (const pred of [NS.dcat + 'theme', NS.dct + 'subject']) {
+    for (const st of store.statementsMatching(null, sym(pred), null)) {
+      const subj = st.subject;
+      if (subj.termType !== 'NamedNode' || seenFeed.has(subj.value)) continue;
+      const topicUri = st.object.value;
+      if (!subtree.has(topicUri)) continue;
+      const url = valueOf(subj, NS.dcat + 'accessURL')
+        || valueOf(subj, NS.dcat + 'landingPage')
+        || (/^https?:/.test(subj.value) ? subj.value : '');
+      if (!url) continue;
+      seenFeed.add(subj.value);
+      feeds.push({
+        label: valueOf(subj, NS.dct + 'title')
+          || valueOf(subj, 'http://www.w3.org/2000/01/rdf-schema#label')
+          || lastSegment(url),
+        url,
+        topic: topicLabel.get(topicUri) || lastSegment(topicUri),
+        topicUri,
+      });
+    }
   }
 
   // Topics in the focus subtree, in BFS order, with their labels — used by
@@ -351,7 +366,7 @@ export async function parseSourceList(sourceUri, { proxy } = {}) {
  * grouping tiers; <sol-gallery> needs the full hierarchy (e.g. the
  * Art / Life groups above each image sub-topic).
  *
- * Each node is `{ uri, label, topics: TreeNode[], collections: {label,url}[] }`.
+ * Each node is `{ uri, label, topics: TreeNode[], collections: {label,url,uri}[] }`.
  * Leaves are `a ui:Link` with `bk:recalls` (the URL), `bk:hasTopic` (their
  * topic), and `ui:label`. Subtree membership follows `bk:subTopicOf`
  * (and the SKOS equivalents, for parity with parseSourceList).
@@ -416,15 +431,39 @@ export async function parseBookmarkTree(sourceUri, { proxy } = {}) {
     return out;
   };
 
-  // Collections (ui:Link leaves) grouped by their bk:hasTopic, in file order.
+  // Collection leaves grouped by topic, in file order. Accepts the bookmark
+  // form (ui:Link + bk:recalls + bk:hasTopic + ui:label) and the SKOS/DCAT
+  // form (dcat:theme|dct:subject → topic, dcat:landingPage|dcat:accessURL →
+  // the page URL, dct:title → label).
   const byTopic = new Map();
+  const seenColl = new Set();
+  const pushColl = (subjValue, topicUri, coll) => {
+    if (!topicUri || !coll.url || seenColl.has(subjValue)) return;
+    seenColl.add(subjValue);
+    if (!byTopic.has(topicUri)) byTopic.set(topicUri, []);
+    byTopic.get(topicUri).push(coll);
+  };
+  // Bookmark leaves.
   for (const st of store.statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.ui + 'Link'))) {
     const subj = st.subject;
     const url = valueOf(subj, NS.bk + 'recalls');
     const topicUri = (store.any(subj, sym(NS.bk + 'hasTopic'), null) || {}).value || '';
-    if (!url || !topicUri) continue;
-    if (!byTopic.has(topicUri)) byTopic.set(topicUri, []);
-    byTopic.get(topicUri).push({ label: valueOf(subj, NS.ui + 'label') || lastSegment(url), url });
+    pushColl(subj.value, topicUri, { uri: subj.value, label: valueOf(subj, NS.ui + 'label') || lastSegment(url), url });
+  }
+  // SKOS / DCAT leaves.
+  for (const pred of [NS.dcat + 'theme', NS.dct + 'subject']) {
+    for (const st of store.statementsMatching(null, sym(pred), null)) {
+      const subj = st.subject;
+      if (subj.termType !== 'NamedNode') continue;
+      const url = valueOf(subj, NS.dcat + 'landingPage')
+        || valueOf(subj, NS.dcat + 'accessURL')
+        || (/^https?:/.test(subj.value) ? subj.value : '');
+      pushColl(subj.value, st.object.value, {
+        uri: subj.value,
+        label: valueOf(subj, NS.dct + 'title') || valueOf(subj, NS.ui + 'label') || lastSegment(url),
+        url,
+      });
+    }
   }
 
   // Build the tree depth-first, guarding against cycles.
