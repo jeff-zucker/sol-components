@@ -174,46 +174,50 @@ class SolGallery extends HTMLElement {
     this.setStatus('Loading collections…');
     const root = await parseBookmarkTree(this.source, { proxy: this.proxy });
 
-    // url → { group, sub } so a remembered collection can repopulate both
-    // columns on restore.
-    this._locate = new Map();
-    this._groupButtons = [];
-    this._groupBtnByNode = new Map();
+    // Flatten: gather every leaf topic (a node that directly holds collections),
+    // depth-first, into ONE list. Intermediate grouping tiers (e.g. Art / Life)
+    // stay in the data but are collapsed away here — the browser is a single
+    // Topics column → Collections, with no Library tier.
+    const topics = [];
+    const gather = (node) => {
+      if (node.collections && node.collections.length) topics.push(node);
+      for (const t of node.topics) gather(t);
+    };
+    gather(root);
 
-    const groups = root.topics.filter(g => this.hasContent(g));
-    this._groupsPane._list.replaceChildren();
-    for (const g of groups) {
-      const b = this._row(this._groupsPane, 'gallery-group', g.label);
-      b.addEventListener('click', () => this.selectGroup(g, b));
-      this._groupButtons.push(b);
-      this._groupBtnByNode.set(g, b);
-      for (const sub of g.topics) {
-        for (const coll of sub.collections) this._locate.set(coll.url, { group: g, sub });
-      }
+    this._locate = new Map();          // collection url → its topic node
+    this._topicButtons = [];
+    this._topicBtnByNode = new Map();
+
+    // No Library tier in the flat browser — the single list lives in _subPane.
+    this._groupsPane.hidden = true;
+
+    this._subPane._list.replaceChildren();
+    for (const topic of topics) {
+      const b = this._row(this._subPane, 'gallery-sub', topic.label);
+      b.addEventListener('click', () => this.selectTopic(topic, b));
+      this._topicButtons.push(b);
+      this._topicBtnByNode.set(topic, b);
+      for (const coll of topic.collections) this._locate.set(coll.url, topic);
     }
 
-    if (!groups.length) { this.setStatus('No collections found', true); return; }
+    if (!topics.length) { this.setStatus('No collections found', true); return; }
     this.setStatus('');
     this._head.textContent = '';
-    this._paneHint(this._subPane, 'Select a library above');
     this._paneHint(this._collPane, 'Select a topic');
 
-    // Restore the last-opened collection: refill both columns, select, load.
+    // Restore the last-opened collection: select its topic, then the collection.
     let remembered = null;
     try { remembered = localStorage.getItem(this.selectionKey); } catch {}
-    const where = remembered && this._locate.get(remembered);
-    if (where) {
-      this.selectGroup(where.group, this._groupBtnByNode.get(where.group));
-      const subBtn = this._subBtnByNode.get(where.sub);
-      if (subBtn) this.selectSubtopic(where.sub, subBtn);
+    const topic = remembered && this._locate.get(remembered);
+    if (topic) {
+      this.selectTopic(topic, this._topicBtnByNode.get(topic));
       const collBtn = this._collButtons.find(b => b.dataset.url === remembered);
       if (collBtn) {
         this.selectCollection(remembered, collBtn.textContent, collBtn);
         requestAnimationFrame(() => collBtn.scrollIntoView({ block: 'nearest' }));
       }
     } else {
-      // First visit: open the first group so its topics show in col 1.
-      if (groups.length) this.selectGroup(groups[0], this._groupButtons[0]);
       this._grid.replaceChildren();
       const hint = document.createElement('div');
       hint.className = 'gallery-empty';
@@ -222,33 +226,10 @@ class SolGallery extends HTMLElement {
     }
   }
 
-  /** Select a group: highlight it and fill col-1's lower pane with its
-   *  sub-topics; col 2 resets until a sub-topic is picked. */
-  selectGroup(node, btn) {
-    this._activeGroup = node;
-    for (const b of this._groupButtons) {
-      const on = b === btn;
-      b.classList.toggle('selected', on);
-      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
-    }
-
-    this._subButtons = [];
-    this._subBtnByNode = new Map();
-    this._subPane._list.replaceChildren();
-    for (const sub of node.topics.filter(s => this.hasContent(s))) {
-      const b = this._row(this._subPane, 'gallery-sub', sub.label);
-      b.addEventListener('click', () => this.selectSubtopic(sub, b));
-      this._subButtons.push(b);
-      this._subBtnByNode.set(sub, b);
-    }
-    this._collButtons = [];
-    this._paneHint(this._collPane, 'Select a topic');
-  }
-
-  /** Select a sub-topic: highlight it and fill col 2 with its collections. */
-  selectSubtopic(node, btn) {
-    this._activeSub = node;
-    for (const b of this._subButtons) {
+  /** Select a topic: highlight it and fill the Collections column. */
+  selectTopic(node, btn) {
+    this._activeTopic = node;
+    for (const b of this._topicButtons) {
       const on = b === btn;
       b.classList.toggle('selected', on);
       if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
@@ -459,7 +440,7 @@ class SolGallery extends HTMLElement {
       this._lb.caption.append(' ');
       const a = document.createElement('a');
       a.href = it.descUrl; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = 'View on Commons ↗';
+      a.textContent = 'View on Wikidata ↗';
       this._lb.caption.appendChild(a);
     }
     const multi = imgs.length > 1;

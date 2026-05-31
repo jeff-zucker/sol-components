@@ -33,7 +33,7 @@ export const CSS = `
     overflow: hidden;
   }
   /* col 1 (groups over sub-topics) and col 2 (collections). */
-  .gallery-col1 { flex: 0 0 11rem; border-right: 1px solid var(--border, #d0d0d0); }
+  .gallery-col1 { flex: 0 0 19rem; border-right: 1px solid var(--border, #d0d0d0); }
   .gallery-col2 { flex: 0 0 14rem; }
 
   .gallery-pane { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
