@@ -196,6 +196,8 @@ export const CSS = `
     box-shadow: 0 8px 40px rgba(0,0,0,.6);
     cursor: zoom-in;
   }
+  /* Image already shown at full resolution — no zoom affordance. */
+  .gallery-lightbox.no-zoom img { cursor: default; }
 
   /* Actual-size (100%) view: full-bleed, natural pixels, scroll to pan. */
   .gallery-lightbox.zoomed {

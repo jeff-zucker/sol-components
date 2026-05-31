@@ -189,8 +189,11 @@ class SolGallery extends HTMLElement {
     this._topicButtons = [];
     this._topicBtnByNode = new Map();
 
-    // No Library tier in the flat browser — the single list lives in _subPane.
-    this._groupsPane.hidden = true;
+    // No Library tier in the flat browser — drop the groups pane entirely (an
+    // inline display:none beats the .gallery-pane{display:flex} rule that the
+    // `hidden` attribute can't), so the Topics list sits at the top of col 1,
+    // parallel with the Collections column. The single list lives in _subPane.
+    this._groupsPane.style.display = 'none';
 
     this._subPane._list.replaceChildren();
     for (const topic of topics) {
@@ -379,8 +382,11 @@ class SolGallery extends HTMLElement {
     close.addEventListener('click', () => this.closeLightbox());
     lb.addEventListener('click', (e) => { if (e.target === lb) this.closeLightbox(); });
     // Click the image to toggle a full-bleed, actual-size (100%) view that
-    // pans via scroll; click again (or page / Esc) to return to fit.
-    img.addEventListener('click', (e) => { e.stopPropagation(); this.setZoom(!this._lbZoom); });
+    // pans via scroll; click again (or page / Esc) to return to fit. Only when
+    // the fit view shows fewer pixels than the image has — an image already at
+    // 100% offers no zoom.
+    img.addEventListener('click', (e) => { e.stopPropagation(); if (this._canZoom) this.setZoom(!this._lbZoom); });
+    img.addEventListener('load', () => this._refreshZoomable());
 
     this._onKey = (e) => {
       if (this._lb.lb.hidden) return;
@@ -413,6 +419,16 @@ class SolGallery extends HTMLElement {
   /** Toggle the actual-size (100%) view. When on, the overlay goes
    *  full-bleed, the image renders at its natural pixel size, and the
    *  overlay scrolls to pan; the centre is brought into view. */
+  /** Decide whether the current (fit) image can usefully zoom: only when its
+   *  natural pixel width exceeds the fit-rendered width. Toggles the no-zoom
+   *  class (hides the zoom-in cursor) and gates the click handler. */
+  _refreshZoomable() {
+    const { lb, img } = this._lb;
+    const fitW = this._lbZoom ? 0 : img.getBoundingClientRect().width;
+    this._canZoom = !this._lbZoom && img.naturalWidth > Math.ceil(fitW) + 1;
+    lb.classList.toggle('no-zoom', !this._canZoom);
+  }
+
   setZoom(on) {
     this._lbZoom = on;
     const { lb, img } = this._lb;
@@ -446,6 +462,7 @@ class SolGallery extends HTMLElement {
     const multi = imgs.length > 1;
     this._lb.prev.style.display = multi ? '' : 'none';
     this._lb.next.style.display = multi ? '' : 'none';
+    this._refreshZoomable();   // default to no-zoom until the image loads
   }
 
   closeLightbox() {
