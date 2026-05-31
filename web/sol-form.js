@@ -37,6 +37,48 @@ import { CSS as ROLODEX_CSS, sheet as rolodexSheet } from './styles/view-rolodex
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
 
+// Replace the store's UpdateManager.update with a raw `application/sparql-update`
+// PATCH (DELETE DATA / INSERT DATA from the concrete statement arrays solid-ui
+// and our rolodex pass). rdflib's own PATCH 500s on the Community Solid Server
+// for some documents (large / certain content); a plain sparql-update PATCH is
+// what that server reliably accepts — the same workaround the omp player uses
+// for its library writes. Idempotent; install once per store. `put` (new-doc
+// creation) is left on rdflib. Applied only to editable forms.
+function installRawSparqlUpdate(store) {
+  const updater = store?.updater;
+  if (!updater || updater._rawPatchInstalled) return;
+  updater._rawPatchInstalled = true;
+  const nt = (s) => `${s.subject.toNT()} ${s.predicate.toNT()} ${s.object.toNT()} .`;
+  updater.update = (deletes = [], inserts = [], cb) => {
+    deletes = deletes || []; inserts = inserts || [];
+    const any = deletes[0] || inserts[0];
+    const doc = any && (any.why || any.graph) ? (any.why || any.graph).value : null;
+    if (!doc) { cb && cb(null, false, 'sol-form rawPatch: no target document'); return; }
+    const parts = [];
+    if (deletes.length) parts.push(`DELETE DATA {\n${deletes.map(nt).join('\n')}\n}`);
+    if (inserts.length) parts.push(`INSERT DATA {\n${inserts.map(nt).join('\n')}\n}`);
+    const body = parts.join(' ;\n');
+    // Prefer the logged-in Solid session's fetch (carries the auth token for
+    // writes to a protected pod); fall back to the page fetch (public pods,
+    // dev). solid-client-authn-browser is exposed as window.solidClientAuthn.
+    const session = globalThis.solidClientAuthn?.getDefaultSession?.();
+    const fetchFn = (session?.info?.isLoggedIn && session.fetch.bind(session))
+      || globalThis.fetch.bind(globalThis);
+    Promise.resolve(fetchFn(doc, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/sparql-update' }, body,
+    })).then(async res => {
+      if (res && res.ok) {
+        for (const s of deletes) store.remove(s);
+        for (const s of inserts) store.add(s.subject, s.predicate, s.object, s.why || s.graph);
+        cb && cb(doc, true);
+      } else {
+        console.warn('[sol-form] PATCH failed:', res && res.status, 'on', doc);
+        cb && cb(doc, false, `HTTP ${res && res.status}`);
+      }
+    }).catch(e => cb && cb(doc, false, e.message));
+  };
+}
+
 class SolForm extends HTMLElement {
   constructor() {
     super();
@@ -403,6 +445,10 @@ class SolForm extends HTMLElement {
 
     const docUrl = new URL(source, document.baseURI).href;
     const dataStore = this._initStore(docUrl);
+    // Editable rolodexes write through a raw sparql-update PATCH (rdflib's
+    // own PATCH 500s on CSS for some docs). Field edits (solid-ui) and our
+    // Add / Remove both go through updater.update, so this one swap covers all.
+    if (this.hasAttribute('editable')) installRawSparqlUpdate(dataStore);
     await dataStore.fetcher.load(docUrl);
     const docNode = rdf.sym(docUrl);
 
@@ -412,7 +458,11 @@ class SolForm extends HTMLElement {
     this._docNode = docNode;
     this._docUrl  = docUrl;
 
-    this._buildRolodexCards(body, dataStore, docNode, subjects, parsed.properties);
+    this._buildRolodexCards(body, dataStore, docNode, subjects, parsed.properties, null, {
+      lazy: this.hasAttribute('lazy'),
+      editable: this.hasAttribute('editable'),
+      targets: parsed.targets,
+    });
   }
 
   // Build the rolodex UI: nav buttons + counter + one pre-rendered card
@@ -425,31 +475,39 @@ class SolForm extends HTMLElement {
   // is hidden, and each card gains ↑/↓ buttons that swap the
   // `sortedBy` value with the previous / next subject (two-statement
   // PATCH via store.updater.update).
-  _buildRolodexCards(body, dataStore, docNode, subjects, properties, sortedBy = null) {
+  _buildRolodexCards(body, dataStore, docNode, subjects, properties, sortedBy = null, opts = {}) {
     adopt(this.shadowRoot, { sheet: rolodexSheet, css: ROLODEX_CSS });
 
-    if (!subjects.length) {
-      body.innerHTML = '<div class="sol-form-empty">No records to edit.</div>';
-      const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
-      if (saveBar) saveBar.style.display = 'none';
-      return;
-    }
+    // `lazy` mounts only the active record's form (dispose + rebuild on
+    // nav) so a rolodex over hundreds of records stays light; safe because
+    // fields autosave (no in-progress state to preserve across a flip).
+    // sortedBy reorder needs neighbouring cards mounted, so it forces eager.
+    const lazy = !!opts.lazy && !sortedBy;
+    const editable = !!opts.editable;   // show jump box + Add / Remove
+    const targets = opts.targets || {};
+    const startIndex = opts.startIndex || 0;
+    const RDF_TYPE = rdf.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+    const lastSeg = u => String(u).replace(/[#/]+$/, '').replace(/^.*[#/]/, '') || u;
 
-    // Sort by the ordering predicate (if any). Missing / non-integer
-    // values sink to the end so they don't break the sort.
+    // Mutable copy — Add / Remove splice this list.
+    subjects = [...subjects];
+
     const sortKey = (subj) => {
       if (!sortedBy) return 0;
       const v = dataStore.anyValue(subj, sortedBy, null, docNode);
       const n = parseInt(v, 10);
       return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
     };
-    if (sortedBy) {
-      subjects = [...subjects].sort((a, b) => sortKey(a) - sortKey(b));
-    }
+    if (sortedBy) subjects.sort((a, b) => sortKey(a) - sortKey(b));
+
     // Hide the ordering field from each card — the ↑/↓ buttons own it.
     const displayProps = sortedBy
       ? properties.filter(p => !p.path || p.path.value !== sortedBy.value)
       : properties;
+    // Label predicate for the jump box: the first scalar field of the shape.
+    const labelPred = (displayProps.find(p => p.path) || {}).path || null;
+    const labelOf = (subj) =>
+      (labelPred && dataStore.anyValue(subj, labelPred, null, docNode)) || lastSeg(subj.value);
 
     this._rolodexCleanups?.forEach(fn => { try { fn(); } catch (_) {} });
     this._rolodexCleanups = [];
@@ -458,162 +516,283 @@ class SolForm extends HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'sol-view-rolodex';
     wrapper.tabIndex = 0;
-    // sol-query's rolodex view is inline-block (one-cell-wide cards);
-    // sol-form's rolodex cards hold real form widgets and want the
-    // full host width so the consumer can size the rolodex from outside.
     wrapper.style.display = 'block';
     wrapper.style.width = '100%';
 
     const nav = document.createElement('div');
     nav.className = 'rolodex-nav';
-
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
     prevBtn.className = 'sol-btn sol-btn-icon rolodex-btn';
     prevBtn.setAttribute('aria-label', 'Previous record');
     prevBtn.textContent = '‹';
-
     const counter = document.createElement('span');
     counter.className = 'rolodex-counter';
     counter.setAttribute('aria-live', 'polite');
-
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'sol-btn sol-btn-icon rolodex-btn';
     nextBtn.setAttribute('aria-label', 'Next record');
     nextBtn.textContent = '›';
+    nav.append(prevBtn, counter, nextBtn);
+    wrapper.appendChild(nav);
 
-    nav.appendChild(prevBtn);
-    nav.appendChild(counter);
-    nav.appendChild(nextBtn);
+    // Jump box: a native <datalist> over record labels (in-memory, no query).
+    // Picking / typing an exact label pages the rolodex to that record.
+    let jumpInput = null, datalist = null;
+    if (editable) {
+      const jump = document.createElement('div');
+      jump.className = 'rolodex-jump';
+      jumpInput = document.createElement('input');
+      jumpInput.type = 'text';
+      jumpInput.className = 'rolodex-jump-input';
+      jumpInput.placeholder = 'Jump to…';
+      jumpInput.setAttribute('aria-label', 'Jump to a record');
+      const listId = 'rolodex-list-' + Math.random().toString(36).slice(2);
+      jumpInput.setAttribute('list', listId);
+      datalist = document.createElement('datalist');
+      datalist.id = listId;
+      jump.append(jumpInput, datalist);
+      wrapper.appendChild(jump);
+      const tryJump = () => {
+        const i = subjects.findIndex(s => labelOf(s) === jumpInput.value);
+        if (i >= 0) show(i);
+      };
+      jumpInput.addEventListener('input', tryJump);
+      jumpInput.addEventListener('change', tryJump);
+    }
 
     const card = document.createElement('div');
     card.className = 'rolodex-card';
     card.style.cursor = 'default';
-
-    wrapper.appendChild(nav);
     wrapper.appendChild(card);
+
+    // Add / Remove bar.
+    let addBtn = null, removeBtn = null;
+    if (editable) {
+      const bar = document.createElement('div');
+      bar.className = 'rolodex-actions';
+      bar.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+      addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'sol-btn rolodex-add';
+      addBtn.textContent = '+ Add';
+      removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'sol-btn rolodex-remove';
+      removeBtn.textContent = 'Remove';
+      removeBtn.style.marginLeft = 'auto';
+      bar.append(addBtn, removeBtn);
+      wrapper.appendChild(bar);
+    }
+
     body.appendChild(wrapper);
 
-    const pages = subjects.map(subj => {
+    const rebuildList = () => {
+      if (!datalist) return;
+      datalist.replaceChildren(...subjects.map(s => {
+        const o = document.createElement('option');
+        o.value = labelOf(s);
+        return o;
+      }));
+    };
+    rebuildList();
+
+    const emitSave = (subj) => this.dispatchEvent(new CustomEvent('sol-form-save', {
+      bubbles: true, composed: true, detail: { subject: subj, target: this._docUrl },
+    }));
+    const onFieldChange = (subj) => {
+      this.dispatchEvent(new CustomEvent('sol-form-change', {
+        bubbles: true, composed: true, detail: { subject: subj, ok: true, message: '' },
+      }));
+      rebuildList();   // a label edit changes the jump options
+      emitSave(subj);
+    };
+
+    let index = 0;
+    let pages = [];   // eager only
+
+    // Render one record's form into `card`, disposing whatever was there.
+    const renderInto = (subj) => {
+      this._rolodexCleanups.forEach(fn => { try { fn(); } catch (_) {} });
+      this._rolodexCleanups = [];
+      card.replaceChildren();
       const page = document.createElement('div');
       page.className = 'sol-form-rolodex-page';
       page.dataset.subject = subj.value;
-
       card.appendChild(page);
-      const cleanup = renderRecordForm(page, dataStore, subj, displayProps, {
-        doc: docNode,
-        onChange: () => {
-          this.dispatchEvent(new CustomEvent('sol-form-change', {
-            bubbles: true, composed: true,
-            detail: { subject: subj, ok: true, message: '' },
-          }));
-        },
+      this._rolodexCleanups.push(renderRecordForm(page, dataStore, subj, displayProps, {
+        doc: docNode, onChange: () => onFieldChange(subj),
+      }));
+    };
+
+    // Flush a pending field edit before disposing its widget.
+    const flush = () => { const ae = this.shadowRoot.activeElement; if (ae && ae.blur) ae.blur(); };
+
+    let show;
+    if (lazy) {
+      show = (i) => {
+        if (!subjects.length) {
+          card.replaceChildren();
+          counter.textContent = '0 of 0';
+          this._subject = null;
+          return;
+        }
+        flush();
+        index = ((i % subjects.length) + subjects.length) % subjects.length;
+        renderInto(subjects[index]);
+        counter.textContent = `${index + 1} of ${subjects.length}`;
+        this._subject = subjects[index];
+        if (jumpInput) jumpInput.value = labelOf(subjects[index]);
+      };
+    } else {
+      // Eager: pre-render every card and toggle visibility (preserves widget
+      // state across flips; required for the sortedBy reorder controls).
+      pages = subjects.map(subj => {
+        const page = document.createElement('div');
+        page.className = 'sol-form-rolodex-page';
+        page.dataset.subject = subj.value;
+        card.appendChild(page);
+        this._rolodexCleanups.push(renderRecordForm(page, dataStore, subj, displayProps, {
+          doc: docNode, onChange: () => onFieldChange(subj),
+        }));
+
+        if (sortedBy) {
+          const reorder = document.createElement('div');
+          reorder.className = 'rolodex-reorder';
+          const hint = document.createElement('span');
+          hint.className = 'rolodex-reorder-hint';
+          hint.textContent = 'Use arrows to change order';
+          const upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
+          upBtn.setAttribute('aria-label', 'Move up');
+          upBtn.textContent = '↑';
+          upBtn.addEventListener('click', () => this._swapSortedNeighbor(-1));
+          const posSpan = document.createElement('span');
+          posSpan.className = 'rolodex-pos';
+          posSpan.setAttribute('aria-label', 'Position');
+          posSpan.textContent = String(sortKey(subj));
+          const downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
+          downBtn.setAttribute('aria-label', 'Move down');
+          downBtn.textContent = '↓';
+          downBtn.addEventListener('click', () => this._swapSortedNeighbor(1));
+          reorder.append(hint, upBtn, posSpan, downBtn);
+          page.appendChild(reorder);
+        }
+        return page;
       });
-      this._rolodexCleanups.push(cleanup);
 
-      if (sortedBy) {
-        const reorder = document.createElement('div');
-        reorder.className = 'rolodex-reorder';
-        const hint = document.createElement('span');
-        hint.className = 'rolodex-reorder-hint';
-        hint.textContent = 'Use arrows to change order';
-        reorder.appendChild(hint);
-        const upBtn = document.createElement('button');
-        upBtn.type = 'button';
-        upBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
-        upBtn.setAttribute('aria-label', 'Move up');
-        upBtn.textContent = '↑';
-        upBtn.addEventListener('click', () => this._swapSortedNeighbor(-1));
-        const posSpan = document.createElement('span');
-        posSpan.className = 'rolodex-pos';
-        posSpan.setAttribute('aria-label', 'Position');
-        posSpan.textContent = String(sortKey(subj));
-        const downBtn = document.createElement('button');
-        downBtn.type = 'button';
-        downBtn.className = 'sol-btn sol-btn-icon rolodex-reorder-btn';
-        downBtn.setAttribute('aria-label', 'Move down');
-        downBtn.textContent = '↓';
-        downBtn.addEventListener('click', () => this._swapSortedNeighbor(1));
-        reorder.appendChild(upBtn);
-        reorder.appendChild(posSpan);
-        reorder.appendChild(downBtn);
-        page.appendChild(reorder);
+      show = (i) => {
+        if (!pages.length) { counter.textContent = '0 of 0'; this._subject = null; return; }
+        index = ((i % pages.length) + pages.length) % pages.length;
+        pages.forEach((p, j) => { p.hidden = j !== index; });
+        counter.textContent = `${index + 1} of ${pages.length}`;
+        this._subject = subjects[index];
+        if (jumpInput) jumpInput.value = labelOf(subjects[index]);
+        if (sortedBy) {
+          const cur = pages[index];
+          const up = cur.querySelector('.rolodex-reorder-btn[aria-label="Move up"]');
+          const dn = cur.querySelector('.rolodex-reorder-btn[aria-label="Move down"]');
+          if (up) up.disabled = index === 0;
+          if (dn) dn.disabled = index === pages.length - 1;
+        }
+      };
+
+      this._swapSortedNeighbor = (delta) => {
+        const i = index;
+        const j = i + delta;
+        if (j < 0 || j >= subjects.length) return;
+        const a = subjects[i], b = subjects[j];
+        const litA = dataStore.any(a, sortedBy, null, docNode);
+        const litB = dataStore.any(b, sortedBy, null, docNode);
+        if (!litA || !litB) return;
+        const olds = [rdf.st(a, sortedBy, litA, docNode), rdf.st(b, sortedBy, litB, docNode)];
+        const news = [rdf.st(a, sortedBy, litB, docNode), rdf.st(b, sortedBy, litA, docNode)];
+        dataStore.updater.update(olds, news, (_uri, ok) => {
+          if (!ok) return;
+          [subjects[i], subjects[j]] = [subjects[j], subjects[i]];
+          [pages[i], pages[j]] = [pages[j], pages[i]];
+          card.insertBefore(pages[Math.min(i, j)], pages[Math.max(i, j)]);
+          pages.forEach((p, k) => {
+            const span = p.querySelector('.rolodex-pos');
+            if (span) span.textContent = String(sortKey(subjects[k]));
+          });
+          show(j);
+          emitSave(a);
+        });
+      };
+    }
+
+    // Re-run the whole build (used by Add / Remove in eager mode, where the
+    // pre-rendered `pages` array can't grow / shrink in place).
+    const rebuild = (at) => this._buildRolodexCards(
+      body, dataStore, docNode, subjects, properties, sortedBy,
+      { ...opts, startIndex: at });
+
+    if (addBtn) addBtn.addEventListener('click', () => {
+      const id = 'n' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36);
+      const subj = rdf.sym(docNode.value.split('#')[0] + '#' + id);
+      const inserts = [];
+      for (const c of (targets.classes || [])) inserts.push(rdf.st(subj, RDF_TYPE, c, docNode));
+      for (const p of (targets.subjectsOf || [])) {
+        const ex = dataStore.any(null, p, null, docNode);   // anchor to an existing parent
+        if (ex) inserts.push(rdf.st(subj, p, ex, docNode));
       }
-
-      return page;
+      if (!inserts.length) { console.warn('[sol-form] cannot derive a type for the new record'); return; }
+      dataStore.updater.update([], inserts, (_u, ok, msg) => {
+        if (!ok) { console.warn('[sol-form] add failed:', msg); return; }
+        subjects.push(subj);
+        rebuildList();
+        emitSave(subj);
+        if (lazy) show(subjects.length - 1);
+        else rebuild(subjects.length - 1);
+      });
     });
 
-    let index = 0;
-    const show = i => {
-      index = ((i % pages.length) + pages.length) % pages.length;
-      pages.forEach((p, j) => { p.hidden = j !== index; });
-      counter.textContent = `${index + 1} of ${pages.length}`;
-      this._subject = subjects[index];
-      // Disable ↑/↓ at the ends — wraparound here would silently break
-      // the position values for items outside the visible swap.
-      if (sortedBy) {
-        const cur = pages[index];
-        const up = cur.querySelector('.rolodex-reorder-btn[aria-label="Move up"]');
-        const dn = cur.querySelector('.rolodex-reorder-btn[aria-label="Move down"]');
-        if (up) up.disabled = index === 0;
-        if (dn) dn.disabled = index === pages.length - 1;
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+      if (!subjects.length) return;
+      // Two-step confirm on the button itself (no native dialog).
+      if (removeBtn.dataset.armed !== '1') {
+        removeBtn.dataset.armed = '1';
+        removeBtn.textContent = 'Click to confirm';
+        clearTimeout(this._removeArmTimer);
+        this._removeArmTimer = setTimeout(() => {
+          removeBtn.dataset.armed = ''; removeBtn.textContent = 'Remove';
+        }, 3000);
+        return;
       }
-    };
-
-    // Swap the `sortedBy` value of the current card with its
-    // neighbor (-1 = previous, +1 = next), via two-statement PATCH.
-    // After save, swap the in-memory subjects / pages so widget state
-    // is preserved and the just-moved card stays in view.
-    this._swapSortedNeighbor = (delta) => {
-      const i = index;
-      const j = i + delta;
-      if (j < 0 || j >= subjects.length) return;
-      const a = subjects[i];
-      const b = subjects[j];
-      const litA = dataStore.any(a, sortedBy, null, docNode);
-      const litB = dataStore.any(b, sortedBy, null, docNode);
-      if (!litA || !litB) return;
-      const olds = [
-        rdf.st(a, sortedBy, litA, docNode),
-        rdf.st(b, sortedBy, litB, docNode),
+      removeBtn.dataset.armed = ''; removeBtn.textContent = 'Remove';
+      const subj = subjects[index];
+      const dels = [
+        ...dataStore.statementsMatching(subj, null, null, docNode),       // its own triples
+        ...dataStore.statementsMatching(null, null, subj, docNode),       // catalog membership etc.
       ];
-      const news = [
-        rdf.st(a, sortedBy, litB, docNode),
-        rdf.st(b, sortedBy, litA, docNode),
-      ];
-      dataStore.updater.update(olds, news, (_uri, ok) => {
-        if (!ok) return;
-        [subjects[i], subjects[j]] = [subjects[j], subjects[i]];
-        [pages[i], pages[j]] = [pages[j], pages[i]];
-        // Reflect new DOM order so prev/next walks visit the new sequence.
-        card.insertBefore(pages[Math.min(i, j)], pages[Math.max(i, j)]);
-        // Refresh the displayed position numbers — both swapped cards
-        // now carry the other's value.
-        pages.forEach((p, k) => {
-          const span = p.querySelector('.rolodex-pos');
-          if (span) span.textContent = String(sortKey(subjects[k]));
-        });
-        // After swap, the just-moved card moved to position j.
-        show(j);
-        this.dispatchEvent(new CustomEvent('sol-form-save', {
-          bubbles: true, composed: true,
-          detail: { subject: a, target: this._docUrl },
-        }));
+      dataStore.updater.update(dels.slice(), [], (_u, ok, msg) => {
+        if (!ok) { console.warn('[sol-form] remove failed:', msg); return; }
+        const at = subjects.indexOf(subj);
+        subjects.splice(at, 1);
+        rebuildList();
+        emitSave(subj);
+        const next = Math.min(at, Math.max(0, subjects.length - 1));
+        if (lazy) show(next);
+        else rebuild(next);
       });
-    };
+    });
 
     prevBtn.addEventListener('click', () => show(index - 1));
     nextBtn.addEventListener('click', () => show(index + 1));
     wrapper.addEventListener('keydown', e => {
+      if (e.target === jumpInput) return;   // let the jump box use arrows
       if (e.key === 'ArrowLeft')  { e.preventDefault(); show(index - 1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); show(index + 1); }
     });
 
-    show(0);
+    if (!subjects.length && editable) { card.replaceChildren(); counter.textContent = '0 of 0'; }
+    else show(Math.min(startIndex, subjects.length - 1));
 
-    // Per-field PATCH via solid-ui already persists; the manual Save
-    // bar is just visual noise in rolodex mode.
     const saveBar = this.shadowRoot.querySelector('.sol-form-save-bar');
     if (saveBar) saveBar.style.display = 'none';
   }
