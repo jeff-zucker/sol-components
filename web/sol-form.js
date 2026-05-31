@@ -546,7 +546,7 @@ class SolForm extends HTMLElement {
       jumpInput = document.createElement('input');
       jumpInput.type = 'text';
       jumpInput.className = 'rolodex-jump-input';
-      jumpInput.placeholder = 'Jump to…';
+      jumpInput.placeholder = 'Type to search ...';
       jumpInput.setAttribute('aria-label', 'Jump to a record');
       const listId = 'rolodex-list-' + Math.random().toString(36).slice(2);
       jumpInput.setAttribute('list', listId);
@@ -576,11 +576,11 @@ class SolForm extends HTMLElement {
       addBtn = document.createElement('button');
       addBtn.type = 'button';
       addBtn.className = 'sol-btn rolodex-add';
-      addBtn.textContent = '+ Add';
+      addBtn.textContent = 'Add new record';
       removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'sol-btn rolodex-remove';
-      removeBtn.textContent = 'Remove';
+      removeBtn.textContent = 'Delete this record';
       removeBtn.style.marginLeft = 'auto';
       bar.append(addBtn, removeBtn);
       wrapper.appendChild(bar);
@@ -643,7 +643,6 @@ class SolForm extends HTMLElement {
         renderInto(subjects[index]);
         counter.textContent = `${index + 1} of ${subjects.length}`;
         this._subject = subjects[index];
-        if (jumpInput) jumpInput.value = labelOf(subjects[index]);
       };
     } else {
       // Eager: pre-render every card and toggle visibility (preserves widget
@@ -691,7 +690,6 @@ class SolForm extends HTMLElement {
         pages.forEach((p, j) => { p.hidden = j !== index; });
         counter.textContent = `${index + 1} of ${pages.length}`;
         this._subject = subjects[index];
-        if (jumpInput) jumpInput.value = labelOf(subjects[index]);
         if (sortedBy) {
           const cur = pages[index];
           const up = cur.querySelector('.rolodex-reorder-btn[aria-label="Move up"]');
@@ -757,14 +755,14 @@ class SolForm extends HTMLElement {
       // Two-step confirm on the button itself (no native dialog).
       if (removeBtn.dataset.armed !== '1') {
         removeBtn.dataset.armed = '1';
-        removeBtn.textContent = 'Click to confirm';
+        removeBtn.textContent = 'Click again to confirm';
         clearTimeout(this._removeArmTimer);
         this._removeArmTimer = setTimeout(() => {
-          removeBtn.dataset.armed = ''; removeBtn.textContent = 'Remove';
+          removeBtn.dataset.armed = ''; removeBtn.textContent = 'Delete this record';
         }, 3000);
         return;
       }
-      removeBtn.dataset.armed = ''; removeBtn.textContent = 'Remove';
+      removeBtn.dataset.armed = ''; removeBtn.textContent = 'Delete this record';
       const subj = subjects[index];
       const dels = [
         ...dataStore.statementsMatching(subj, null, null, docNode),       // its own triples

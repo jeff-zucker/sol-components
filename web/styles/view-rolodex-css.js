@@ -83,5 +83,20 @@ export const CSS = BTN_CSS + `
     font-style: italic;
     margin-right: .35rem;
   }
+  /* Jump box: full width of the form it sits above; no native datalist caret. */
+  .rolodex-jump { width: 100%; }
+  .rolodex-jump-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin: .25rem 0 .5rem;
+    padding: .4em .6em;
+    border: 1px solid var(--border, #ccc);
+    border-radius: var(--radius-sm, 4px);
+    font: inherit;
+    background: var(--bg, #fff);
+    color: inherit;
+  }
+  .rolodex-jump-input::-webkit-calendar-picker-indicator { display: none !important; }
+  .rolodex-jump-input::-webkit-list-button { display: none !important; }
 `;
 export const sheet = sheetFrom(CSS);
