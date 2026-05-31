@@ -1,31 +1,18 @@
 /**
- * sources/contract.js — the canonical interface every image source conforms to.
+ * sources/contract.js — the shared image vocab + RDF read/write helpers.
  *
- * A *provider* is a headless, source-blind script that produces RDF; a *display*
- * (e.g. <sol-gallery>) renders that RDF and nothing else. Neither knows the
- * other's origin. RDF is the only interchange, shaped as **one envelope + a
- * typed payload per media kind** (see PLAN-source-adapters in the omp repo).
+ * A *fetcher* (e.g. commons.js) acquires data and writes it as RDF; a *display*
+ * (e.g. <sol-gallery>) reads that RDF and renders it. Neither knows the other's
+ * origin — RDF is the only interchange, shaped as **one envelope + a typed
+ * payload per media kind** (see PLAN-source-adapters in the omp repo).
  *
  * This module owns the image vocab (schema.org + dcat) and the read/write
  * helpers both sides share, so the bytes on the wire have exactly one
- * definition. Providers WRITE records with the `add*` helpers; displays READ
+ * definition. Fetchers WRITE records with the `add*` helpers; displays READ
  * them with the `read*` helpers.
  *
  *   CollectionRecord — a browsable grouping (`dcat:Dataset` / `schema:ImageGallery`)
  *   ImageItem        — one picture (`schema:ImageObject`)
- *
- * @typedef {object} Provider
- * @property {string}   id            stable id, e.g. 'commons-file'
- * @property {string}   label         tab label, e.g. 'Images'
- * @property {string[]} kinds         media kinds yielded, e.g. ['image']
- * @property {string}   display       custom-element tag, e.g. 'sol-gallery'
- * @property {{search:boolean, load:boolean}} capabilities
- * @property {(query:string, opts?:object) => AsyncIterable<object>} [search]
- *           discover groupings → pages of CollectionRecord stores (NO topic —
- *           topics/genres are local, owned by the host).
- * @property {(ref:string, opts?:object) => AsyncIterable<object>} load
- *           expand one grouping → pages of ImageItem stores. `ref` is opaque
- *           to the host (for images, the collection's Commons category URL).
  *
  * @typedef {object} ImageFields
  * @property {string}  iri          stable IRI for the image (its detail page)

@@ -3,9 +3,8 @@
  * Run from the repo root:  node sources/smoke-test.mjs
  *
  * Covers the no-network pieces: the contract read/write round-trip + ordering,
- * imagesToStore's page offsetting, reading real SKOS/DCAT collections, and the
- * registry. The network paths (loadCategory, parseBookmarkTree) are exercised
- * by the browser e2e, not here.
+ * imagesToStore's page offsetting, and reading real SKOS/DCAT collections. The
+ * network path (loadCategory) is exercised by the browser e2e, not here.
  */
 import assert from 'node:assert';
 import { rdf } from '../core/rdf.js';
@@ -13,9 +12,6 @@ import {
   NS, addImageItem, readImageItems, addCollection, readCollections,
 } from './contract.js';
 import { imagesToStore } from './commons.js';
-import {
-  registerProvider, providers, getProvider, providersForKind,
-} from './registry.js';
 
 let n = 0;
 const ok = (msg) => { console.log(`  ✓ ${msg}`); n++; };
@@ -86,19 +82,6 @@ const ok = (msg) => { console.log(`  ✓ ${msg}`); n++; };
   assert.equal(back.landingPage, colls[0].landingPage);
   assert.equal(back.theme, colls[0].theme);
   ok('addCollection ↔ readCollections round-trips');
-}
-
-/* 4 — registry -------------------------------------------------------------- */
-{
-  const fake = { id: 'fake-img', label: 'Fake', kinds: ['image'], display: 'sol-gallery',
-    capabilities: { search: false, load: true }, load: async function* () {} };
-  registerProvider(fake);
-  assert.equal(getProvider('fake-img'), fake, 'getProvider by id');
-  assert.ok(providers().includes(fake), 'providers() lists it');
-  assert.ok(providersForKind('image').includes(fake), 'providersForKind image');
-  assert.throws(() => registerProvider({ id: 'no-load' }), /needs a load/, 'rejects provider without load()');
-  assert.throws(() => registerProvider({ load() {} }), /needs an id/, 'rejects provider without id');
-  ok('registry registers, looks up, filters by kind, and validates');
 }
 
 console.log(`\n${n} smoke checks passed`);

@@ -1,9 +1,14 @@
-# sources/ — headless data-source adapters
+# sources/ — headless data-source fetchers
 
-An **open set** of importable, source-blind scripts that produce RDF for the
-display components (`<sol-gallery>`, …). The split: **providers** acquire data
-and emit RDF; **displays** render RDF and nothing else. Neither knows the
-other's origin. RDF is the only interchange.
+Importable, source-blind scripts that **fetch** data and emit RDF for the
+display components (`<sol-gallery>`, …). The split: a **fetcher** acquires data
+and writes it as RDF; a **display** renders RDF and nothing else. Neither knows
+the other's origin — RDF is the only interchange.
+
+A fetcher is just an importable function (no provider object, no registry): a
+host imports it and calls it. Reading a host's *own* local catalog file is the
+host's concern, not a fetcher's — fetchers are for talking to external sources
+(Commons now, Wikidata later).
 
 Design spec: `PLAN-source-adapters.md` in the open_media_player repo.
 
@@ -11,25 +16,20 @@ Design spec: `PLAN-source-adapters.md` in the open_media_player repo.
 
 | file | role |
 |---|---|
-| `contract.js` | The canonical vocab (schema.org + dcat) + read/write helpers both sides share. `addImageItem`/`readImageItems` (a `schema:ImageObject`), `addCollection`/`readCollections` (a `dcat:Dataset`/`schema:ImageGallery`). Defines the `Provider` typedef. |
-| `registry.js` | The open-set slot: `registerProvider` / `providers` / `getProvider` / `providersForKind`. Providers self-register on import; a host iterates the registry to build data-driven UI. Adding a source = a module + one `registerProvider` call, zero host edits. |
-| `commons.js` | Shared "Commons category → ImageItem RDF" loader. `imagesToStore` (pure) + `loadCategory` (async-iterable paging). All Commons network access lives here; every image provider's `load()` delegates to it. |
-| `commons-file.js` | Image provider over a curated SKOS/DCAT file (omp's `images.ttl`). `catalog()` exposes the local topic tree for the host's selectors; `search()` flattens to CollectionRecord RDF; `load()` → `loadCategory`. Self-registers. |
+| `contract.js` | The canonical vocab (schema.org + dcat) + read/write helpers both sides share. `addImageItem`/`readImageItems` (a `schema:ImageObject`), `addCollection`/`readCollections` (a `dcat:Dataset`/`schema:ImageGallery`). |
+| `commons.js` | "Commons category → ImageItem RDF" fetcher. `imagesToStore` (pure) + `loadCategory` (async-iterable paging). All Commons network access lives here; a host calls `loadCategory(categoryUrl)` and pumps the pages into a display. |
 | `smoke-test.mjs` | Node check of the no-network logic. `node sources/smoke-test.mjs`. |
 
-## The provider interface
+## The fetcher shape
 
 ```js
-{
-  id, label, kinds: ['image'], display: 'sol-gallery',
-  capabilities: { search, load },
-  search?(query, opts) -> AsyncIterable<Store>,   // CollectionRecord pages (no topic)
-  load(ref, opts)      -> AsyncIterable<Store>,    // ImageItem pages
-}
+// expand a remote ref into pages of ImageItem RDF
+async function* loadCategory(ref, opts) -> AsyncIterable<Store>
+// (a future wikidata-images.js would add: search(query) -> AsyncIterable<Store>)
 ```
 
 `ref` is opaque to the host (for images, a Commons category URL). Topics/genres
-are **local** — owned by the host, never emitted by a provider's `search()`.
+are **local** — owned by the host, never emitted by a fetcher.
 
 ## The display contract (what a display consumes/emits)
 
@@ -42,6 +42,7 @@ display 'load-more'        // event → host pumps the next page (lazy paging)
 
 ## Status
 
-Foundation built + node-verified (contract round-trips, paging offsets, real
-SKOS/DCAT reads, registry). Still to do: slim `<sol-gallery>` to the display
-contract above; a `wikidata-images` provider; host wiring in omp.
+`commons.js` + `contract.js` built and node-verified; `<sol-gallery>` slimmed to
+the display contract; wired into omp's `<omp-images>` (which reads its own
+`images.ttl` catalog locally and calls `loadCategory` to fetch pictures). Still
+to do: a `wikidata-images.js` fetcher (live search → display, no save).
