@@ -146,9 +146,18 @@ class SolSettings extends HTMLElement {
         if (seen.has(el)) continue;
         seen.add(el);
         if (el === this || this.contains(el)) continue;
+        // Opt-out: a host can mark an element it doesn't want surfaced as a
+        // settings panel (e.g. a page-config element whose class declares a
+        // shape for a different app, or one whose bundled shape URL won't
+        // resolve in this app's build).
+        if (el.hasAttribute('data-settings-skip')) { if (el.shadowRoot) visit(el.shadowRoot); continue; }
         const ctor = customElements.get(el.localName);
         if (!ctor) continue;
-        if (resolveEditorSpec(ctor)) {
+        // A class's editor/shape getter may throw (e.g. import.meta.url maths
+        // that breaks once bundled); never let one bad widget abort discovery.
+        let spec = null;
+        try { spec = resolveEditorSpec(ctor); } catch (_) { spec = null; }
+        if (spec) {
           found.push({
             el,
             label: el.getAttribute('label') || labelFromTag(el.localName),
