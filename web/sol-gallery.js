@@ -1,140 +1,62 @@
 /**
- * <sol-gallery> — Wikimedia Commons image-collection browser.
+ * <sol-gallery> — pure image-grid display (masonry + lightbox).
  *
- * A bookmark/SKOS tree (see data/images.ttl) whose leaves each `bk:recalls`
- * a Wikimedia Commons *category* URL. The component renders, in one shadow
- * root:
+ * Source-blind: it renders the ImageItem RDF it is handed and emits events. It
+ * does NO network, no search, and knows nothing about Commons / Wikidata /
+ * files / SKOS / DCAT. A host (see the `sources/` providers) pumps pages of
+ * `schema:ImageObject` records in and decides what a selection means.
  *
- *   • a two-column Miller browser on the left: col 1 stacks the groups
- *     (Art / Life) over the selected group's sub-topics; col 2 lists the
- *     selected sub-topic's collections;
- *   • a masonry image GRID on the right for the selected collection, filled
- *     lazily from the Commons API (CORS-direct, no proxy) and paged on scroll;
- *   • an in-page LIGHTBOX for the full-size image, with ←/→ paging, license
- *     caption, and a link out to the Commons file page.
+ * Display contract
+ *   clear()       drop all tiles — a new collection was selected
+ *   add(store)    append one page of schema:ImageObject records   ← the seam
+ *   end()         the host signals there are no more pages
+ * Events out
+ *   'item-opened' {detail:{iri}}  a tile's lightbox opened (lazy per-item detail hook)
+ *   'load-more'                   scrolled near the end; the host should pump the next page
  *
- * It reuses <sol-feed>'s bookmark-tree parser (parseBookmarkTree) and the
- * shared design-token / adopt plumbing, so it themes with the rest of the
- * suite. Mounting only parses the local TTL — no Commons calls happen until
- * a collection is clicked.
- *
- * Attributes:
- *   source   "<rdfFile>#<Topic>" — the root topic to render (required).
- *   proxy    CORS proxy for fetching a cross-origin TTL source (the Commons
- *            image calls never use it). Falls back to <sol-default>'s proxy.
+ * Records are read with `readImageItems` from the shared contract, so the
+ * gallery and every provider agree on the vocab without either re-declaring it.
  *
  * @element sol-gallery
- * @example <sol-gallery source="images.ttl#Images"></sol-gallery>
+ * @example
+ *   const g = document.querySelector('sol-gallery');
+ *   g.addEventListener('load-more', () => pumpNextPage());
+ *   g.clear(); g.add(pageStore); // …; g.end();
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as GALLERY_CSS, sheet as GALLERY_SHEET } from './styles/sol-gallery-css.js';
-import { parseBookmarkTree } from './utils/feed-fetch.js';
-import { getCategoryImages } from './utils/commons-fetch.js';
-import { getDefault, onDefaultChange } from '../core/defaults.js';
-
-/** How many files to request per Commons page. */
-const PAGE_SIZE = 60;
+import { readImageItems } from '../sources/contract.js';
 
 class SolGallery extends HTMLElement {
-  /** Inline editor: the tree IS the picker — skip discovery surfaces. */
-  static get editor() { return { inline: true }; }
-
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    /** category URL → { images, cont } accumulated across pages. */
-    this._cache = new Map();
+    /** @type {Array} flattened, position-ordered items across all pages. */
+    this._items = [];
   }
 
-  async connectedCallback() {
-    this.shadowRoot.adoptedStyleSheets = [];
-    this.shadowRoot.innerHTML = '';
-
-    this.proxy = this.getAttribute('proxy') || getDefault('proxy') || '';
-    this.source = this.getAttribute('source') || '';
-
-    if (!this._unsubDefaults) {
-      this._unsubDefaults = onDefaultChange((name) => {
-        if (name === 'proxy') this.reload().catch(() => {});
-      });
-    }
-
+  connectedCallback() {
+    if (this._built) return;            // build once; survives re-attach
+    this._built = true;
     adopt(this.shadowRoot, { sheet: GALLERY_SHEET, css: GALLERY_CSS });
-
-    // Layout: a two-column Miller browser | main(head + status + grid).
-    //   col 1 — groups (Art / Life) on top; the selected group's sub-topics
-    //           below; col 2 — the selected sub-topic's collections.
-    //   Clicking a collection fills the main image grid. Lightbox last.
-    this._sel = document.createElement('nav');
-    this._sel.className = 'gallery-cols';
-    this._sel.setAttribute('aria-label', 'Collections');
-
-    const col1 = document.createElement('div');
-    col1.className = 'gallery-col gallery-col1';
-    this._groupsPane = this._pane('gallery-groups', 'Library');
-    this._subPane = this._pane('gallery-subtopics', 'Topics');
-    col1.append(this._groupsPane, this._subPane);
-
-    const col2 = document.createElement('div');
-    col2.className = 'gallery-col gallery-col2';
-    this._collPane = this._pane('gallery-collections', 'Collections');
-    col2.append(this._collPane);
-
-    this._sel.append(col1, col2);
 
     this._main = document.createElement('div');
     this._main.className = 'gallery-main';
-
-    this._head = document.createElement('h2');
-    this._head.className = 'gallery-head';
     this._status = document.createElement('div');
     this._status.className = 'gallery-status';
     this._status.setAttribute('role', 'status');
     this._status.setAttribute('aria-live', 'polite');
     this._grid = document.createElement('div');
     this._grid.className = 'gallery-grid';
-    this._main.append(this._head, this._status, this._grid);
-
-    this.shadowRoot.append(this._sel, this._main);
+    this._main.append(this._status, this._grid);
+    this.shadowRoot.append(this._main);
     this._buildLightbox();
 
-    try {
-      await this.renderSelector();
-    } catch (e) {
-      this.setStatus(e.message || String(e), true);
-    }
-  }
-
-  /** Build a labelled, scrollable pane (header + an empty <ul> body). */
-  _pane(cls, label) {
-    const pane = document.createElement('div');
-    pane.className = `gallery-pane ${cls}`;
-    const head = document.createElement('div');
-    head.className = 'gallery-pane-head';
-    head.textContent = label;
-    const ul = document.createElement('ul');
-    ul.className = 'gallery-list';
-    pane.append(head, ul);
-    pane._list = ul;
-    return pane;
-  }
-
-  /** Append a hint line into a pane's list (cleared on the next fill). */
-  _paneHint(pane, text) {
-    const li = document.createElement('li');
-    li.className = 'gallery-pane-hint';
-    li.textContent = text;
-    pane._list.replaceChildren(li);
-  }
-
-  async reload() {
-    this._cache.clear();
-    await this.connectedCallback();
+    this._renderEmpty('Pick a collection to see its images.');
   }
 
   disconnectedCallback() {
-    if (this._unsubDefaults) { this._unsubDefaults(); this._unsubDefaults = null; }
     if (this._io) { this._io.disconnect(); this._io = null; }
     document.removeEventListener('keydown', this._onKey);
   }
@@ -145,218 +67,124 @@ class SolGallery extends HTMLElement {
     else this._status.removeAttribute('data-error');
   }
 
-  /** localStorage key for the last-opened collection (one URL). */
-  get selectionKey() {
-    return `sol-gallery:collection:${this.source || location.pathname}`;
+  /** Show a centred placeholder line in the grid (cleared by the next page). */
+  _renderEmpty(text) {
+    const empty = document.createElement('div');
+    empty.className = 'gallery-empty';
+    empty.textContent = text;
+    this._grid.replaceChildren(empty);
+    this._emptyEl = empty;
   }
 
-  /* ── selector (two-column Miller browser) ──────────────────────────────── */
+  /* ── display contract ───────────────────────────────────────────────────── */
 
-  /** True when a topic node has at least one collection anywhere beneath it. */
-  hasContent(node) {
-    return node.collections.length > 0 || node.topics.some(t => this.hasContent(t));
-  }
-
-  /** Add a row button to a pane's list and return it. */
-  _row(pane, cls, label) {
-    const li = document.createElement('li');
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = `gallery-row ${cls}`;
-    b.textContent = label;
-    li.appendChild(b);
-    pane._list.appendChild(li);
-    return b;
-  }
-
-  async renderSelector() {
-    if (!this.source) { this.setStatus('No source specified', true); return; }
-    this.setStatus('Loading collections…');
-    const root = await parseBookmarkTree(this.source, { proxy: this.proxy });
-
-    // Flatten: gather every leaf topic (a node that directly holds collections),
-    // depth-first, into ONE list. Intermediate grouping tiers (e.g. Art / Life)
-    // stay in the data but are collapsed away here — the browser is a single
-    // Topics column → Collections, with no Library tier.
-    const topics = [];
-    const gather = (node) => {
-      if (node.collections && node.collections.length) topics.push(node);
-      for (const t of node.topics) gather(t);
-    };
-    gather(root);
-    topics.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
-
-    this._locate = new Map();          // collection url → its topic node
-    this._topicButtons = [];
-    this._topicBtnByNode = new Map();
-
-    // No Library tier in the flat browser — drop the groups pane entirely (an
-    // inline display:none beats the .gallery-pane{display:flex} rule that the
-    // `hidden` attribute can't), so the Topics list sits at the top of col 1,
-    // parallel with the Collections column. The single list lives in _subPane.
-    this._groupsPane.style.display = 'none';
-
-    this._subPane._list.replaceChildren();
-    for (const topic of topics) {
-      const b = this._row(this._subPane, 'gallery-sub', topic.label);
-      b.addEventListener('click', () => this.selectTopic(topic, b));
-      this._topicButtons.push(b);
-      this._topicBtnByNode.set(topic, b);
-      for (const coll of topic.collections) this._locate.set(coll.url, topic);
-    }
-
-    if (!topics.length) { this.setStatus('No collections found', true); return; }
-    this.setStatus('');
-    this._head.textContent = '';
-    this._paneHint(this._collPane, 'Select a topic');
-
-    // Restore the last-opened collection: select its topic, then the collection.
-    let remembered = null;
-    try { remembered = localStorage.getItem(this.selectionKey); } catch {}
-    const topic = remembered && this._locate.get(remembered);
-    if (topic) {
-      const topicBtn = this._topicBtnByNode.get(topic);
-      this.selectTopic(topic, topicBtn);
-      const collBtn = this._collButtons.find(b => b.dataset.url === remembered);
-      if (collBtn) this.selectCollection(remembered, collBtn.textContent, collBtn);
-      // Bring the remembered topic + collection into view (no-op if visible).
-      requestAnimationFrame(() => {
-        topicBtn?.scrollIntoView({ block: 'nearest' });
-        collBtn?.scrollIntoView({ block: 'nearest' });
-      });
-    } else {
-      this._grid.replaceChildren();
-      const hint = document.createElement('div');
-      hint.className = 'gallery-empty';
-      hint.textContent = 'Pick a collection to see its images.';
-      this._grid.appendChild(hint);
-    }
-  }
-
-  /** Select a topic: highlight it and fill the Collections column. */
-  selectTopic(node, btn) {
-    this._activeTopic = node;
-    for (const b of this._topicButtons) {
-      const on = b === btn;
-      b.classList.toggle('selected', on);
-      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
-    }
-
-    this._collButtons = [];
-    this._collPane._list.replaceChildren();
-    const colls = [...node.collections].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
-    for (const coll of colls) {
-      const b = this._row(this._collPane, 'gallery-collection', coll.label);
-      b.dataset.url = coll.url;
-      b.addEventListener('click', () => this.selectCollection(coll.url, coll.label, b));
-      this._collButtons.push(b);
-    }
-  }
-
-  /* ── grid ─────────────────────────────────────────────────────────────── */
-
-  async selectCollection(url, label, btn) {
-    for (const b of this._collButtons) {
-      const on = b === btn;
-      b.classList.toggle('selected', on);
-      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
-    }
-    try { localStorage.setItem(this.selectionKey, url); } catch {}
-
-    this._activeUrl = url;
-    this._head.textContent = label;
+  /** Drop everything for a freshly selected collection; show a loading line. */
+  clear() {
+    this._items = [];
+    this._complete = false;
+    this._awaitingPage = false;
+    this._removeSentinel();
     this._grid.replaceChildren();
+    this._emptyEl = null;
     this.setStatus('Loading images…');
-    if (this._io) { this._io.disconnect(); this._io = null; }
-
-    try {
-      await this.loadPage(url, /* first */ true);
-    } catch (e) {
-      this.setStatus(`${label}: ${e.message}`, true);
-    }
   }
 
-  /** Fetch one page for `url`, append its thumbs, and wire paging. Guards
-   *  against a stale response when the user has since picked another
-   *  collection. */
-  async loadPage(url, first) {
-    const prev = first ? null : (this._cache.get(url) || null);
-    const { images, cont } = await getCategoryImages(url, {
-      thumbWidth: 300,
-      limit: PAGE_SIZE,
-      cont: prev ? prev.cont : undefined,
-    });
-    if (this._activeUrl !== url) return;        // selection changed mid-flight
+  /** Append one page (an rdflib store of schema:ImageObject records). */
+  add(store) {
+    const page = readImageItems(store);
+    this._awaitingPage = false;
+    if (this._emptyEl) { this._emptyEl.remove(); this._emptyEl = null; }
 
-    const acc = this._cache.get(url) || { images: [], cont: null };
-    acc.images = acc.images.concat(images);
-    acc.cont = cont;
-    this._cache.set(url, acc);
+    const start = this._items.length;
+    this._items = this._items.concat(page);
+    for (let i = 0; i < page.length; i++) {
+      this._grid.appendChild(this._thumb(this._items[start + i], start + i));
+    }
+    this.setStatus(this._countLabel());
+    this._armSentinel();                // a page arrived → there may be more
+  }
 
-    if (!acc.images.length) {
+  /** The host has no more pages: remove the sentinel; show empty if needed. */
+  end() {
+    this._complete = true;
+    this._removeSentinel();
+    if (!this._items.length) {
       this.setStatus('');
-      const empty = document.createElement('div');
-      empty.className = 'gallery-empty';
-      empty.textContent = 'This collection has no images directly in its Commons category.';
-      this._grid.replaceChildren(empty);
-      return;
+      this._renderEmpty('This collection has no images in its Commons category.');
+    } else {
+      this.setStatus(this._countLabel());
     }
-
-    const start = acc.images.length - images.length;
-    for (let i = 0; i < images.length; i++) this._grid.appendChild(this.thumb(images[start + i], start + i));
-    this.setStatus(`${acc.images.length} image${acc.images.length === 1 ? '' : 's'}` + (cont ? ' (scroll for more)' : ''));
-    this.wirePaging(url, cont);
   }
 
-  /** Attach an IntersectionObserver sentinel (with a Load-more fallback)
-   *  when more pages remain; remove paging affordances otherwise. */
-  wirePaging(url, cont) {
-    this._grid.querySelector('.gallery-sentinel')?.remove();
-    this._grid.querySelector('.gallery-more')?.remove();
-    if (this._io) { this._io.disconnect(); this._io = null; }
-    if (!cont) return;
+  _countLabel() {
+    const n = this._items.length;
+    return `${n} image${n === 1 ? '' : 's'}`;
+  }
 
-    const sentinel = document.createElement('div');
-    sentinel.className = 'gallery-sentinel';
-    this._grid.appendChild(sentinel);
+  /* ── lazy paging (the gallery only ASKS; the host fetches) ───────────────── */
 
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'gallery-more';
-    more.textContent = 'Load more';
-    more.addEventListener('click', () => this.loadPage(url, false).catch(() => {}));
-    this._main.appendChild(more);
+  /** Ensure a sentinel + observer exist so reaching the end emits 'load-more'.
+   *  A Load-more button is added as a no-IntersectionObserver fallback. */
+  _armSentinel() {
+    if (this._complete) return;
+    if (!this._sentinel) {
+      this._sentinel = document.createElement('div');
+      this._sentinel.className = 'gallery-sentinel';
+    }
+    this._grid.appendChild(this._sentinel);     // keep it last
 
     if ('IntersectionObserver' in window) {
+      if (this._io) this._io.disconnect();
       this._io = new IntersectionObserver((entries) => {
-        if (entries.some(e => e.isIntersecting)) {
-          this._io.disconnect(); this._io = null;
-          this.loadPage(url, false).catch(() => {});
-        }
+        if (entries.some((e) => e.isIntersecting)) this._requestMore();
       }, { root: this._main, rootMargin: '600px' });
-      this._io.observe(sentinel);
+      this._io.observe(this._sentinel);
+    } else if (!this._moreBtn) {
+      this._moreBtn = document.createElement('button');
+      this._moreBtn.type = 'button';
+      this._moreBtn.className = 'gallery-more';
+      this._moreBtn.textContent = 'Load more';
+      this._moreBtn.addEventListener('click', () => this._requestMore());
+      this._main.appendChild(this._moreBtn);
     }
   }
 
+  _removeSentinel() {
+    if (this._io) { this._io.disconnect(); this._io = null; }
+    this._sentinel?.remove();
+    this._moreBtn?.remove();
+    this._moreBtn = null;
+  }
+
+  /** Ask the host for the next page (once; re-armed when add() lands). */
+  _requestMore() {
+    if (this._complete || this._awaitingPage) return;
+    this._awaitingPage = true;
+    if (this._io) { this._io.disconnect(); this._io = null; }   // re-armed by add()
+    this.dispatchEvent(new CustomEvent('load-more', { bubbles: true, composed: true }));
+  }
+
+  /* ── thumbnails ──────────────────────────────────────────────────────────── */
+
   /** One masonry thumbnail button → opens the lightbox at its index. */
-  thumb(img, index) {
+  _thumb(item, index) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'gallery-thumb';
     b.dataset.index = String(index);
-    b.setAttribute('aria-label', img.title);
+    b.setAttribute('aria-label', item.caption || 'image');
     const el = document.createElement('img');
-    el.src = img.thumb;
-    el.alt = img.title;
+    el.src = item.thumb;
+    el.alt = item.caption || '';
     el.loading = 'lazy';
-    if (img.width && img.height) { el.width = img.width; el.height = img.height; }
+    if (item.width && item.height) { el.width = item.width; el.height = item.height; }
     el.addEventListener('error', () => b.remove());
     b.appendChild(el);
     b.addEventListener('click', () => this.openLightbox(index));
     return b;
   }
 
-  /* ── lightbox ───────────────────────────────────────────────────────── */
+  /* ── lightbox ────────────────────────────────────────────────────────────── */
 
   _buildLightbox() {
     const lb = document.createElement('div');
@@ -386,10 +214,9 @@ class SolGallery extends HTMLElement {
     next.addEventListener('click', () => this.stepLightbox(1));
     close.addEventListener('click', () => this.closeLightbox());
     lb.addEventListener('click', (e) => { if (e.target === lb) this.closeLightbox(); });
-    // Click the image to toggle a full-bleed, actual-size (100%) view that
-    // pans via scroll; click again (or page / Esc) to return to fit. Only when
-    // the fit view shows fewer pixels than the image has — an image already at
-    // 100% offers no zoom.
+    // Click the image to toggle a full-bleed, actual-size (100%) view that pans
+    // via scroll; click again (or page / Esc) to return to fit. Only offered
+    // when the fit view shows fewer pixels than the image actually has.
     img.addEventListener('click', (e) => { e.stopPropagation(); if (this._canZoom) this.setZoom(!this._lbZoom); });
     img.addEventListener('load', () => this._refreshZoomable());
 
@@ -402,28 +229,25 @@ class SolGallery extends HTMLElement {
     document.addEventListener('keydown', this._onKey);
   }
 
-  /** Images currently loaded for the active collection. */
-  get _activeImages() {
-    return (this._cache.get(this._activeUrl) || {}).images || [];
-  }
-
   openLightbox(index) {
     this._lbIndex = index;
     this.showLightboxImage();
     this._lb.lb.hidden = false;
     this._lb.close.focus();
+    // Lazy per-item detail hook: a host may listen and enrich (e.g. Wikidata).
+    const it = this._items[index];
+    if (it) this.dispatchEvent(new CustomEvent('item-opened', {
+      detail: { iri: it.iri }, bubbles: true, composed: true,
+    }));
   }
 
   stepLightbox(delta) {
-    const imgs = this._activeImages;
+    const imgs = this._items;
     if (!imgs.length) return;
     this._lbIndex = (this._lbIndex + delta + imgs.length) % imgs.length;
     this.showLightboxImage();
   }
 
-  /** Toggle the actual-size (100%) view. When on, the overlay goes
-   *  full-bleed, the image renders at its natural pixel size, and the
-   *  overlay scrolls to pan; the centre is brought into view. */
   /** Decide whether the current (fit) image can usefully zoom: only when its
    *  natural pixel width exceeds the fit-rendered width. Toggles the no-zoom
    *  class (hides the zoom-in cursor) and gates the click handler. */
@@ -447,27 +271,24 @@ class SolGallery extends HTMLElement {
   }
 
   showLightboxImage() {
-    const imgs = this._activeImages;
-    const it = imgs[this._lbIndex];
+    const it = this._items[this._lbIndex];
     if (!it) return;
     this.setZoom(false);                 // each image starts fit-to-screen
     this._lb.img.src = it.full || it.thumb;
-    this._lb.img.alt = it.title;
-    const bits = [it.title];
-    if (it.artist) bits.push(it.artist);
-    if (it.license) bits.push(it.license);
-    this._lb.caption.textContent = bits.filter(Boolean).join(' · ');
-    if (it.descUrl) {
+    this._lb.img.alt = it.caption || '';
+    const bits = [it.caption, it.author, it.license].filter(Boolean);
+    this._lb.caption.textContent = bits.join(' · ');
+    if (it.detailUrl) {
       this._lb.caption.append(' ');
-      const a = document.createElement('a');
-      a.href = it.descUrl; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = 'View on Wikidata ↗';
-      this._lb.caption.appendChild(a);
+      const link = document.createElement('a');
+      link.href = it.detailUrl; link.target = '_blank'; link.rel = 'noopener';
+      link.textContent = 'View on Commons ↗';
+      this._lb.caption.appendChild(link);
     }
-    const multi = imgs.length > 1;
+    const multi = this._items.length > 1;
     this._lb.prev.style.display = multi ? '' : 'none';
     this._lb.next.style.display = multi ? '' : 'none';
-    this._refreshZoomable();   // default to no-zoom until the image loads
+    this._refreshZoomable();             // default to no-zoom until the image loads
   }
 
   closeLightbox() {

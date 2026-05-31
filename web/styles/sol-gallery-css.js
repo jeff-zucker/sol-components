@@ -7,7 +7,7 @@ import { sheetFrom } from '../../core/adopt.js';
 export const CSS = `
   :host {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     height: 100%;
     max-height: 100vh;
     min-height: 0;
@@ -18,86 +18,8 @@ export const CSS = `
   }
   * { box-sizing: border-box; }
 
-  /* ── left: two-column Miller browser ─────────────────────────────────── */
-  .gallery-cols {
-    flex: 0 0 auto;
-    display: flex;
-    min-height: 0;
-    background: var(--surface, #fff);
-    border-right: 1px solid var(--border, #d0d0d0);
-  }
-  .gallery-col {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-  /* col 1 (groups over sub-topics) and col 2 (collections). */
-  .gallery-col1 { flex: 0 0 16rem; border-right: 1px solid var(--border, #d0d0d0); }
-  .gallery-col2 { flex: 0 0 14rem; }
-
-  .gallery-pane { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-  /* Groups pane sits at the top of col 1 and is only as tall as its rows;
-     the sub-topics + collections panes take the rest and scroll. */
-  .gallery-groups { flex: 0 0 auto; border-bottom: 1px solid var(--border, #d0d0d0); }
-  .gallery-subtopics,
-  .gallery-collections { flex: 1 1 auto; }
-
-  .gallery-pane-head {
-    flex: 0 0 auto;
-    padding: .45rem .6rem .3rem;
-    font-size: .68em;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--text-muted, #7f8c8d);
-  }
-  .gallery-list {
-    list-style: none;
-    margin: 0;
-    padding: 0 .35rem .6rem;
-    overflow: auto;
-    min-height: 0;
-  }
-  .gallery-pane-hint {
-    padding: .35rem .5rem;
-    font-size: .75em;
-    font-style: italic;
-    color: var(--text-muted, #7f8c8d);
-  }
-
-  .gallery-row {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font: inherit;
-    font-size: .8em;
-    padding: .35rem .55rem;
-    margin: 0;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text, #212121);
-    cursor: pointer;
-    line-height: 1.3;
-  }
-  .gallery-row:hover { background: var(--hover, #eaf2fb); }
-  .gallery-row.selected {
-    background: var(--focus-bg, #ebf5fb);
-    color: var(--selected-fg, var(--link, #2980b9));
-    font-weight: 600;
-  }
-  .gallery-row:focus-visible { outline: 2px solid var(--accent, #3498db); outline-offset: -2px; }
-  /* Groups read as section headers; collections read as links. */
-  .gallery-group {
-    font-size: .82em;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-  }
-  .gallery-collection { color: var(--link, var(--accent, #2980b9)); }
-
-  /* ── right: the image grid ───────────────────────────────────────────── */
+  /* The scroll container for the masonry grid (also the paging root). The
+     host owns any topic/collection selectors — the gallery is display-only. */
   .gallery-main {
     flex: 1 1 auto;
     min-width: 0;
@@ -105,15 +27,6 @@ export const CSS = `
     overflow: auto;
     display: flex;
     flex-direction: column;
-  }
-  .gallery-head {
-    flex: 0 0 auto;
-    margin: 0;
-    padding: .8rem 1rem .2rem;
-    font-family: var(--font-display, var(--font-ui, serif));
-    font-size: 1.05em;
-    font-weight: 600;
-    color: var(--text, #212121);
   }
   .gallery-status {
     flex: 0 0 auto;
