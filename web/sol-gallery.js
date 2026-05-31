@@ -184,6 +184,7 @@ class SolGallery extends HTMLElement {
       for (const t of node.topics) gather(t);
     };
     gather(root);
+    topics.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
 
     this._locate = new Map();          // collection url → its topic node
     this._topicButtons = [];
@@ -214,12 +215,15 @@ class SolGallery extends HTMLElement {
     try { remembered = localStorage.getItem(this.selectionKey); } catch {}
     const topic = remembered && this._locate.get(remembered);
     if (topic) {
-      this.selectTopic(topic, this._topicBtnByNode.get(topic));
+      const topicBtn = this._topicBtnByNode.get(topic);
+      this.selectTopic(topic, topicBtn);
       const collBtn = this._collButtons.find(b => b.dataset.url === remembered);
-      if (collBtn) {
-        this.selectCollection(remembered, collBtn.textContent, collBtn);
-        requestAnimationFrame(() => collBtn.scrollIntoView({ block: 'nearest' }));
-      }
+      if (collBtn) this.selectCollection(remembered, collBtn.textContent, collBtn);
+      // Bring the remembered topic + collection into view (no-op if visible).
+      requestAnimationFrame(() => {
+        topicBtn?.scrollIntoView({ block: 'nearest' });
+        collBtn?.scrollIntoView({ block: 'nearest' });
+      });
     } else {
       this._grid.replaceChildren();
       const hint = document.createElement('div');
@@ -240,7 +244,8 @@ class SolGallery extends HTMLElement {
 
     this._collButtons = [];
     this._collPane._list.replaceChildren();
-    for (const coll of node.collections) {
+    const colls = [...node.collections].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    for (const coll of colls) {
       const b = this._row(this._collPane, 'gallery-collection', coll.label);
       b.dataset.url = coll.url;
       b.addEventListener('click', () => this.selectCollection(coll.url, coll.label, b));
