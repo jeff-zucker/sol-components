@@ -49,6 +49,10 @@
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as FEED_CSS, sheet as FEED_SHEET } from './styles/sol-feed-css.js';
+import {
+  renameTopicEdit, recategorizeEdit, addFeedEdit, deleteToBinEdit, restoreEdit,
+  setPositionsEdit, mintFeedUri, patchDoc, binUriFor,
+} from './utils/feed-edit.js';
 import { getFeedItems, parseSourceList } from './utils/feed-fetch.js';
 import { getDefault, onDefaultChange } from '../core/defaults.js';
 
@@ -885,15 +889,59 @@ class SolFeed extends HTMLElement {
       }
     };
 
-    // One column per topic, in first-seen (file) order.
-    for (const group of this.groupByTopic(sources)) {
+    // Editing context (used by the edit helpers below) + the column set.
+    const editable = this.editable;
+    this._fileUri = sources.fileUri;
+    this._catalogUri = sources.catalogUri;
+    this._binUri = binUriFor(sources.fileUri);
+    this._allTopics = (sources.topics || []).filter(t => t.uri !== sources.focusUri);
+    this._allFeedUris = sources.map(f => f.uri).filter(Boolean);
+
+    // Non-editable: one column per topic that HAS feeds (first-seen order).
+    // Editable: one column per topic in the scheme — including empty ones —
+    // so you can rename / add anywhere; carry the topic IRI for edits.
+    let groups;
+    if (editable) {
+      const byUri = new Map();
+      for (const f of sources) (byUri.get(f.topicUri) || byUri.set(f.topicUri, []).get(f.topicUri)).push(f);
+      groups = this._allTopics.map(t => ({ topic: t.label, topicUri: t.uri, feeds: byUri.get(t.uri) || [] }));
+    } else {
+      groups = this.groupByTopic(sources).map(g => ({ ...g, topicUri: g.feeds[0]?.topicUri }));
+    }
+
+    // Honour a saved order (schema:position); items without one keep file
+    // order (stable sort). Stash per-topic ordered lists so reorder can
+    // recompute positions.
+    for (const g of groups) g.feeds = [...g.feeds].sort((a, b) => (a.position ?? 1e9) - (b.position ?? 1e9));
+    if (editable) this._feedsByTopic = new Map(groups.map(g => [g.topicUri, g.feeds]));
+
+    for (const group of groups) {
       const col = document.createElement('section');
       col.className = 'feed-topic-column';
+      if (editable && group.topicUri) this._wireColumnDrop(col, group.topicUri);
 
       const head = document.createElement('h2');
       head.className = 'feed-topic-head';
       head.textContent = group.topic || 'Sources';
-      col.appendChild(head);
+
+      if (editable && group.topicUri) {
+        head.classList.add('editable');
+        head.title = 'Click to rename';
+        head.addEventListener('click', () => this._renameTopicInline(head, group));
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'feed-add-source';
+        addBtn.textContent = '+';
+        addBtn.title = `Add a feed to ${group.topic}`;
+        addBtn.setAttribute('aria-label', addBtn.title);
+        addBtn.addEventListener('click', (e) => { e.stopPropagation(); this._addFeedForm(col, group); });
+        const headWrap = document.createElement('div');
+        headWrap.className = 'feed-topic-headwrap';
+        headWrap.append(head, addBtn);
+        col.appendChild(headWrap);
+      } else {
+        col.appendChild(head);
+      }
 
       const list = document.createElement('ul');
       list.className = 'feed-source-list feed-topic-col-list';
@@ -908,6 +956,12 @@ class SolFeed extends HTMLElement {
         allLinks.push(a);
         entries.push({ src, a });
         li.appendChild(a);
+        if (editable) {
+          li.classList.add('editable-row');
+          this._wireSourceDrag(li, src);
+          this._wireRowDrop(li, src);
+          li.appendChild(this._deleteButton(src, li));
+        }
         list.appendChild(li);
       }
       col.appendChild(list);
@@ -931,6 +985,225 @@ class SolFeed extends HTMLElement {
       selectSource(entries[0].src, entries[0].a);
     } else {
       showMsg('Select a source to see articles');
+    }
+  }
+
+  /* ── editing (view="topics" + the `editable` attribute) ─────────────────
+   * All edits PATCH the same-origin feeds file (sparql-update) then reload so
+   * the view re-renders from the saved doc. Owner-gating is the host's job
+   * (it sets/clears the `editable` attribute). */
+
+  get editable() { return this.hasAttribute('editable'); }
+
+  /** Host hook routed from the app chrome (⋮ → "View deleted"). */
+  appAction(name) {
+    if (name === 'viewDeleted') return this._openBin();
+  }
+
+  /** PATCH one edit, then reload the normal view. */
+  async _edit(editObj) {
+    try {
+      await patchDoc(this._fileUri, editObj);
+      await this.reload();
+    } catch (e) {
+      this.setStatus(e.message || 'Edit failed', true);
+    }
+  }
+
+  /** Replace a topic head with an inline rename input. */
+  _renameTopicInline(head, group) {
+    const old = group.topic;
+    const input = document.createElement('input');
+    input.className = 'feed-topic-rename';
+    input.value = old;
+    head.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const commit = () => {
+      if (done) return; done = true;
+      const val = input.value.trim();
+      if (val && val !== old) this._edit(renameTopicEdit(group.topicUri, old, val));
+      else input.replaceWith(head);               // unchanged → restore
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { done = true; input.replaceWith(head); }
+    });
+    input.addEventListener('blur', commit);
+  }
+
+  /** Inline "add a feed to this topic" form, inserted under the topic head. */
+  _addFeedForm(col, group) {
+    if (col.querySelector('.feed-add-form')) return;
+    const form = document.createElement('form');
+    form.className = 'feed-add-form';
+    const title = document.createElement('input');
+    title.className = 'feed-add-input'; title.placeholder = 'Feed name'; title.required = true;
+    const url = document.createElement('input');
+    url.className = 'feed-add-input'; url.type = 'url'; url.placeholder = 'RSS URL'; url.required = true;
+    const row = document.createElement('div'); row.className = 'feed-add-row';
+    const ok = document.createElement('button'); ok.type = 'submit'; ok.className = 'primary'; ok.textContent = 'Add';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+    row.append(ok, cancel);
+    form.append(title, url, row);
+    col.insertBefore(form, col.children[1] || null);   // after the head wrap
+    title.focus();
+    cancel.addEventListener('click', () => form.remove());
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const t = title.value.trim(), u = url.value.trim();
+      if (!t || !u) return;
+      const feedUri = mintFeedUri(this._fileUri, t, this._allFeedUris);
+      this._edit(addFeedEdit(feedUri, { title: t, url: u, topicUri: group.topicUri, catalogUri: this._catalogUri }));
+    });
+  }
+
+  /** Make a source row draggable (records the dragged feed + its topic). */
+  _wireSourceDrag(li, src) {
+    li.draggable = true;
+    li.addEventListener('dragstart', (e) => {
+      this._dragFeed = { uri: src.uri, fromTopicUri: src.topicUri };
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', src.uri); } catch {}
+      li.classList.add('dragging');
+    });
+    li.addEventListener('dragend', () => { li.classList.remove('dragging'); this._dragFeed = null; });
+  }
+
+  /** Make a topic column a drop target. Cross-topic drop = re-categorize;
+   *  same-topic drop on empty column area = reorder to the end. (Row-level
+   *  drops handle precise reorder and stopPropagation, so this only fires on
+   *  the empty space below the list.) */
+  _wireColumnDrop(col, topicUri) {
+    col.addEventListener('dragover', (e) => {
+      if (!this._dragFeed) return;
+      e.preventDefault();
+      col.classList.add('drop-target');
+    });
+    col.addEventListener('dragleave', (e) => { if (!col.contains(e.relatedTarget)) col.classList.remove('drop-target'); });
+    col.addEventListener('drop', (e) => {
+      col.classList.remove('drop-target');
+      const d = this._dragFeed;
+      if (!d) return;
+      e.preventDefault();
+      if (d.fromTopicUri === topicUri) this._reorder(topicUri, d.uri, null, false);   // → end
+      else this._edit(recategorizeEdit(d.uri, d.fromTopicUri, topicUri));
+    });
+  }
+
+  /** A source row as a drop target: same-topic → reorder (insert before/after
+   *  by cursor position); cross-topic → re-categorize. stopPropagation keeps
+   *  the column handler for empty-area drops only. */
+  _wireRowDrop(li, src) {
+    const before = (e) => {
+      const r = li.getBoundingClientRect();
+      return (e.clientY - r.top) < r.height / 2;
+    };
+    li.addEventListener('dragover', (e) => {
+      const d = this._dragFeed;
+      if (!d || d.uri === src.uri) return;
+      e.preventDefault(); e.stopPropagation();
+      const b = before(e);
+      li.classList.toggle('drop-before', b);
+      li.classList.toggle('drop-after', !b);
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drop-before', 'drop-after'));
+    li.addEventListener('drop', (e) => {
+      const d = this._dragFeed;
+      li.classList.remove('drop-before', 'drop-after');
+      if (!d || d.uri === src.uri) return;
+      e.preventDefault(); e.stopPropagation();
+      if (d.fromTopicUri === src.topicUri) this._reorder(src.topicUri, d.uri, src.uri, before(e));
+      else this._edit(recategorizeEdit(d.uri, d.fromTopicUri, src.topicUri));
+    });
+  }
+
+  /** Move `draggedUri` before/after `targetUri` (or to the end when null)
+   *  within a topic, then re-number schema:position for that topic. */
+  _reorder(topicUri, draggedUri, targetUri, before) {
+    const feeds = this._feedsByTopic?.get(topicUri) || [];
+    const oldPos = {};
+    feeds.forEach((f) => { if (f.position != null) oldPos[f.uri] = f.position; });
+    const order = feeds.map((f) => f.uri).filter((u) => u !== draggedUri);
+    let idx = targetUri ? order.indexOf(targetUri) : order.length;
+    if (idx < 0) idx = order.length;
+    if (!before && targetUri) idx += 1;
+    order.splice(idx, 0, draggedUri);
+    this._edit(setPositionsEdit(order, oldPos));
+  }
+
+  /** The ✕ delete control on a source row → asks to confirm first. */
+  _deleteButton(src, li) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'feed-del';
+    b.textContent = '✕';
+    b.title = `Delete ${src.label}`;
+    b.setAttribute('aria-label', `Delete ${src.label}`);
+    b.addEventListener('click', (e) => { e.stopPropagation(); this._confirmDelete(li, src); });
+    return b;
+  }
+
+  /** Inline confirm replacing the row: «Delete "X"? [Delete] [Cancel]». */
+  _confirmDelete(li, src) {
+    if (li.querySelector('.feed-del-confirm')) return;
+    const orig = [...li.childNodes];
+    li.classList.add('confirming');
+    const wrap = document.createElement('div');
+    wrap.className = 'feed-del-confirm';
+    const q = document.createElement('span');
+    q.className = 'feed-del-q';
+    q.textContent = `Delete “${src.label}”?`;
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.className = 'feed-del-yes'; yes.textContent = 'Delete';
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'feed-del-no'; no.textContent = 'Cancel';
+    wrap.append(q, yes, no);
+    li.replaceChildren(wrap);
+    no.focus();
+    no.addEventListener('click', () => { li.classList.remove('confirming'); li.replaceChildren(...orig); });
+    yes.addEventListener('click', () => this._edit(deleteToBinEdit(src.uri, src.topicUri, this._binUri)));
+  }
+
+  /** Render the deleted bin: each deleted feed with a "restore to <topic>". */
+  async _openBin() {
+    if (!this._fileUri) {                       // not rendered yet — derive
+      const abs = new URL(this.source, location.href).href;
+      this._fileUri = abs.split('#')[0];
+      this._binUri = binUriFor(this._fileUri);
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'sol-feed-list topics feed-bin-view';
+    const bar = document.createElement('div'); bar.className = 'feed-bin-bar';
+    const back = document.createElement('button');
+    back.type = 'button'; back.className = 'feed-bin-back'; back.textContent = '← Back to feeds';
+    back.addEventListener('click', () => this.reload());
+    const title = document.createElement('span'); title.className = 'feed-bin-title'; title.textContent = 'Deleted feeds';
+    bar.append(back, title);
+    const list = document.createElement('ul'); list.className = 'feed-source-list feed-bin-list';
+    wrap.append(bar, list);
+    this._root.replaceChildren(wrap);
+
+    let binFeeds = [];
+    try { binFeeds = await parseSourceList(this._binUri, { proxy: this.proxy }); } catch { /* empty bin */ }
+    if (!binFeeds.length) {
+      const li = document.createElement('li'); li.className = 'sol-feed-empty'; li.textContent = 'Nothing deleted.';
+      list.appendChild(li); return;
+    }
+    const topics = this._allTopics || [];
+    for (const src of binFeeds) {
+      const li = document.createElement('li'); li.className = 'feed-bin-row';
+      const name = document.createElement('span'); name.className = 'feed-bin-name'; name.textContent = src.label;
+      const sel = document.createElement('select'); sel.className = 'feed-bin-restore-to'; sel.setAttribute('aria-label', 'Restore to topic');
+      for (const t of topics) { const o = document.createElement('option'); o.value = t.uri; o.textContent = t.label; sel.appendChild(o); }
+      const restore = document.createElement('button');
+      restore.type = 'button'; restore.className = 'feed-bin-restore'; restore.textContent = 'Restore';
+      restore.addEventListener('click', async () => {
+        try { await patchDoc(this._fileUri, restoreEdit(src.uri, this._binUri, sel.value)); await this._openBin(); }
+        catch (e) { this.setStatus(e.message, true); }
+      });
+      li.append(name, sel, restore);
+      list.appendChild(li);
     }
   }
 

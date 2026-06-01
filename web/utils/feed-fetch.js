@@ -280,6 +280,7 @@ async function feedsFromRdf(fileUri, focusUri, text) {
     const topicUri = (store.any(subj, sym(NS.bk + 'hasTopic'), null) || {}).value || '';
     if (!topicUri || !subtree.has(topicUri)) continue;
     feeds.push({
+      uri: subj.value,                 // the feed's RDF subject (for editing)
       label: valueOf(subj, NS.ui + 'label') || lastSegment(url),
       url,
       topic: topicLabel.get(topicUri) || lastSegment(topicUri),
@@ -303,13 +304,16 @@ async function feedsFromRdf(fileUri, focusUri, text) {
         || (/^https?:/.test(subj.value) ? subj.value : '');
       if (!url) continue;
       seenFeed.add(subj.value);
+      const posStr = valueOf(subj, 'http://schema.org/position');
       feeds.push({
+        uri: subj.value,               // the feed's RDF subject (for editing)
         label: valueOf(subj, NS.dct + 'title')
           || valueOf(subj, 'http://www.w3.org/2000/01/rdf-schema#label')
           || lastSegment(url),
         url,
         topic: topicLabel.get(topicUri) || lastSegment(topicUri),
         topicUri,
+        position: posStr === '' ? undefined : Number(posStr),   // schema:position (for reorder)
       });
     }
   }
@@ -325,11 +329,15 @@ async function feedsFromRdf(fileUri, focusUri, text) {
   const hasBookmark = store
     .statementsMatching(null, sym(NS.rdf + 'type'), sym(NS.bk + 'Topic')).length > 0;
 
+  const catalogSt = store.statementsMatching(
+    null, sym(NS.rdf + 'type'), sym(NS.dcat + 'Catalog'))[0];
+
   const out = dedupeFeeds(feeds);
   Object.assign(out, {
     topics,
     fileUri,
     focusUri,
+    catalogUri: catalogSt ? catalogSt.subject.value : '',
     ontology: hasBookmark ? 'bookmark' : 'skos',
   });
   return out;

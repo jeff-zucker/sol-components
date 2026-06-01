@@ -403,6 +403,68 @@ export const CSS = `
     outline-offset: -2px;
   }
 
+  /* ── editing affordances (view="topics" + [editable]) ────────────────── */
+  .feed-topic-headwrap { display: flex; align-items: center; gap: .25rem; }
+  .feed-topic-headwrap .feed-topic-head { flex: 1 1 auto; min-width: 0; }
+  .feed-topic-head.editable { cursor: text; border-radius: 4px; }
+  .feed-topic-head.editable:hover { background: var(--hover, rgba(0,0,0,.06)); }
+  .feed-add-source {
+    flex: 0 0 auto; width: 1.4em; height: 1.4em; line-height: 1; padding: 0;
+    border: 1px solid var(--border, #d0d0d0); border-radius: 5px; cursor: pointer;
+    background: var(--surface, #fff); color: var(--text-muted, #7f8c8d); font-size: .9em;
+  }
+  .feed-add-source:hover { background: var(--accent, #3498db); color: #fff; border-color: transparent; }
+  .feed-topic-rename {
+    width: 100%; font: inherit; font-weight: 700; padding: .15rem .3rem;
+    border: 1px solid var(--accent, #3498db); border-radius: 4px;
+    background: var(--bg, #fff); color: var(--text, #111);
+  }
+  .feed-add-form { display: flex; flex-direction: column; gap: .3rem; padding: .35rem .4rem; }
+  .feed-add-input {
+    font: inherit; font-size: .82em; padding: .3rem .4rem; border: 1px solid var(--border, #c0c0c0);
+    border-radius: 5px; background: var(--bg, #fff); color: var(--text, #111);
+  }
+  .feed-add-row { display: flex; gap: .3rem; }
+  .feed-add-row button {
+    font: inherit; font-size: .8em; padding: .25rem .6rem; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--border, #c0c0c0); background: var(--surface, #fff); color: inherit;
+  }
+  .feed-add-row button.primary { background: var(--accent, #3498db); color: #fff; border-color: transparent; }
+
+  .feed-source-list .editable-row { display: flex; align-items: center; gap: .15rem; }
+  .editable-row .feed-link { flex: 1 1 auto; min-width: 0; cursor: grab; }
+  .editable-row.dragging { opacity: .45; }
+  .feed-del {
+    flex: 0 0 auto; background: transparent; border: none; cursor: pointer; padding: 0 .25rem;
+    color: var(--text-muted, #9aa0a6); font-size: .85em; line-height: 1;
+  }
+  .feed-del:hover { color: var(--error, #e74c3c); }
+  .feed-topic-column.drop-target { outline: 2px dashed var(--accent, #3498db); outline-offset: -3px; border-radius: 6px; }
+
+  /* delete confirm (inline, replaces the row) */
+  .feed-del-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; padding: .15rem 0; width: 100%; }
+  .feed-del-q { flex: 1 1 100%; font-size: .8em; }
+  .feed-del-confirm button { font: inherit; font-size: .76em; padding: .15rem .55rem; border-radius: 5px; cursor: pointer; border: 1px solid var(--border, #c0c0c0); background: var(--surface, #fff); color: inherit; }
+  .feed-del-yes { background: var(--error, #e74c3c) !important; color: #fff !important; border-color: transparent !important; }
+
+  /* reorder insertion indicator (drop before/after a row) */
+  .editable-row.drop-before { box-shadow: inset 0 2px 0 0 var(--accent, #3498db); }
+  .editable-row.drop-after  { box-shadow: inset 0 -2px 0 0 var(--accent, #3498db); }
+
+  /* deleted-bin view */
+  .feed-bin-bar { display: flex; align-items: center; gap: .8rem; padding: .5rem .7rem; border-bottom: 1px solid var(--border, #d0d0d0); }
+  .feed-bin-back { font: inherit; font-size: .85em; cursor: pointer; background: none; border: none; color: var(--link, #2980b9); padding: 0; }
+  .feed-bin-title { font-weight: 700; }
+  .feed-bin-list { padding: .5rem .7rem; }
+  .feed-bin-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+  .feed-bin-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .feed-bin-restore-to { font: inherit; font-size: .82em; }
+  .feed-bin-restore {
+    font: inherit; font-size: .8em; padding: .2rem .6rem; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--border, #c0c0c0); background: var(--surface, #fff); color: inherit;
+  }
+  .feed-bin-restore:hover { background: var(--accent, #3498db); color: #fff; border-color: transparent; }
+
 `;
 
 export const sheet = sheetFrom(CSS);
