@@ -15,6 +15,12 @@ export const CSS = `
     width: 100%; max-width: 100%;
     overflow: auto;
   }
+  sol-tabs > .sol-tabs-content > .sol-tabs-pane {
+    display: flex; flex-direction: column;
+    flex: 1; min-height: 0; min-width: 0;
+    width: 100%; max-width: 100%;
+  }
+  sol-tabs > .sol-tabs-content > .sol-tabs-pane[hidden] { display: none; }
   sol-tabs[orientation="vertical"] {
     flex-direction: row;
   }

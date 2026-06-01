@@ -83,6 +83,11 @@ class SolTabs extends HTMLElement {
 
   static get observedAttributes() { return ['from-rdf']; }
 
+  // Keep-alive: render every tab once into its own persistent pane and
+  // switch by toggling visibility, so components are never torn down —
+  // audio keeps playing, scroll / login / in-flight state survive.
+  get _keepAlive() { return this.hasAttribute('keep-alive'); }
+
   /**
    * Form TTL describing how to edit this tabs' `from-rdf` subject.
    * sol-tabs and sol-menu share the same `ui:Menu` shape, so they
@@ -130,7 +135,7 @@ class SolTabs extends HTMLElement {
       }
       this._renderBar();
 
-      if (declared?.length) this.switchTab(declared[0].name);
+      if (declared?.length) this._activateInitial();
     }
 
     if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
@@ -150,7 +155,7 @@ class SolTabs extends HTMLElement {
       }
       this._tabs = this._wrapRdfItems(result.items);
       this._renderBar();
-      if (this._tabs.length) this.switchTab(this._tabs[0].name);
+      if (this._tabs.length) this._activateInitial();
     } catch (err) {
       console.error('<sol-tabs> from-rdf load failed:', err);
       this.dispatchEvent(new CustomEvent('sol-error', {
@@ -174,6 +179,7 @@ class SolTabs extends HTMLElement {
         const children = this._wrapRdfItems(desc.children);
         return {
           name: desc.name,
+          id: desc.id,
           render: (body) => {
             const sub = document.createElement('sol-tabs');
             sub.setAttribute('variant', 'sub');
@@ -184,9 +190,9 @@ class SolTabs extends HTMLElement {
         };
       }
       if (desc.type === 'component') {
-        return { name: desc.name, render: renderComponentItem(desc, ctx) };
+        return { name: desc.name, id: desc.id, render: renderComponentItem(desc, ctx) };
       }
-      return { name: desc.name, render: renderLinkItem(desc, ctx) };
+      return { name: desc.name, id: desc.id, render: renderLinkItem(desc, ctx) };
     });
   }
 
@@ -208,6 +214,7 @@ class SolTabs extends HTMLElement {
       const handlerTag = (a.getAttribute('handler') || parentHandler || 'sol-include').trim();
       return {
         name: label,
+        id: a.id || undefined,
         render: (body) => {
           ensureHandler(handlerTag, this, import.meta.url, 'sol-tabs');
           const el = document.createElement(handlerTag);
@@ -251,10 +258,36 @@ class SolTabs extends HTMLElement {
       btn.type = 'button';
       btn.setAttribute('role', 'tab');
       btn.textContent = tab.name;
+      if (tab.id) btn.dataset.tabId = tab.id;
       btn.onclick = () => this.switchTab(tab.name);
       bar.appendChild(btn);
       this._btns[tab.name] = btn;
     });
+  }
+
+  // Render every tab once (keep-alive) then show the first, else just
+  // show the first (lazy default path).
+  _activateInitial() {
+    if (!this._tabs.length) return;
+    if (this._keepAlive) {
+      this.body.innerHTML = '';   // drop any panes from a prior load (reload)
+      for (const t of this._tabs) this._ensurePane(t);
+    }
+    this.switchTab(this._tabs[0].name);
+  }
+
+  // Build (once) a persistent pane for a tab and render its content into it.
+  _ensurePane(tab) {
+    if (tab._pane) return tab._pane;
+    const pane = document.createElement('div');
+    pane.className = 'sol-tabs-pane';
+    if (tab.id) pane.dataset.tabId = tab.id;
+    pane.dataset.tabName = tab.name;
+    pane.hidden = true;
+    this.body.appendChild(pane);
+    tab._pane = pane;
+    tab.render(pane, this._footerEl, this._actionsEl);
+    return pane;
   }
 
   switchTab(name) {
@@ -262,19 +295,25 @@ class SolTabs extends HTMLElement {
     if (!tab) return;
     this._active = tab.name;
 
-    if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
-
     Object.values(this._btns).forEach(b => b.classList.remove('active'));
     if (this._btns[tab.name]) this._btns[tab.name].classList.add('active');
 
-    const body = this.body;
-    body.innerHTML = '';
-    body.style.padding = ''; body.style.overflow = ''; body.style.height = '';
-    if (this._footerEl)  this._footerEl.innerHTML = '';
-    if (this._actionsEl) this._actionsEl.innerHTML = '';
+    if (this._keepAlive) {
+      // No teardown: ensure this tab's pane exists, then park the others.
+      this._ensurePane(tab);
+      for (const t of this._tabs) if (t._pane) t._pane.hidden = (t !== tab);
+    } else {
+      if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
 
-    const cleanup = tab.render(body, this._footerEl, this._actionsEl);
-    if (typeof cleanup === 'function') this._cleanup = cleanup;
+      const body = this.body;
+      body.innerHTML = '';
+      body.style.padding = ''; body.style.overflow = ''; body.style.height = '';
+      if (this._footerEl)  this._footerEl.innerHTML = '';
+      if (this._actionsEl) this._actionsEl.innerHTML = '';
+
+      const cleanup = tab.render(body, this._footerEl, this._actionsEl);
+      if (typeof cleanup === 'function') this._cleanup = cleanup;
+    }
 
     this.dispatchEvent(new CustomEvent('sol-tab-change', {
       bubbles: true, composed: true, detail: { name: tab.name },

@@ -346,3 +346,48 @@ describe('SolTabs — declarative and imperative APIs', () => {
     expect(content(el).textContent).toBe('y-body');
   });
 });
+
+// ── keep-alive ──────────────────────────────────────────────────────────────
+
+describe('SolTabs — keep-alive', () => {
+  beforeEach(() => { mockStore = buildStore(); });
+
+  test('renders a persistent pane for every tab up front', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('keep-alive', '');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    const panes = content(el).querySelectorAll(':scope > .sol-tabs-pane');
+    expect(panes.length).toBe(4);                       // all tabs rendered
+    const visible = [...panes].filter(p => !p.hidden);
+    expect(visible.length).toBe(1);                     // only the active one shown
+    expect(visible[0].dataset.tabName).toBe('Home');
+  });
+
+  test('switching toggles pane visibility without tearing content down', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('keep-alive', '');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    const home = content(el).querySelector('.sol-tabs-pane[data-tab-name="Home"]');
+    const homeEmbed = home.querySelector('.sol-tab-embed');
+    expect(homeEmbed).toBeTruthy();
+
+    el.switchTab('About');
+    expect(home.hidden).toBe(true);                                // parked, not removed
+    expect(home.querySelector('.sol-tab-embed')).toBe(homeEmbed);  // same instance
+    const about = content(el).querySelector('.sol-tabs-pane[data-tab-name="About"]');
+    expect(about.hidden).toBe(false);
+  });
+
+  test('tab buttons carry the RDF item id as data-tab-id', async () => {
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('keep-alive', '');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    expect(tabBtns(el).map(b => b.dataset.tabId)).toEqual(['Home', 'Settings', 'Table', 'About']);
+  });
+});
