@@ -470,6 +470,15 @@ export const CSS = `
   }
   .feed-bin-purge:hover { background: var(--error, #e74c3c); color: #fff; }
 
+  /* ★ favourite affordance on article cards (open to everyone) */
+  .feed-card { position: relative; }
+  .feed-card-fav {
+    position: absolute; top: .35rem; right: .35rem; z-index: 2;
+    width: 1.7rem; height: 1.7rem; border: none; border-radius: 50%;
+    background: rgba(0,0,0,.5); color: #ffd966; font-size: 1rem; line-height: 1; cursor: pointer;
+  }
+  .feed-card-fav:hover { background: rgba(0,0,0,.78); }
+
 `;
 
 export const sheet = sheetFrom(CSS);

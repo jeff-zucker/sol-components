@@ -205,14 +205,29 @@ class SolGallery extends HTMLElement {
     const close = document.createElement('button');
     close.type = 'button'; close.className = 'gallery-lb-close';
     close.textContent = '✕'; close.setAttribute('aria-label', 'Close');
+    // Optional ★: shown only when the host opts in via the `favouritable`
+    // attribute. The gallery stays source-blind — it just emits the item; the
+    // host decides what favouriting means.
+    const fav = document.createElement('button');
+    fav.type = 'button'; fav.className = 'gallery-lb-fav';
+    fav.textContent = '☆'; fav.title = 'Add to favourites'; fav.setAttribute('aria-label', 'Favourite');
+    fav.hidden = !this.hasAttribute('favouritable');
 
-    lb.append(close, prev, img, next, caption);
+    lb.append(close, fav, prev, img, next, caption);
     this.shadowRoot.appendChild(lb);
-    this._lb = { lb, img, caption, prev, next, close };
+    this._lb = { lb, img, caption, prev, next, close, fav };
 
     prev.addEventListener('click', () => this.stepLightbox(-1));
     next.addEventListener('click', () => this.stepLightbox(1));
     close.addEventListener('click', () => this.closeLightbox());
+    fav.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const it = this._items[this._lbIndex];
+      if (it) this.dispatchEvent(new CustomEvent('item-favourite', {
+        detail: { iri: it.iri, full: it.full, thumb: it.thumb, caption: it.caption, detailUrl: it.detailUrl },
+        bubbles: true, composed: true,
+      }));
+    });
     lb.addEventListener('click', (e) => { if (e.target === lb) this.closeLightbox(); });
     // Click the image to toggle a full-bleed, actual-size (100%) view that pans
     // via scroll; click again (or page / Esc) to return to fit. Only offered

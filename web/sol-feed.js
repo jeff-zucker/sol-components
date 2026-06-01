@@ -1311,6 +1311,23 @@ class SolFeed extends HTMLElement {
     title.className = 'feed-card-title';
     title.textContent = it.title || '';
     a.appendChild(title);
+
+    // Optional ★: favouriting is open to everyone (the communal wall). The
+    // host opts in with `favouritable`; sol-feed just emits the article.
+    if (this.hasAttribute('favouritable')) {
+      const fav = document.createElement('button');
+      fav.type = 'button'; fav.className = 'feed-card-fav';
+      fav.textContent = '☆'; fav.title = 'Add to favourites'; fav.setAttribute('aria-label', 'Favourite');
+      fav.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        this.dispatchEvent(new CustomEvent('item-favourite', {
+          detail: { item: it.link, bucket: 'Text', schemaType: 'Article', name: it.title || it.link,
+                    link: it.link, download: false, thumbnail: it.image || '' },
+          bubbles: true, composed: true,
+        }));
+      });
+      a.appendChild(fav);
+    }
     return a;
   }
 }
