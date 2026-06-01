@@ -54,7 +54,7 @@ import { adopt } from '../core/adopt.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
-import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
+import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, paramsToObject, dispatchCommand } from '../core/rdf-render.js';
 
 /**
  * Sidebar navigation + content panel.
@@ -131,12 +131,17 @@ class SolMenu extends HTMLElement {
       this._initShell();
       if (declared?.length) this._items = declared;
       this._renderNav();
-
-      const firstLeaf = this._firstLeaf(this._items);
-      if (firstLeaf) this.select(firstLeaf.name);
+      this._autoSelectFirst();
     }
 
     if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
+  }
+
+  // Select the first leaf so the content panel isn't empty on load. Overridable
+  // — e.g. <sol-dropdown-button> has no panel and shouldn't pre-fire anything.
+  _autoSelectFirst() {
+    const firstLeaf = this._firstLeaf(this._items);
+    if (firstLeaf) this.select(firstLeaf.name);
   }
 
   _initShell() {
@@ -245,8 +250,7 @@ class SolMenu extends HTMLElement {
       if (!this.hasAttribute('orientation')) this.setAttribute('orientation', result.orientation);
       this._items = this._wrapRdfItems(result.items);
       this._renderNav();
-      const firstLeaf = this._firstLeaf(this._items);
-      if (firstLeaf) this.select(firstLeaf.name);
+      this._autoSelectFirst();
     } catch (err) {
       console.error('<sol-menu> from-rdf load failed:', err);
       this.dispatchEvent(new CustomEvent('sol-error', {
@@ -269,6 +273,11 @@ class SolMenu extends HTMLElement {
         return { name: desc.name, children: this._wrapRdfItems(desc.children) };
       }
       if (desc.type === 'component') {
+        // A ui:Component whose ui:name isn't a custom-element tag is a command:
+        // clicking dispatches sol-command (no content mounted, not selectable).
+        if (isCommandName(desc.tag)) {
+          return { name: desc.name, icon: desc.icon, command: desc.tag, params: paramsToObject(desc.params) };
+        }
         return { name: desc.name, icon: desc.icon, render: renderComponentItem(desc, ctx) };
       }
       return { name: desc.name, icon: desc.icon, render: renderLinkItem(desc, ctx) };
@@ -335,6 +344,15 @@ class SolMenu extends HTMLElement {
     return acc;
   }
 
+  // Command items (no render closure — they dispatch sol-command on click).
+  _flatCommands(items, acc = []) {
+    for (const it of items) {
+      if (it.children) this._flatCommands(it.children, acc);
+      else if (it.command) acc.push(it);
+    }
+    return acc;
+  }
+
   get items() { return this._items; }
   set items(arr) {
     this._items = arr || [];
@@ -352,7 +370,7 @@ class SolMenu extends HTMLElement {
     this._btns = {};
     const orient = this.getAttribute('orientation') === 'horizontal' ? 'horizontal' : 'vertical';
     nav.setAttribute('aria-orientation', orient);
-    const leafCount = this._flatLeaves(this._items).length;
+    const leafCount = this._flatLeaves(this._items).length + this._flatCommands(this._items).length;
     if (leafCount <= 1 && !this._items.some(i => i.children)) {
       nav.style.display = 'none';
       return;
@@ -423,7 +441,11 @@ class SolMenu extends HTMLElement {
         } else {
           btn.textContent = item.name;
         }
-        btn.onclick = () => { this.select(item.name); this._closeAllPopups(); };
+        if (item.command) {
+          btn.onclick = () => { dispatchCommand(this, item.command, item.params); this._closeAllPopups(); };
+        } else {
+          btn.onclick = () => { this.select(item.name); this._closeAllPopups(); };
+        }
         parent.appendChild(btn);
         this._btns[item.name] = btn;
       }

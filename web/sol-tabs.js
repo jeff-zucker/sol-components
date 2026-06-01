@@ -52,7 +52,7 @@ import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
-import { renderComponentItem, renderLinkItem, ensureHandler } from '../core/rdf-render.js';
+import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName } from '../core/rdf-render.js';
 
 /**
  * Tabbed content container.
@@ -190,10 +190,13 @@ class SolTabs extends HTMLElement {
         };
       }
       if (desc.type === 'component') {
+        // Command items (ui:name is a registry key, not a tag) are a menu
+        // affordance, not content — a tab can't "run" something. Skip them.
+        if (isCommandName(desc.tag)) return null;
         return { name: desc.name, id: desc.id, render: renderComponentItem(desc, ctx) };
       }
       return { name: desc.name, id: desc.id, render: renderLinkItem(desc, ctx) };
-    });
+    }).filter(Boolean);
   }
 
   // Parse <a href="url" [handler="tag"] [attr=val ...]>Label</a> children

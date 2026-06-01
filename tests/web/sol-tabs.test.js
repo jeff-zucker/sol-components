@@ -391,3 +391,34 @@ describe('SolTabs — keep-alive', () => {
     expect(tabBtns(el).map(b => b.dataset.tabId)).toEqual(['Home', 'Settings', 'Table', 'About']);
   });
 });
+
+// ── command items are skipped (they belong in sol-menu, not tabs) ────────────
+
+describe('SolTabs — command items', () => {
+  test('a bare-name ui:Component is not rendered as a tab', async () => {
+    const store = rdflib.graph();
+    const s = (v) => rdflib.sym(v);
+    const l = (v) => rdflib.literal(v);
+    store.add(s(BASE + '#M'), s(RDF + 'type'), s(UI + 'Menu'));
+    store.add(s(BASE + '#M'), s(UI + 'label'), l('m'));
+    const b1 = s(BASE + '#_x1'), b2 = s(BASE + '#_x2');
+    store.add(s(BASE + '#M'), s(UI + 'parts'), b1);
+    store.add(b1, s(RDF + 'first'), s(BASE + '#Table'));
+    store.add(b1, s(RDF + 'rest'), b2);
+    store.add(b2, s(RDF + 'first'), s(BASE + '#Run'));
+    store.add(b2, s(RDF + 'rest'), s(RDF + 'nil'));
+    store.add(s(BASE + '#Table'), s(RDF + 'type'), s(UI + 'Component'));
+    store.add(s(BASE + '#Table'), s(UI + 'label'), l('Table'));
+    store.add(s(BASE + '#Table'), s(UI + 'name'), l('sol-query'));
+    store.add(s(BASE + '#Run'), s(RDF + 'type'), s(UI + 'Component'));
+    store.add(s(BASE + '#Run'), s(UI + 'label'), l('Run'));
+    store.add(s(BASE + '#Run'), s(UI + 'name'), l('installPod'));   // bare → command
+    mockStore = store;
+
+    const el = attached(document.createElement('sol-tabs'));
+    el.setAttribute('from-rdf', BASE + '#M');
+    await flush();
+
+    expect(el.tabs.map(t => t.name)).toEqual(['Table']);   // 'Run' command filtered out
+  });
+});

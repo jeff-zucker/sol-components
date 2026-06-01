@@ -1013,3 +1013,69 @@ describe('SolMenu — ARIA state updates on re-select', () => {
     expect(panel.getAttribute('aria-label')).toBe('Content: About');
   });
 });
+
+// ── command items (ui:Component whose ui:name is a registry key) ─────────────
+
+function buildCommandStore() {
+  const store = rdflib.graph();
+  const s = (v) => rdflib.sym(v);
+  const l = (v) => rdflib.literal(v);
+
+  store.add(s(BASE + '#Main'), s(RDF + 'type'), s(UI + 'Menu'));
+  store.add(s(BASE + '#Main'), s(UI + 'label'), l('main'));
+  const b1 = s(BASE + '#_c1'), b2 = s(BASE + '#_c2');
+  store.add(s(BASE + '#Main'), s(UI + 'parts'), b1);
+  store.add(b1, s(RDF + 'first'), s(BASE + '#Home'));
+  store.add(b1, s(RDF + 'rest'), b2);
+  store.add(b2, s(RDF + 'first'), s(BASE + '#Install'));
+  store.add(b2, s(RDF + 'rest'), s(RDF + 'nil'));
+
+  store.add(s(BASE + '#Home'), s(RDF + 'type'), s(UI + 'Link'));
+  store.add(s(BASE + '#Home'), s(UI + 'label'), l('Home'));
+  store.add(s(BASE + '#Home'), s(UI + 'href'), s('http://example.org/home.html'));
+
+  // ui:name "installPod" — no hyphen → a command, not an element tag.
+  store.add(s(BASE + '#Install'), s(RDF + 'type'), s(UI + 'Component'));
+  store.add(s(BASE + '#Install'), s(UI + 'label'), l('Install on my Pod'));
+  store.add(s(BASE + '#Install'), s(UI + 'name'), l('installPod'));
+  const p = s(BASE + '#_p');
+  store.add(s(BASE + '#Install'), s(UI + 'attribute'), p);
+  store.add(p, s(SCHEMA + 'name'), l('target'));
+  store.add(p, s(SCHEMA + 'value'), l('pod'));
+  return store;
+}
+
+const cmdBtn = (el) =>
+  [...el.shadowRoot.querySelectorAll('.sol-menu-nav > button[role="menuitem"]')]
+    .find(b => b.textContent === 'Install on my Pod');
+
+describe('SolMenu — command items', () => {
+  beforeEach(() => { mockStore = buildCommandStore(); });
+
+  test('a bare-name ui:Component renders as a nav entry but mounts no content', async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    expect(cmdBtn(el)).toBeTruthy();                 // shows in the nav
+    expect(el.activeItem).toBe('Home');              // command is NOT auto-selected
+    // The bare name was NOT mistaken for an element tag and mounted.
+    expect(el.querySelector('.sol-menu-content').querySelector('installpod')).toBeNull();
+  });
+
+  test('clicking a command dispatches sol-command with command + params, mounts nothing', async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+
+    let detail = null;
+    el.addEventListener('sol-command', (e) => { detail = e.detail; });
+    cmdBtn(el).click();
+
+    expect(detail).toBeTruthy();
+    expect(detail.command).toBe('installPod');
+    expect(detail.params).toEqual({ target: 'pod' });
+    expect(el.activeItem).toBe('Home');              // unchanged — not a selection
+    expect(el.querySelector('.sol-menu-content').querySelector('installpod')).toBeNull();
+  });
+});

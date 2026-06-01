@@ -17,6 +17,43 @@ import { siblingUrl } from './here.js';
 import { displayItem, contentForHref } from './display-target.js';
 
 /**
+ * A ui:Component's `ui:name` is either a custom-element tag (render that
+ * component) or a *command* — an opaque registry key the host app resolves.
+ * Custom-element names must contain a hyphen (HTML spec), so a bare name that
+ * isn't a registered element is a command. The name is NOT a tag, a global, or
+ * a script: clicking it dispatches `sol-command` for the app to map; an
+ * unregistered key is a no-op. Bounded entirely by the app's registry.
+ *
+ * @param {string} name  a ui:Component ui:name value
+ * @returns {boolean}    true when it should be treated as a command
+ */
+export function isCommandName(name) {
+  if (!name) return false;
+  return !name.includes('-') && !customElements.get(name);
+}
+
+/** ui:attribute/ui:parameter pairs [[k,v],…] → { k: v, … } command args. */
+export function paramsToObject(params) {
+  return Object.fromEntries(params || []);
+}
+
+/**
+ * Dispatch a menu command. `command` is the registry key (from a ui:Component
+ * `ui:name`); `params` is the args object. Bubbling + composed so one
+ * document-level listener in the host app catches it.
+ *
+ * @param {HTMLElement} host
+ * @param {string} command
+ * @param {object} [params]
+ */
+export function dispatchCommand(host, command, params) {
+  host.dispatchEvent(new CustomEvent('sol-command', {
+    bubbles: true, composed: true,
+    detail: { command, params: params || {}, source: host },
+  }));
+}
+
+/**
  * Lazy-import a sibling sol-* handler module on first use, so authors
  * don't have to <script> every component a declared item references.
  *
