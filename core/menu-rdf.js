@@ -8,6 +8,15 @@ import { loadRdfStore } from './rdf-utils.js';
 const UI     = 'http://www.w3.org/ns/ui#';
 const RDF    = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 const SCHEMA = 'http://schema.org/';
+const ACL    = 'http://www.w3.org/ns/auth/acl#';
+
+// An item may declare the access mode it needs via the standard WAC vocab,
+// e.g. `acl:mode acl:Write`. We surface a `requiresWrite` flag; the host app
+// decides what to do with it (hide / disable / …) — the menu takes no policy.
+function requiresWriteMode(store, subject) {
+  return store.each(subject, rdf.sym(ACL + 'mode'), null)
+    .some(m => m.value === ACL + 'Write');
+}
 
 // Read a single ui:<localName> property of `subject` from `store`.
 export function rdfVal(store, subject, localName) {
@@ -89,21 +98,22 @@ export function parseMenuItems(store, menuNode) {
     const id       = fragmentOf(part);
     const label    = rdfVal(store, part, 'label') || part.value;
     const icon     = rdfVal(store, part, 'icon');
+    const requiresWrite = requiresWriteMode(store, part);
 
     if (partType && partType.value === menuType.value) {
-      items.push({ type: 'submenu', id, name: label, children: parseMenuItems(store, part) });
+      items.push({ type: 'submenu', id, name: label, requiresWrite, children: parseMenuItems(store, part) });
       continue;
     }
 
     if (partType && partType.value === componentType.value) {
       const { tag, params } = rdfComponent(store, part);
-      items.push({ type: 'component', id, name: label, icon, tag, params });
+      items.push({ type: 'component', id, name: label, icon, requiresWrite, tag, params });
       continue;
     }
 
     const href     = rdfVal(store, part, 'href');
     const contents = rdfVal(store, part, 'contents');
-    items.push({ type: 'link', id, name: label, icon, href, contents });
+    items.push({ type: 'link', id, name: label, icon, requiresWrite, href, contents });
   }
   return items;
 }

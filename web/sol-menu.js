@@ -269,18 +269,19 @@ class SolMenu extends HTMLElement {
       sourceName: 'sol-menu', embedClass: 'sol-menu-embed',
     };
     return descriptions.map(desc => {
+      const rw = desc.requiresWrite;   // surfaced as part="requires-write"; app decides policy
       if (desc.type === 'submenu') {
-        return { name: desc.name, children: this._wrapRdfItems(desc.children) };
+        return { name: desc.name, requiresWrite: rw, children: this._wrapRdfItems(desc.children) };
       }
       if (desc.type === 'component') {
         // A ui:Component whose ui:name isn't a custom-element tag is a command:
         // clicking dispatches sol-command (no content mounted, not selectable).
         if (isCommandName(desc.tag)) {
-          return { name: desc.name, icon: desc.icon, command: desc.tag, params: paramsToObject(desc.params) };
+          return { name: desc.name, icon: desc.icon, requiresWrite: rw, command: desc.tag, params: paramsToObject(desc.params) };
         }
-        return { name: desc.name, icon: desc.icon, render: renderComponentItem(desc, ctx) };
+        return { name: desc.name, icon: desc.icon, requiresWrite: rw, render: renderComponentItem(desc, ctx) };
       }
-      return { name: desc.name, icon: desc.icon, render: renderLinkItem(desc, ctx) };
+      return { name: desc.name, icon: desc.icon, requiresWrite: rw, render: renderLinkItem(desc, ctx) };
     });
   }
 
@@ -394,6 +395,7 @@ class SolMenu extends HTMLElement {
         btn.setAttribute('role', 'menuitem');
         btn.setAttribute('aria-haspopup', 'menu');
         btn.setAttribute('aria-expanded', 'false');
+        if (item.requiresWrite) btn.setAttribute('part', 'item requires-write');
         const popup = document.createElement('div');
         popup.className = 'sol-menu-popup';
         popup.setAttribute('role', 'menu');
@@ -418,6 +420,9 @@ class SolMenu extends HTMLElement {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('role', 'menuitem');
+        // Surface the declared access requirement for the app to act on; the
+        // menu itself takes no policy (no hide / disable here).
+        if (item.requiresWrite) btn.setAttribute('part', 'item requires-write');
         if (item.icon) {
           btn.title = item.name;
           btn.setAttribute('aria-label', item.name);

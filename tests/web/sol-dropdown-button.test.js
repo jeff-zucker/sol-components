@@ -120,7 +120,9 @@ describe('SolDropdownButton', () => {
   });
 });
 
-// ── owner gating ─────────────────────────────────────────────────────────────
+// ── access requirements (acl:Write) ─────────────────────────────────────────
+
+const ACL = 'http://www.w3.org/ns/auth/acl#';
 
 function buildGatedStore() {
   const store = rdflib.graph();
@@ -140,31 +142,23 @@ function buildGatedStore() {
   store.add(s(BASE + '#Secret'), s(RDF + 'type'), s(UI + 'Component'));
   store.add(s(BASE + '#Secret'), s(UI + 'label'), l('Secret'));
   store.add(s(BASE + '#Secret'), s(UI + 'name'), l('secretCmd'));
-  const p = s(BASE + '#_gp');
-  store.add(s(BASE + '#Secret'), s(UI + 'attribute'), p);
-  store.add(p, s(SCHEMA + 'name'), l('owner-only'));
-  store.add(p, s(SCHEMA + 'value'), l('true'));
+  store.add(s(BASE + '#Secret'), s(ACL + 'mode'), s(ACL + 'Write'));   // requires write
   return store;
 }
 
-describe('SolDropdownButton — owner gating', () => {
+describe('SolDropdownButton — access requirements', () => {
   beforeEach(() => { mockStore = buildGatedStore(); });
 
-  test('owner-only items are hidden without the owner flag', async () => {
+  test('renders all items; marks acl:Write items part="requires-write" (no policy)', async () => {
     const el = attached(document.createElement('sol-dropdown-button'));
     el.setAttribute('source', BASE + '#G');
     await flush();
-    expect(items(el).map(b => b.textContent)).toEqual(['Public']);   // Secret hidden
-  });
 
-  test('the owner flag reveals owner-only items, and toggling re-gates', async () => {
-    const el = attached(document.createElement('sol-dropdown-button'));
-    el.setAttribute('source', BASE + '#G');
-    el.setAttribute('owner', '');
-    await flush();
+    // The component does NOT hide — both items render.
     expect(items(el).map(b => b.textContent)).toEqual(['Public', 'Secret']);
 
-    el.removeAttribute('owner');
-    expect(items(el).map(b => b.textContent)).toEqual(['Public']);   // re-gated on toggle
+    const part = (label) => items(el).find(b => b.textContent === label).getAttribute('part') || '';
+    expect(part('Secret').split(/\s+/)).toContain('requires-write');   // exposed for the app
+    expect(part('Public')).not.toMatch(/requires-write/);              // no requirement
   });
 });

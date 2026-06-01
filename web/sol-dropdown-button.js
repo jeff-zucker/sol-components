@@ -14,17 +14,17 @@
  * component items render via the region= cascade (e.g. region="modal"); set a
  * region on the element if you want them surfaced somewhere.
  *
- * Owner gating: an item carrying `ui:attribute [ schema:name "owner-only" ;
- * schema:value "true" ]` is hidden unless the boolean `owner` attribute is set —
- * so the host toggles a flag, not the data URL (which stays declared in HTML).
+ * Access requirements: an item declaring `acl:mode acl:Write` in the RDF is
+ * rendered with `part="requires-write"` (no policy here) — the host app decides
+ * what that means (hide / disable / …), e.g.
+ * `.cannot-write sol-dropdown-button::part(requires-write) { display: none }`.
  *
  * Attributes:
  *   source   — URL of the ui:Menu document (where the menu data lives).
  *              `from-rdf` is accepted as a fallback for <sol-menu> parity.
  *   label    — trigger text (default "⋮")
- *   owner    — boolean; when present, owner-only items are shown
  *
- * The trigger is exposed as `::part(trigger)` for external styling.
+ * Parts: `trigger` (the button), `requires-write` (items needing write access).
  */
 
 import { define } from '../core/define.js';
@@ -60,24 +60,18 @@ const DD_CSS = `
 const DD_SHEET = sheetFrom(MENU_CSS + DD_CSS);
 
 class SolDropdownButton extends SolMenu {
-  static get observedAttributes() { return ['source', 'from-rdf', 'owner']; }
+  static get observedAttributes() { return ['source', 'from-rdf']; }
 
   // Where the menu data lives. `source` is canonical (sol-* launcher parity);
   // `from-rdf` is accepted for <sol-menu> parity.
   _menuUri() { return this.getAttribute('source') || this.getAttribute('from-rdf'); }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (oldValue === newValue || !this._rendered) return;
-    if (name === 'source' || name === 'from-rdf') {
+    if ((name === 'source' || name === 'from-rdf') && oldValue !== newValue && this._rendered) {
       const uri = this._menuUri();
       if (uri) this._loadFromRdf(uri);
-    } else if (name === 'owner') {
-      this._renderNav();   // re-gate owner-only items
     }
   }
-
-  // An item is owner-only when it carries an `owner-only="true"` param.
-  _gated(item) { return item.params?.['owner-only'] === 'true'; }
 
   connectedCallback() {
     if (this._rendered) return;
@@ -146,9 +140,9 @@ class SolDropdownButton extends SolMenu {
     if (!pop) return;
     pop.innerHTML = '';
     this._btns = {};
-    const owner = this.hasAttribute('owner');
-    const visible = this._items.filter(it => owner || !this._gated(it));
-    this._renderNavLevel(pop, visible, 0);
+    // Render every item; items needing write declare it (part="requires-write")
+    // for the host app to gate — the dropdown takes no policy itself.
+    this._renderNavLevel(pop, this._items, 0);
     pop.querySelectorAll('button').forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
   }
 
