@@ -76,7 +76,7 @@ describe('SolDropdownButton', () => {
   test('renders a trigger, popup starts hidden, nothing auto-selected', async () => {
     const el = attached(document.createElement('sol-dropdown-button'));
     el.setAttribute('label', '⋮');
-    el.setAttribute('from-rdf', BASE + '#More');
+    el.setAttribute('source', BASE + '#More');
     await flush();
 
     expect(trigger(el)).toBeTruthy();
@@ -87,7 +87,7 @@ describe('SolDropdownButton', () => {
 
   test('clicking the trigger opens the popup with one button per item', async () => {
     const el = attached(document.createElement('sol-dropdown-button'));
-    el.setAttribute('from-rdf', BASE + '#More');
+    el.setAttribute('source', BASE + '#More');
     await flush();
 
     trigger(el).click();
@@ -96,9 +96,18 @@ describe('SolDropdownButton', () => {
     expect(trigger(el).getAttribute('aria-expanded')).toBe('true');
   });
 
-  test('clicking a command dispatches sol-command and closes the popup', async () => {
+  test('from-rdf still works as a fallback for source', async () => {
     const el = attached(document.createElement('sol-dropdown-button'));
     el.setAttribute('from-rdf', BASE + '#More');
+    await flush();
+
+    trigger(el).click();
+    expect(items(el).map(b => b.textContent)).toEqual(['Install', 'Home']);
+  });
+
+  test('clicking a command dispatches sol-command and closes the popup', async () => {
+    const el = attached(document.createElement('sol-dropdown-button'));
+    el.setAttribute('source', BASE + '#More');
     await flush();
     trigger(el).click();
 

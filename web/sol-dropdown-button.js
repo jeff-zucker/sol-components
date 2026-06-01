@@ -1,13 +1,13 @@
 /**
  * <sol-dropdown-button> — a trigger button that drops an RDF-defined menu.
  *
- * A thin presentation over <sol-menu>: same `from-rdf` ui:Menu shape, same item
- * kinds (ui:Link, ui:Component, command), same submenu / keyboard / command
- * dispatch engine — but rendered as a button that opens its top-level items in
- * a floating popup, instead of <sol-menu>'s always-open nav bar. Nothing is
- * pre-selected (a dropdown has no content panel to fill).
+ * A thin presentation over <sol-menu>: same ui:Menu shape, same item kinds
+ * (ui:Link, ui:Component, command), same submenu / keyboard / command dispatch
+ * engine — but rendered as a button that opens its top-level items in a floating
+ * popup, instead of <sol-menu>'s always-open nav bar. Nothing is pre-selected
+ * (a dropdown has no content panel to fill).
  *
- *   <sol-dropdown-button from-rdf="./menu.ttl#More" label="⋮"></sol-dropdown-button>
+ *   <sol-dropdown-button source="./menu.ttl#More" label="⋮"></sol-dropdown-button>
  *
  * Command items (a ui:Component whose ui:name is a bare registry key) dispatch
  * `sol-command` for the host app to resolve — see core/rdf-render.js. Link /
@@ -15,7 +15,8 @@
  * region on the element if you want them surfaced somewhere.
  *
  * Attributes:
- *   from-rdf — URL of a ui:Menu document (same as <sol-menu>)
+ *   source   — URL of the ui:Menu document (where the menu data lives).
+ *              `from-rdf` is accepted as a fallback for <sol-menu> parity.
  *   label    — trigger text (default "⋮")
  *
  * The trigger is exposed as `::part(trigger)` for external styling.
@@ -54,17 +55,35 @@ const DD_CSS = `
 const DD_SHEET = sheetFrom(MENU_CSS + DD_CSS);
 
 class SolDropdownButton extends SolMenu {
+  static get observedAttributes() { return ['source', 'from-rdf']; }
+
+  // Where the menu data lives. `source` is canonical (sol-* launcher parity);
+  // `from-rdf` is accepted for <sol-menu> parity.
+  _menuUri() { return this.getAttribute('source') || this.getAttribute('from-rdf'); }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if ((name === 'source' || name === 'from-rdf') && oldValue !== newValue && this._rendered) {
+      const uri = this._menuUri();
+      if (uri) this._loadFromRdf(uri);
+    }
+  }
+
   connectedCallback() {
     if (this._rendered) return;
     this._initShell();
-    const fromRdf = this.getAttribute('from-rdf');
-    if (fromRdf) {
-      this._loadFromRdf(fromRdf);            // wrap items + _renderNav (no auto-select)
+    const uri = this._menuUri();
+    if (uri) {
+      this._loadFromRdf(uri);                // wrap items + _renderNav (no auto-select)
     } else {
       const declared = this._items.length === 0 ? this._harvestItems(this) : null;
       if (declared?.length) this._items = declared;
       this._renderNav();
     }
+  }
+
+  async reload() {
+    const uri = this._menuUri();
+    if (uri) await this._loadFromRdf(uri);
   }
 
   _initShell() {
