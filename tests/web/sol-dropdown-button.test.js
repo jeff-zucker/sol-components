@@ -119,3 +119,52 @@ describe('SolDropdownButton', () => {
     expect(popup(el).hidden).toBe(true);    // dropdown closed after the command
   });
 });
+
+// ── owner gating ─────────────────────────────────────────────────────────────
+
+function buildGatedStore() {
+  const store = rdflib.graph();
+  const s = (v) => rdflib.sym(v);
+  const l = (v) => rdflib.literal(v);
+  store.add(s(BASE + '#G'), s(RDF + 'type'), s(UI + 'Menu'));
+  store.add(s(BASE + '#G'), s(UI + 'label'), l('G'));
+  const b1 = s(BASE + '#_g1'), b2 = s(BASE + '#_g2');
+  store.add(s(BASE + '#G'), s(UI + 'parts'), b1);
+  store.add(b1, s(RDF + 'first'), s(BASE + '#Public'));
+  store.add(b1, s(RDF + 'rest'), b2);
+  store.add(b2, s(RDF + 'first'), s(BASE + '#Secret'));
+  store.add(b2, s(RDF + 'rest'), s(RDF + 'nil'));
+  store.add(s(BASE + '#Public'), s(RDF + 'type'), s(UI + 'Component'));
+  store.add(s(BASE + '#Public'), s(UI + 'label'), l('Public'));
+  store.add(s(BASE + '#Public'), s(UI + 'name'), l('publicCmd'));
+  store.add(s(BASE + '#Secret'), s(RDF + 'type'), s(UI + 'Component'));
+  store.add(s(BASE + '#Secret'), s(UI + 'label'), l('Secret'));
+  store.add(s(BASE + '#Secret'), s(UI + 'name'), l('secretCmd'));
+  const p = s(BASE + '#_gp');
+  store.add(s(BASE + '#Secret'), s(UI + 'attribute'), p);
+  store.add(p, s(SCHEMA + 'name'), l('owner-only'));
+  store.add(p, s(SCHEMA + 'value'), l('true'));
+  return store;
+}
+
+describe('SolDropdownButton — owner gating', () => {
+  beforeEach(() => { mockStore = buildGatedStore(); });
+
+  test('owner-only items are hidden without the owner flag', async () => {
+    const el = attached(document.createElement('sol-dropdown-button'));
+    el.setAttribute('source', BASE + '#G');
+    await flush();
+    expect(items(el).map(b => b.textContent)).toEqual(['Public']);   // Secret hidden
+  });
+
+  test('the owner flag reveals owner-only items, and toggling re-gates', async () => {
+    const el = attached(document.createElement('sol-dropdown-button'));
+    el.setAttribute('source', BASE + '#G');
+    el.setAttribute('owner', '');
+    await flush();
+    expect(items(el).map(b => b.textContent)).toEqual(['Public', 'Secret']);
+
+    el.removeAttribute('owner');
+    expect(items(el).map(b => b.textContent)).toEqual(['Public']);   // re-gated on toggle
+  });
+});
