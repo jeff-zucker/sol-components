@@ -11,7 +11,7 @@ export const CSS = BTN_CSS + `
     backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     z-index: 1000;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: var(--font-body, system-ui, -apple-system, sans-serif);
     color: var(--text, #212121);
   }
 
