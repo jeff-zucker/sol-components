@@ -47,6 +47,15 @@ Each <i>ui:Link</i> or <i>ui:Component</i> part becomes a tab. A nested
 <i>ui:Menu</i> part becomes a tab whose content is a
 <i>&lt;sol-tabs variant="sub"&gt;</i> strip of that group's own children.
 </p>
+<p>
+Add the <i><code>keep-alive</code></i> attribute to render every tab once into
+its own persistent pane and switch by toggling visibility (no teardown) — so a
+tab's components keep their state (audio playback, scroll, login, in-flight
+fetches) across switches. <b>Command</b> items (a <i>ui:Component</i> whose
+<i>ui:name</i> is a hyphen-free key) are <b>skipped</b> by &lt;sol-tabs&gt; — a
+tab can't "run" something; put commands in a <i>&lt;sol-menu&gt;</i> /
+<i>&lt;sol-dropdown-button&gt;</i> instead.
+</p>
 </div>
 
 <div class="tab-panel" id="tab-rdf">
@@ -70,9 +79,11 @@ Each <i>ui:Link</i> or <i>ui:Component</i> part becomes a tab. A nested
 <b>ui:Component</b>
   ui:label       # (required) display name shown on the tab
   ui:name        # (required) custom element tag, e.g. "sol-query"
+                 # (a hyphen-free name is a command — skipped by sol-tabs)
   ui:attribute   # (optional) schema:PropertyValue pairs passed as element attributes
                  # e.g. [ schema:name "sparql" ; schema:value "SELECT ..." ]
   ui:icon        # (optional) icon URL
+  acl:mode       # (optional) access mode, e.g. acl:Write (used by menus, not tabs)
 
   <b>note:</b> a nested ui:Menu inside ui:parts renders as a tab containing a
   slimmer &lt;sol-tabs variant="sub"&gt; strip of its children.</pre>

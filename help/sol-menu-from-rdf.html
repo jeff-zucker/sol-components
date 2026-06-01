@@ -73,13 +73,21 @@ one) — in that region instead.
 
 <b>ui:Component</b>
   ui:label       # (required) display name shown in the menu
-  ui:name        # (required) custom element tag, e.g. "sol-query"
-  ui:attribute   # (optional) schema:PropertyValue pairs passed as element attributes
+  ui:name        # (required) EITHER a custom-element tag (hyphenated, e.g. "sol-query")
+                 #            OR a hyphen-free command key (e.g. "installPod")
+  ui:attribute   # (optional) schema:PropertyValue pairs — element attributes,
+                 #            or, for a command, args carried in the event detail
                  # e.g. [ schema:name "sparql" ; schema:value "SELECT ..." ]
   ui:icon        # (optional) icon URL
+  acl:mode       # (optional) access mode the item needs, e.g. acl:Write (WAC).
+                 #            Rendered with part="requires-write"; the host app
+                 #            decides the policy (hide / disable / …).
 
-  <b>note:</b> a ui:Component is self-contained — it carries its own tag and attributes.
-  The consuming application must load or define the named custom element.</pre>
+  <b>note:</b> a hyphenated ui:name names a custom element the app loads/defines.
+  A hyphen-free ui:name is a <b>command</b>: clicking dispatches a bubbling
+  <code>sol-command</code> (detail: { command, params }) for the host app to
+  resolve against its own registry — no code is named in the RDF. (Menus and
+  &lt;sol-dropdown-button&gt; dispatch on click; &lt;sol-tabs&gt; skips command items.)</pre>
 
 </div>
 
