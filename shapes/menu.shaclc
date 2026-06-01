@@ -1,4 +1,5 @@
 
+PREFIX acl: <http://www.w3.org/ns/auth/acl#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX schema: <http://schema.org/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -8,6 +9,7 @@ shape <#MenuShape> -> ui:Menu {
     ui:label xsd:string [1..1] % sh:name "label" ; sh:description "The display label for the menu" % .
     ui:parts [1..1] @<#MenuPartsCollectionShape> % sh:name "parts" ; sh:description "Ordered collection of ui:Link, ui:Component, and/or ui:Menu items" % .
     ui:orientation [0..1] in=[ui:Horizontal ui:Vertical] % sh:name "orientation" ; sh:description "Layout orientation: ui:Horizontal (default) or ui:Vertical" % .
+    acl:mode IRI in=[acl:Read acl:Write acl:Append acl:Control] % sh:name "access mode" ; sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." % .
 }
 shape <#MenuPartsCollectionShape> {
     rdf:rest* hasValue=rdf:nil .
@@ -32,12 +34,14 @@ shape <#LinkShape> -> ui:Link ;
     ui:icon xsd:anyURI [0..1] % sh:name "icon" ; sh:description "Icon URL" % .
     rdfs:comment xsd:string [0..1] % sh:description "Description of the Link" % .
     dcterms:subject skos:Concept % sh:description "Categories associated with the Link" % .
+    acl:mode IRI in=[acl:Read acl:Write acl:Append acl:Control] % sh:name "access mode" ; sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." % .
 }
 shape <#ComponentShape> -> ui:Component {
     ui:label xsd:string [1..1] % sh:name "label" ; sh:description "Display name shown in the menu" % .
-    ui:name xsd:string [1..1] % sh:name "name" ; sh:description "Custom element tag name (e.g., 'sol-query', 'pos-picture')" % .
-    ui:attribute @<#PropertyValueShape> % sh:name "attribute" ; sh:description "Attributes passed to the element as schema:PropertyValue pairs" % .
+    ui:name xsd:string [1..1] % sh:name "name" ; sh:description "Custom element tag name (hyphenated, e.g. 'sol-query'), OR a hyphen-free command key (e.g. 'installPod') dispatched as a sol-command event for the host app to handle" % .
+    ui:attribute @<#PropertyValueShape> % sh:name "attribute" ; sh:description "Attributes passed to the element (or args for a command) as schema:PropertyValue pairs" % .
     ui:icon xsd:anyURI [0..1] % sh:name "icon" ; sh:description "Icon URL" % .
+    acl:mode IRI in=[acl:Read acl:Write acl:Append acl:Control] % sh:name "access mode" ; sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." % .
 }
 shape <#PropertyValueShape> {
     schema:name xsd:string [1..1] % sh:name "name" ; sh:description "Attribute name" % .

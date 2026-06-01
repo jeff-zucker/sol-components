@@ -7,6 +7,7 @@
 @prefix schema: <http://schema.org/> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix acl: <http://www.w3.org/ns/auth/acl#> .
 
 :MenuShape
   a sh:NodeShape ;
@@ -33,6 +34,13 @@
     sh:in ( ui:Horizontal ui:Vertical ) ;
     sh:name "orientation" ;
     sh:description "Layout orientation: ui:Horizontal (default) or ui:Vertical" ;
+  ] ;
+  sh:property [
+    sh:path acl:mode ;
+    sh:nodeKind sh:IRI ;
+    sh:in ( acl:Read acl:Write acl:Append acl:Control ) ;
+    sh:name "access mode" ;
+    sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." ;
   ] .
 
 :MenuPartsCollectionShape
@@ -93,6 +101,13 @@
     sh:class skos:Concept ;
     sh:description "Categories associated with the Link" ;
   ] ;
+  sh:property [
+    sh:path acl:mode ;
+    sh:nodeKind sh:IRI ;
+    sh:in ( acl:Read acl:Write acl:Append acl:Control ) ;
+    sh:name "access mode" ;
+    sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." ;
+  ] ;
   sh:xone (
     [ sh:property [ sh:path ui:href ; sh:minCount 1 ] ]
     [ sh:property [ sh:path ui:contents ; sh:minCount 1 ] ]
@@ -116,13 +131,13 @@
     sh:maxCount 1 ;
     sh:datatype xsd:string ;
     sh:name "name" ;
-    sh:description "Custom element tag name (e.g., 'sol-query', 'pos-picture')" ;
+    sh:description "Custom element tag name (hyphenated, e.g. 'sol-query'), OR a hyphen-free command key (e.g. 'installPod') dispatched as a sol-command event for the host app to handle" ;
   ] ;
   sh:property [
     sh:path ui:attribute ;
     sh:node :PropertyValueShape ;
     sh:name "attribute" ;
-    sh:description "Attributes passed to the element as schema:PropertyValue pairs" ;
+    sh:description "Attributes passed to the element (or args for a command) as schema:PropertyValue pairs" ;
   ] ;
   sh:property [
     sh:path ui:icon ;
@@ -130,6 +145,13 @@
     sh:datatype xsd:anyURI ;
     sh:name "icon" ;
     sh:description "Icon URL" ;
+  ] ;
+  sh:property [
+    sh:path acl:mode ;
+    sh:nodeKind sh:IRI ;
+    sh:in ( acl:Read acl:Write acl:Append acl:Control ) ;
+    sh:name "access mode" ;
+    sh:description "Access mode (WAC) this item requires, e.g. acl:Write. Surfaced as part=\"requires-write\"; the host app decides the policy (hide / disable / …)." ;
   ] .
 
 :PropertyValueShape
