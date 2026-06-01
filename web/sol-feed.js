@@ -51,7 +51,7 @@ import { define } from '../core/define.js';
 import { CSS as FEED_CSS, sheet as FEED_SHEET } from './styles/sol-feed-css.js';
 import {
   renameTopicEdit, recategorizeEdit, addFeedEdit, deleteToBinEdit, restoreEdit,
-  setPositionsEdit, mintFeedUri, patchDoc, binUriFor,
+  setPositionsEdit, mintFeedUri, patchDoc, purgeFeed, binUriFor,
 } from './utils/feed-edit.js';
 import { getFeedItems, parseSourceList } from './utils/feed-fetch.js';
 import { getDefault, onDefaultChange } from '../core/defaults.js';
@@ -213,6 +213,11 @@ class SolFeed extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     /** feed URL → parsed items, populated lazily by the news view. */
     this._cache = new Map();
+    /** current topics-view mode ('topics' | 'bin') — survives reload so a
+     *  reload racing a viewDeleted click can't clobber the open bin. */
+    this._view = 'topics';
+    /** monotonic render token; async renders bail if superseded. */
+    this._nav = 0;
   }
 
   async connectedCallback() {
@@ -247,7 +252,10 @@ class SolFeed extends HTMLElement {
 
     try {
       if (view === 'topic') await this.renderTopic();
-      else if (view === 'topics') await this.renderTopics();
+      // Re-entering while the deleted bin is open (e.g. a reload races a
+      // viewDeleted click) must re-render the BIN, not clobber it with the
+      // normal columns — the bin is the user's current view.
+      else if (view === 'topics') await (this._view === 'bin' ? this._openBin() : this.renderTopics());
       else if (view === 'all') await this.renderAll();
       else await this.renderFeed();
     } catch (e) {
@@ -1002,6 +1010,7 @@ class SolFeed extends HTMLElement {
 
   /** PATCH one edit, then reload the normal view. */
   async _edit(editObj) {
+    this._view = 'topics';            // a normal-view edit returns to the columns
     try {
       await patchDoc(this._fileUri, editObj);
       await this.reload();
@@ -1167,7 +1176,9 @@ class SolFeed extends HTMLElement {
 
   /** Render the deleted bin: each deleted feed with a "restore to <topic>". */
   async _openBin() {
-    if (!this._fileUri) {                       // not rendered yet — derive
+    this._view = 'bin';                         // sticky: a reload re-renders the bin
+    const nav = ++this._nav;
+    if (!this._fileUri) {                        // not rendered yet — derive
       const abs = new URL(this.source, location.href).href;
       this._fileUri = abs.split('#')[0];
       this._binUri = binUriFor(this._fileUri);
@@ -1177,7 +1188,7 @@ class SolFeed extends HTMLElement {
     const bar = document.createElement('div'); bar.className = 'feed-bin-bar';
     const back = document.createElement('button');
     back.type = 'button'; back.className = 'feed-bin-back'; back.textContent = '← Back to feeds';
-    back.addEventListener('click', () => this.reload());
+    back.addEventListener('click', () => { this._view = 'topics'; this.reload(); });
     const title = document.createElement('span'); title.className = 'feed-bin-title'; title.textContent = 'Deleted feeds';
     bar.append(back, title);
     const list = document.createElement('ul'); list.className = 'feed-source-list feed-bin-list';
@@ -1186,6 +1197,7 @@ class SolFeed extends HTMLElement {
 
     let binFeeds = [];
     try { binFeeds = await parseSourceList(this._binUri, { proxy: this.proxy }); } catch { /* empty bin */ }
+    if (nav !== this._nav) return;               // superseded by a newer navigation
     if (!binFeeds.length) {
       const li = document.createElement('li'); li.className = 'sol-feed-empty'; li.textContent = 'Nothing deleted.';
       list.appendChild(li); return;
@@ -1202,9 +1214,35 @@ class SolFeed extends HTMLElement {
         try { await patchDoc(this._fileUri, restoreEdit(src.uri, this._binUri, sel.value)); await this._openBin(); }
         catch (e) { this.setStatus(e.message, true); }
       });
-      li.append(name, sel, restore);
+      const purge = document.createElement('button');
+      purge.type = 'button'; purge.className = 'feed-bin-purge'; purge.textContent = 'Delete forever';
+      purge.addEventListener('click', () => this._confirmPurge(li, src));
+      li.append(name, sel, restore, purge);
       list.appendChild(li);
     }
+  }
+
+  /** Inline confirm for a PERMANENT delete from the bin (no undo). */
+  _confirmPurge(li, src) {
+    if (li.querySelector('.feed-del-confirm')) return;
+    const orig = [...li.childNodes];
+    const wrap = document.createElement('div');
+    wrap.className = 'feed-del-confirm';
+    const q = document.createElement('span');
+    q.className = 'feed-del-q';
+    q.textContent = `Permanently delete “${src.label}”? This can't be undone.`;
+    const yes = document.createElement('button');
+    yes.type = 'button'; yes.className = 'feed-del-yes'; yes.textContent = 'Delete forever';
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'feed-del-no'; no.textContent = 'Cancel';
+    wrap.append(q, yes, no);
+    li.replaceChildren(wrap);
+    no.focus();
+    no.addEventListener('click', () => li.replaceChildren(...orig));
+    yes.addEventListener('click', async () => {
+      try { await purgeFeed(this._fileUri, src.uri, { catalogUri: this._catalogUri }); await this._openBin(); }
+      catch (e) { this.setStatus(e.message, true); }
+    });
   }
 
   /** localStorage key for the topics-view selected source (one URL). */

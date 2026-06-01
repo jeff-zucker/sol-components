@@ -464,6 +464,11 @@ export const CSS = `
     border: 1px solid var(--border, #c0c0c0); background: var(--surface, #fff); color: inherit;
   }
   .feed-bin-restore:hover { background: var(--accent, #3498db); color: #fff; border-color: transparent; }
+  .feed-bin-purge {
+    font: inherit; font-size: .8em; padding: .2rem .6rem; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--error, #e74c3c); background: transparent; color: var(--error, #e74c3c);
+  }
+  .feed-bin-purge:hover { background: var(--error, #e74c3c); color: #fff; }
 
 `;
 

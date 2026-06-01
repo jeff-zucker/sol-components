@@ -136,3 +136,24 @@ export async function patchDoc(fileUri, edit, { prefixes = DEFAULT_PREFIXES, fet
   });
   if (!resp.ok) throw new Error(`Save failed (HTTP ${resp.status}) — the feeds file must be writable.`);
 }
+
+/**
+ * Permanent delete: remove ALL of a source's triples (DELETE … WHERE, so it
+ * works whatever predicates it has — title, accessURL, theme, position, …)
+ * plus its `dcat:dataset` catalog membership. Used to purge from the bin.
+ */
+export function purgeBody(feedUri, catalogUri, prefixes = DEFAULT_PREFIXES) {
+  const pfx = Object.entries(prefixes).map(([k, v]) => `PREFIX ${k}: <${v}>`).join('\n');
+  const cat = catalogUri ? `\n  <${catalogUri}> dcat:dataset <${feedUri}> .` : '';
+  return `${pfx}\nDELETE {\n  <${feedUri}> ?p ?o .${cat}\n} WHERE {\n  <${feedUri}> ?p ?o .\n}\n`;
+}
+
+export async function purgeFeed(fileUri, feedUri, { catalogUri, prefixes, fetchImpl } = {}) {
+  const f = fetchImpl || fetch;
+  const resp = await f(fileUri, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/sparql-update' },
+    body: purgeBody(feedUri, catalogUri, prefixes),
+  });
+  if (!resp.ok) throw new Error(`Permanent delete failed (HTTP ${resp.status}).`);
+}
