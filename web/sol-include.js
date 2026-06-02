@@ -35,13 +35,15 @@ function browserContainer(html) {
 
 /**
  * Is there an authenticated user? True for a live Solid session (a logged-in
- * <sol-login>, or any logged-in session in the shared AuthManager) AND for the
- * `window.SolidKitchen` dev flag, which is treated as exactly equivalent to
- * being logged in. Used by the `if-logged-in` source switch.
+ * <sol-login>, or any logged-in session in the shared AuthManager), and for the
+ * dev "kitchen" flag — declared as `solid-kitchen` on <sol-default> (or the
+ * legacy `window.SolidKitchen` global) — treated as exactly equivalent to being
+ * logged in. Used by the `if-logged-in` source switch.
  */
 function isLoggedIn() {
   try { if (typeof window !== 'undefined' && window.SolidKitchen === true) return true; } catch { /* ignore */ }
   if (typeof document === 'undefined') return false;
+  if (document.querySelector('sol-default')?.hasAttribute('solid-kitchen')) return true;
   const login = document.querySelector('sol-login');
   if (login && login.isLoggedIn) return true;
   try {
