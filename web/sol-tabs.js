@@ -37,6 +37,16 @@
  *     <a href="readme.md">Readme</a>
  *   </sol-tabs>
  *
+ * Action launchers: a child with `slot="actions"` is NOT a tab — it's re-homed
+ * into the tab bar's actions row (next to the tabs) and otherwise left as-is, so
+ * toolbar buttons live in the same markup. An inline <sol-button> there is
+ * auto-wired to this tabs' content area (no `for=` needed):
+ *
+ *   <sol-tabs>
+ *     <a href="a.html">A</a>
+ *     <sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>
+ *   </sol-tabs>
+ *
  * RDF usage: point `from-rdf` at a ui:Menu document — the same RDF shape
  * <sol-menu> consumes. Each ui:Link / ui:Component part becomes a tab; a
  * nested ui:Menu becomes a tab whose content is a slimmer
@@ -58,6 +68,10 @@ import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { loadMenuFromUri } from '../core/menu-rdf.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName } from '../core/rdf-render.js';
+
+// For auto-wiring an inline action launcher to this tabs' content area we need
+// a stable selector; mint an id for any <sol-tabs> that lacks one.
+let _solTabsUid = 0;
 
 /**
  * Tabbed content container.
@@ -83,6 +97,7 @@ class SolTabs extends HTMLElement {
     this._cleanup = null;
     this._footerEl = null;
     this._actionsEl = null;
+    this._launchers = null;
     this._rendered = false;
   }
 
@@ -117,6 +132,14 @@ class SolTabs extends HTMLElement {
     // Harvest declarative anchors before we overwrite innerHTML.
     const declared = (!fromRdf && this._tabs.length === 0)
       ? this._harvestAnchors() : null;
+
+    // Declarative PAGE-LEVEL action launchers (e.g. <sol-button slot="actions">):
+    // detach so they survive the innerHTML reset; _renderBar re-homes them onto
+    // the bar (right side). Unlike the per-tab `.sol-tabs-actions` row — which
+    // switchTab clears on every switch — these persist across tabs. An inline
+    // <sol-button> is auto-wired to this tabs' content area (no `for=` needed).
+    this._launchers = Array.from(this.querySelectorAll(':scope > [slot="actions"]'));
+    for (const el of this._launchers) { el.remove(); this._wireInlineAction(el); }
 
     this.innerHTML = `
       <div class="sol-tabs-bar" role="tablist"></div>
@@ -211,8 +234,19 @@ class SolTabs extends HTMLElement {
   // the created element as both `source` and `endpoint` so components that
   // use either convention (sol-include / sol-live-edit use source, sol-query
   // uses endpoint) pick it up. All other anchor attributes are forwarded.
+  // Auto-wire an inline action launcher (<sol-button inline>) to this tabs'
+  // content area, so the author needn't repeat a `for=` selector. No-op when it
+  // already has `for=` or isn't an inline sol-button.
+  _wireInlineAction(el) {
+    if (!el.tagName || el.tagName.toLowerCase() !== 'sol-button') return;
+    if (!el.hasAttribute('inline') || el.hasAttribute('for')) return;
+    if (!this.id) this.id = `sol-tabs-${++_solTabsUid}`;
+    el.setAttribute('for', `#${this.id} > .sol-tabs-content`);
+  }
+
   _harvestAnchors() {
-    const anchors = Array.from(this.querySelectorAll(':scope > a[href]'));
+    // Anchors marked slot="actions" are launchers, not tabs — skip them here.
+    const anchors = Array.from(this.querySelectorAll(':scope > a[href]:not([slot="actions"])'));
     if (!anchors.length) return [];
     // `handler` may be written plain or as `data-handler` (the latter keeps a
     // standard <a> HTML-valid). Same for the forwarded attributes below.
@@ -264,7 +298,10 @@ class SolTabs extends HTMLElement {
     if (!bar) return;
     bar.innerHTML = '';
     this._btns = {};
-    if (this._tabs.length <= 1) { bar.style.display = 'none'; return; }
+    const launchers = this._launchers || [];
+    // Hide the bar only when there's nothing to show — a lone tab AND no
+    // page-level launchers. Launchers alone keep the bar visible.
+    if (this._tabs.length <= 1 && !launchers.length) { bar.style.display = 'none'; return; }
     bar.style.display = '';
     this._tabs.forEach(tab => {
       const btn = document.createElement('button');
@@ -276,6 +313,14 @@ class SolTabs extends HTMLElement {
       bar.appendChild(btn);
       this._btns[tab.name] = btn;
     });
+    // Page-level action launchers, grouped on the right of the bar. Re-appended
+    // on every bar render (so they survive a tabs reload); persist across switches.
+    if (launchers.length) {
+      const group = document.createElement('span');
+      group.className = 'sol-tabs-launch';
+      for (const el of launchers) group.appendChild(el);
+      bar.appendChild(group);
+    }
   }
 
   // Render every tab once (keep-alive) then show the first, else just

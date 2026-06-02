@@ -31,6 +31,11 @@ export const CSS = `
     overflow-x: auto; overflow-y: hidden;
     scrollbar-width: thin;
   }
+  /* Page-level action launchers (slot="actions"), grouped at the right of the bar. */
+  sol-tabs > .sol-tabs-bar > .sol-tabs-launch {
+    margin-left: auto; flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
   sol-tabs[orientation="vertical"] > .sol-tabs-bar {
     flex-direction: column;
     border-bottom: none;

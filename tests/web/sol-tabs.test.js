@@ -375,6 +375,54 @@ describe('SolTabs — declarative and imperative APIs', () => {
   });
 });
 
+describe('SolTabs — slot="actions" launchers', () => {
+  const LAUNCH = ':scope > .sol-tabs-bar > .sol-tabs-launch > sol-button';
+
+  test('relocates slot="actions" children to the bar launch group, not as tabs', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+    attached(el);
+    expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);   // launcher is NOT a tab
+    const launch = el.querySelector(LAUNCH);
+    expect(launch).toBeTruthy();                                              // homed in the bar launch group
+    expect(launch.textContent).toBe('?');
+  });
+
+  test('survives a tab switch (persistent, unlike the per-tab actions row)', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+    attached(el);
+    el.switchTab('Beta');
+    expect(el.querySelector(LAUNCH)).toBeTruthy();   // still there after switching tabs
+  });
+
+  test('auto-wires an inline sol-button to the content area via for=', () => {
+    const el = document.createElement('sol-tabs');
+    el.id = 'mytabs';
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+    attached(el);
+    expect(el.querySelector(LAUNCH).getAttribute('for')).toBe('#mytabs > .sol-tabs-content');
+  });
+
+  test('mints an id when missing; keeps an explicit for=', () => {
+    const a = document.createElement('sol-tabs');   // no id
+    a.innerHTML = '<a href="a.html">A</a><a href="b.html">B</a>'
+      + '<sol-button slot="actions" inline handler="sol-include" source="h">?</sol-button>';
+    attached(a);
+    expect(a.id).toMatch(/^sol-tabs-\d+$/);
+    expect(a.querySelector(LAUNCH).getAttribute('for')).toBe(`#${a.id} > .sol-tabs-content`);
+
+    const b = document.createElement('sol-tabs');
+    b.innerHTML = '<a href="a.html">A</a><a href="b.html">B</a>'
+      + '<sol-button slot="actions" inline for="#elsewhere" handler="sol-include" source="h">?</sol-button>';
+    attached(b);
+    expect(b.querySelector(LAUNCH).getAttribute('for')).toBe('#elsewhere');
+  });
+});
+
 // ── keep-alive ──────────────────────────────────────────────────────────────
 
 describe('SolTabs — keep-alive', () => {
