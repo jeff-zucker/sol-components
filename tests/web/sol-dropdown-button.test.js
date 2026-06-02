@@ -162,3 +162,50 @@ describe('SolDropdownButton — access requirements', () => {
     expect(part('Public')).not.toMatch(/requires-write/);              // no requirement
   });
 });
+
+// ── declarative <menu> (no source / no RDF) ─────────────────────────────────
+
+describe('SolDropdownButton — inline <menu>', () => {
+  // Children must exist before the element connects (connectedCallback harvests
+  // once, guarded by _rendered), so set innerHTML before appending.
+  function mountMenu(inner) {
+    const el = document.createElement('sol-dropdown-button');
+    el.setAttribute('label', '⋮');
+    el.innerHTML = inner;
+    return attached(el);
+  }
+
+  test('harvests a <menu> of command items; dispatches + gates like the RDF form', async () => {
+    const el = mountMenu(`
+      <menu>
+        <button handler="guestView">View as guest</button>
+        <button handler="installPod" requires-write>Install on my Pod…</button>
+      </menu>`);
+    await flush();
+
+    trigger(el).click();
+    expect(items(el).map(b => b.textContent)).toEqual(['View as guest', 'Install on my Pod…']);
+
+    // requires-write surfaces as a part for the app to gate.
+    const part = (label) => items(el).find(b => b.textContent === label).getAttribute('part') || '';
+    expect(part('Install on my Pod…').split(/\s+/)).toContain('requires-write');
+    expect(part('View as guest')).not.toMatch(/requires-write/);
+
+    // clicking a command dispatches sol-command and closes.
+    let detail = null;
+    el.addEventListener('sol-command', (e) => { detail = e.detail; });
+    items(el).find(b => b.textContent === 'View as guest').click();
+    expect(detail).toEqual(expect.objectContaining({ command: 'guestView' }));
+    expect(popup(el).hidden).toBe(true);
+  });
+
+  test('parses a JSON params attribute', async () => {
+    const el = mountMenu(`<menu><button handler="go" params='{"to":"x"}'>Go</button></menu>`);
+    await flush();
+    trigger(el).click();
+    let detail = null;
+    el.addEventListener('sol-command', (e) => { detail = e.detail; });
+    items(el)[0].click();
+    expect(detail.params).toEqual({ to: 'x' });
+  });
+});

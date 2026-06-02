@@ -9,6 +9,18 @@
  *
  *   <sol-dropdown-button source="./menu.ttl#More" label="⋮"></sol-dropdown-button>
  *
+ * Or declare the menu inline (no source) with a <menu> of items — `handler`
+ * names what each does (a bare action name dispatches sol-command; a
+ * custom-element tag / <a href> mounts a component); owner-gated items add
+ * `requires-write`:
+ *
+ *   <sol-dropdown-button label="⋮">
+ *     <menu>
+ *       <button handler="installPod" requires-write>Install on my Pod…</button>
+ *       <a href="about.html">About</a>
+ *     </menu>
+ *   </sol-dropdown-button>
+ *
  * Command items (a ui:Component whose ui:name is a bare registry key) dispatch
  * `sol-command` for the host app to resolve — see core/rdf-render.js. Link /
  * component items render via the region= cascade (e.g. region="modal"); set a
@@ -53,8 +65,10 @@ const DD_CSS = `
     box-shadow: var(--shadow-popup, 0 8px 24px rgba(0,0,0,0.28));
   }
   .sol-dd-popup[hidden] { display: none; }
-  /* A dropdown has no inline content panel; items use the region= cascade. */
-  ::slotted(.sol-menu-content) { display: none; }
+  /* A dropdown has no inline content panel; items use the region= cascade. The
+     authored <menu> (and content panel) is a declaration, not UI — its items
+     are harvested into the popup, so keep the slotted source hidden. */
+  ::slotted(.sol-menu-content), ::slotted(menu) { display: none; }
 `;
 
 const DD_SHEET = sheetFrom(MENU_CSS + DD_CSS);
@@ -155,13 +169,35 @@ class SolDropdownButton extends SolMenu {
   _open() {
     this._popup.hidden = false;
     this._trigger.setAttribute('aria-expanded', 'true');
+    // Position the popup viewport-fixed against the trigger so it escapes any
+    // ancestor that clips overflow (a tab bar, a scroll container) — an
+    // absolutely-positioned popup would be cropped there. Stays right-aligned
+    // to the trigger; tracks scroll/resize while open.
+    this._place();
+    this._onReflow = () => this._place();
+    window.addEventListener('scroll', this._onReflow, true);
+    window.addEventListener('resize', this._onReflow);
     const first = this._popup.querySelector('button');
     if (first) { first.setAttribute('tabindex', '0'); first.focus(); }
+  }
+
+  _place() {
+    const r = this._trigger.getBoundingClientRect();
+    const pop = this._popup;
+    pop.style.position = 'fixed';
+    pop.style.top = `${Math.round(r.bottom + 4)}px`;
+    pop.style.right = `${Math.round(window.innerWidth - r.right)}px`;
+    pop.style.left = 'auto';
   }
 
   _close() {
     if (this._popup) this._popup.hidden = true;
     this._trigger?.setAttribute('aria-expanded', 'false');
+    if (this._onReflow) {
+      window.removeEventListener('scroll', this._onReflow, true);
+      window.removeEventListener('resize', this._onReflow);
+      this._onReflow = null;
+    }
     super._closeAllPopups();   // collapse any submenu fly-outs
   }
 
