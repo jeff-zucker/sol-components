@@ -1,0 +1,26 @@
+{
+  "name": "solid-ui-skos",
+  "version": "0.5.0",
+  "description": "SKOS-aware ui:Choice for solid-ui: populate a form dropdown from a skos:ConceptScheme, skos:Collection, or skos:Concept, with transitive scheme/concept enumeration and optional inline concept minting (ui:canMintNew). `import 'solid-ui-skos'` and it auto-registers (resolves rdflib + solid-logic + solid-ui itself).",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./gather": "./src/skos-options.js"
+  },
+  "files": ["src", "README.md"],
+  "scripts": {
+    "test": "node --test test/skos-options.test.mjs"
+  },
+  "peerDependencies": {
+    "rdflib": "*",
+    "solid-logic": "*",
+    "solid-ui": "*"
+  },
+  "devDependencies": {
+    "rdflib": "*"
+  },
+  "keywords": ["solid", "solid-ui", "skos", "rdf", "rdflib", "forms", "ui:Choice", "concept-scheme"],
+  "license": "MIT"
+}
