@@ -287,16 +287,45 @@ class SolMenu extends HTMLElement {
 
   _harvestItems(root) {
     const parentHandler = (this.getAttribute('handler') || '').trim();
-    const SKIP = new Set(['href', 'handler', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
+    const SKIP = new Set(['href', 'handler', 'params', 'requires-write', 'if-logged-in', 'icon',
+                          'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
+    // A menu item is owner-gated by `requires-write` (≙ acl:mode acl:Write) or
+    // the friendlier `if-logged-in` boolean — same meaning, surfaced as
+    // part="requires-write" for the host to hide. (Whole-button gating is the
+    // `if-logged-in` attribute on the launcher itself, handled by host CSS.)
+    const isGated = (n) => n.hasAttribute('requires-write') || n.hasAttribute('if-logged-in');
     const out = [];
     let i = 0;
-    for (const node of Array.from(root.children)) {
-      if (node.tagName === 'A' && node.hasAttribute('href')) {
+    // A <menu> child is the canonical items container (a dropdown almost always
+    // has one); without it we fall back to harvesting loose children. <li>
+    // wrappers (the strictly-valid form) are unwrapped to the item element.
+    const container = root.querySelector(':scope > menu') || root;
+    const nodes = Array.from(container.children)
+      .flatMap(n => n.tagName === 'LI' ? Array.from(n.children) : [n]);
+    for (const node of nodes) {
+      const handler = node.getAttribute('handler');
+      if (handler && isCommandName(handler)) {
+        // An action item: `handler` is a bare name (not a custom element), so it
+        // dispatches sol-command (no content mounted), gated by requires-write
+        // (→ part="requires-write") just like the RDF form.
+        const label = (node.textContent || '').trim() || `Item ${++i}`;
+        const raw = node.getAttribute('params');
+        let params;
+        if (raw != null) { try { params = JSON.parse(raw); } catch { params = raw; } }
+        out.push({
+          name: label,
+          command: handler,
+          params,
+          requiresWrite: isGated(node),
+          icon: node.getAttribute('icon') || undefined,
+        });
+      } else if (node.tagName === 'A' && node.hasAttribute('href')) {
         const label = (node.textContent || '').trim() || `Item ${++i}`;
         const url = node.getAttribute('href');
         const handlerTag = (node.getAttribute('handler') || parentHandler || 'sol-include').trim();
         out.push({
           name: label,
+          requiresWrite: isGated(node),
           render: (body) => {
             ensureHandler(handlerTag, this, import.meta.url, 'sol-menu');
             const el = document.createElement(handlerTag);
