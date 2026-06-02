@@ -389,6 +389,26 @@ describe('SolTabs — slot="actions" launchers', () => {
     expect(launch.textContent).toBe('?');
   });
 
+  test('infers a non-anchor child as an action — no slot="actions" marker needed', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<sol-button inline handler="sol-include" source="help.html">?</sol-button>';   // no slot=
+    attached(el);
+    expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);   // still only the anchors are tabs
+    const launch = el.querySelector(LAUNCH);
+    expect(launch).toBeTruthy();                                              // non-anchor → action, in the launch group
+    expect(launch.textContent).toBe('?');
+  });
+
+  test('slot="actions" still forces an <a> to be an action (escape hatch)', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<a href="x.html" slot="actions">X</a>';
+    attached(el);
+    expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);   // the marked <a> is NOT a tab
+    expect(el.querySelector(':scope > .sol-tabs-bar > .sol-tabs-launch > a')?.textContent).toBe('X');
+  });
+
   test('survives a tab switch (persistent, unlike the per-tab actions row)', () => {
     const el = document.createElement('sol-tabs');
     el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'

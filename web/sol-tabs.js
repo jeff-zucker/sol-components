@@ -37,14 +37,16 @@
  *     <a href="readme.md">Readme</a>
  *   </sol-tabs>
  *
- * Action launchers: a child with `slot="actions"` is NOT a tab — it's re-homed
- * into the tab bar's actions row (next to the tabs) and otherwise left as-is, so
- * toolbar buttons live in the same markup. An inline <sol-button> there is
- * auto-wired to this tabs' content area (no `for=` needed):
+ * Action launchers: tabs are the `<a href>` children; ANY OTHER element child
+ * (a button, a custom control) is treated as a toolbar action — re-homed into
+ * the tab bar's actions row (next to the tabs) and otherwise left as-is, so
+ * toolbar controls live in the same markup with no marker. `slot="actions"` is
+ * an explicit escape hatch (force an <a> to be an action, or be explicit). An
+ * inline <sol-button> action is auto-wired to this tabs' content area (no `for=`):
  *
  *   <sol-tabs>
  *     <a href="a.html">A</a>
- *     <sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>
+ *     <sol-button inline handler="sol-include" source="help.html">?</sol-button>
  *   </sol-tabs>
  *
  * RDF usage: point `from-rdf` at a ui:Menu document — the same RDF shape
@@ -133,12 +135,16 @@ class SolTabs extends HTMLElement {
     const declared = (!fromRdf && this._tabs.length === 0)
       ? this._harvestAnchors() : null;
 
-    // Declarative PAGE-LEVEL action launchers (e.g. <sol-button slot="actions">):
-    // detach so they survive the innerHTML reset; _renderBar re-homes them onto
-    // the bar (right side). Unlike the per-tab `.sol-tabs-actions` row — which
-    // switchTab clears on every switch — these persist across tabs. An inline
-    // <sol-button> is auto-wired to this tabs' content area (no `for=` needed).
-    this._launchers = Array.from(this.querySelectorAll(':scope > [slot="actions"]'));
+    // Declarative PAGE-LEVEL action launchers (e.g. a <sol-button> toolbar
+    // control). A child is an action — not a tab — when it's NOT an `<a href>`
+    // tab anchor; `slot="actions"` stays as an explicit escape hatch (e.g. to
+    // mark an <a> as an action, or force the classification). They're detached
+    // so they survive the innerHTML reset; _renderBar re-homes them onto the bar
+    // (right side). Unlike the per-tab `.sol-tabs-actions` row — which switchTab
+    // clears on every switch — these persist across tabs. An inline <sol-button>
+    // is auto-wired to this tabs' content area (no `for=` needed).
+    this._launchers = Array.from(this.children).filter(
+      (el) => el.matches('[slot="actions"]') || !el.matches('a[href]'));
     for (const el of this._launchers) { el.remove(); this._wireInlineAction(el); }
 
     this.innerHTML = `
@@ -251,14 +257,17 @@ class SolTabs extends HTMLElement {
     // `handler` may be written plain or as `data-handler` (the latter keeps a
     // standard <a> HTML-valid). Same for the forwarded attributes below.
     const parentHandler = (this.getAttribute('data-handler') || this.getAttribute('handler') || '').trim();
-    const SKIP = new Set(['href', 'handler', 'data-handler', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
+    const SKIP = new Set(['href', 'handler', 'data-handler', 'data-tab-id', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
     return anchors.map((a, i) => {
       const label = (a.textContent || '').trim() || `Tab ${i + 1}`;
       const url = a.getAttribute('href');
       const handlerTag = (a.getAttribute('data-handler') || a.getAttribute('handler') || parentHandler || 'sol-include').trim();
       return {
         name: label,
-        id: a.id || undefined,
+        // The tab id (→ button data-tab-id, for styling/selection) can be set
+        // explicitly with data-tab-id, independent of the anchor's id — the
+        // latter is forwarded to become the content element's id.
+        id: a.dataset.tabId || a.id || undefined,
         render: (body) => {
           ensureHandler(handlerTag, this, import.meta.url, 'sol-tabs');
           const el = document.createElement(handlerTag);
