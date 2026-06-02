@@ -1,0 +1,151 @@
+@prefix : <#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ui: <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+:MenuShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Menu ;
+  sh:property [
+    sh:path ui:label ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "label" ;
+    sh:description "The display label for the menu" ;
+  ] ;
+  sh:property [
+    sh:path ui:parts ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:name "parts" ;
+    sh:description "Ordered collection of ui:Link, ui:Component, and/or ui:Menu items" ;
+    sh:node :MenuPartsCollectionShape ;
+  ] ;
+  sh:property [
+    sh:path ui:orientation ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Horizontal ui:Vertical ) ;
+    sh:name "orientation" ;
+    sh:description "Layout orientation: ui:Horizontal (default) or ui:Vertical" ;
+  ] .
+
+:MenuPartsCollectionShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path [ sh:zeroOrMorePath rdf:rest ] ;
+    sh:hasValue rdf:nil ;
+  ] ;
+  sh:property [
+    sh:path rdf:first ;
+    sh:or (
+      [ sh:class ui:Link ]
+      [ sh:class ui:Component ]
+      [ sh:class ui:Menu ]
+    ) ;
+  ] .
+
+:LinkShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Link ;
+  sh:property [
+    sh:path ui:label ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "label" ;
+    sh:description "The display label for the link" ;
+  ] ;
+  sh:property [
+    sh:path ui:href ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:anyURI ;
+    sh:name "href" ;
+    sh:description "URL to load (via handler component if present)" ;
+  ] ;
+  sh:property [
+    sh:path ui:contents ;
+    sh:maxCount 1 ;
+    sh:datatype rdf:HTML ;
+    sh:name "contents" ;
+    sh:description "Literal HTML rendered inline (sanitized by default)" ;
+  ] ;
+  sh:property [
+    sh:path ui:icon ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:anyURI ;
+    sh:name "icon" ;
+    sh:description "Icon URL" ;
+  ] ;
+  sh:property [
+    sh:path rdfs:comment ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:description "Description of the Link" ;
+  ] ;
+  sh:property [
+    sh:path dcterms:subject ;
+    sh:class skos:Concept ;
+    sh:description "Categories associated with the Link" ;
+  ] ;
+  sh:xone (
+    [ sh:property [ sh:path ui:href ; sh:minCount 1 ] ]
+    [ sh:property [ sh:path ui:contents ; sh:minCount 1 ] ]
+  ) ;
+  sh:message "A ui:Link must have either ui:href or ui:contents" .
+
+:ComponentShape
+  a sh:NodeShape ;
+  sh:targetClass ui:Component ;
+  sh:property [
+    sh:path ui:label ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "label" ;
+    sh:description "Display name shown in the menu" ;
+  ] ;
+  sh:property [
+    sh:path ui:name ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "name" ;
+    sh:description "Custom element tag name (e.g., 'sol-query', 'pos-picture')" ;
+  ] ;
+  sh:property [
+    sh:path ui:attribute ;
+    sh:node :PropertyValueShape ;
+    sh:name "attribute" ;
+    sh:description "Attributes passed to the element as schema:PropertyValue pairs" ;
+  ] ;
+  sh:property [
+    sh:path ui:icon ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:anyURI ;
+    sh:name "icon" ;
+    sh:description "Icon URL" ;
+  ] .
+
+:PropertyValueShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path schema:name ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "name" ;
+    sh:description "Attribute name" ;
+  ] ;
+  sh:property [
+    sh:path schema:value ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:name "value" ;
+    sh:description "Attribute value" ;
+  ] .

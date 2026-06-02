@@ -9,6 +9,7 @@ Quick map of what's in `claude/plans/` and where each plan stands.
 | [PLAN-sol-form-redesign](PLAN-sol-form-redesign.md) | Not started | (large) | Two-attribute API (`shape` + `data`), `view=record/rolodex/table/accordion/auto-complete`, `dry-run` attribute. Subsumes sol-tree-edit. |
 | [PLAN-shape-file-consolidation](PLAN-shape-file-consolidation.md) | Not started | ~10 h | One SHACL file per editable type, `sh:targetClass` dispatch + `swc:` linkage predicates (`children`, `childClasses`, `drillDown`, `displayLabel`). Prereq for `view=accordion`. |
 | [PLAN-shape2form-or-and](PLAN-shape2form-or-and.md) | Not started | ~10–11 h | `sh:or`/`sh:and` support in shape2form (and the renaming from shape**cl**2form). Path to optional ShEx down the road. |
+| [PLAN-sol-form-skos](PLAN-sol-form-skos.md) | Not started | ~3–4 h | Wire `solid-ui-skos` into sol-form: import the add-on (activates the SKOS `ui:Choice` decorator) + have shape2form emit `ui:from <scheme>` for SKOS concept properties → transitive SKOS dropdowns + mint in `<sol-form>`. Add-on lives in `packages/solid-ui-skos/`. |
 | [PLAN-sol-tree-edit](PLAN-sol-tree-edit.md) | v0 shipped, superseded by redesign | — | Read-render of two-shape tree menus. Will be marked deprecated once `<sol-form view="accordion">` lands. |
 | [PLAN-sol-calendar](PLAN-sol-calendar.md) | Pre-existing | — | Calendar component plan (not from this session). |
 
