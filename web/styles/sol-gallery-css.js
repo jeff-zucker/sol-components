@@ -174,13 +174,6 @@ export const CSS = `
     cursor: pointer;
   }
   .gallery-lb-close:hover { background: rgba(255,255,255,.22); }
-  .gallery-lb-fav {
-    position: absolute; top: .6rem; right: 3.6rem; font-size: 1.4rem; line-height: 1;
-    width: 2.4rem; height: 2.4rem; border: none; border-radius: 8px;
-    background: rgba(255,255,255,.1); color: #ffd966; cursor: pointer;
-  }
-  .gallery-lb-fav:hover { background: rgba(255,255,255,.22); }
-  .gallery-lightbox.zoomed .gallery-lb-fav { display: none; }
   .gallery-lb-btn:focus-visible,
   .gallery-lb-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 `;
