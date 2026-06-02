@@ -97,7 +97,8 @@ export async function getAlbums(query, filter = null, opts = {}) {
         output: 'json',
         rows: 10000,
     });
-    for (const f of ['identifier', 'title', 'downloads', 'runtime', 'collection', 'creator', 'format']) {
+    for (const f of ['identifier', 'title', 'downloads', 'runtime', 'collection', 'creator', 'format',
+                     'licenseurl', 'rights', 'possible-copyright-status']) {
         params.append('fl[]', f);
     }
     const url = `https://archive.org/advancedsearch.php?${params}`;
@@ -118,6 +119,8 @@ export async function getAlbums(query, filter = null, opts = {}) {
                 _collection: doc.collection,
                 _creator: doc.creator,
                 _format: doc.format,
+                _rights: rightsFrom(doc),
+                _detailUrl: `https://archive.org/details/${doc.identifier}`,
             });
         }
     }
@@ -207,6 +210,46 @@ function pickPreferred(files, exts) {
     return null;
 }
 
+// ── rights / licensing ───────────────────────────────────────────────────
+// archive.org carries item-level rights as `licenseurl` (often Creative
+// Commons), free-text `rights`, and `possible-copyright-status`. It's
+// uploader-entered and frequently UNKNOWN — surfaced for context, NOT a
+// clearance. Same field names on a metadata doc and an advancedsearch doc.
+const COPYRIGHT_LABELS = {
+    NOT_IN_COPYRIGHT: 'Public domain',
+    PUBLIC_DOMAIN: 'Public domain',
+    IN_COPYRIGHT: 'In copyright',
+    UNKNOWN: 'Rights unknown',
+};
+function ccLabel(url) {
+    const m = /creativecommons\.org\/(licenses|publicdomain)\/([a-z0-9-]+)(?:\/([0-9.]+))?/i.exec(url || '');
+    if (!m) return '';
+    const code = m[2].toLowerCase();
+    if (m[1].toLowerCase() === 'publicdomain' || code === 'zero' || code === 'mark') return 'Public domain (CC)';
+    return `CC ${code.toUpperCase()}${m[3] ? ' ' + m[3] : ''}`;
+}
+function rightsLabel(licenseUrl, rights, status) {
+    const cc = ccLabel(licenseUrl);
+    if (cc) return cc;
+    if (status && COPYRIGHT_LABELS[status]) return COPYRIGHT_LABELS[status];
+    if (rights) return rights.length > 70 ? rights.slice(0, 67) + '…' : rights;
+    if (status) return status.replace(/_/g, ' ').toLowerCase();
+    if (licenseUrl) return 'Licensed (see IA)';
+    return '';
+}
+// Build a rights snapshot { label, licenseUrl, rights, status } from an IA
+// metadata or advancedsearch doc, or null when IA tells us nothing.
+function rightsFrom(src) {
+    if (!src) return null;
+    const one = (v) => Array.isArray(v) ? v[0] : v;
+    const licenseUrl = one(src.licenseurl) || '';
+    const rights = (one(src.rights) || '').toString().trim();
+    const status = one(src['possible-copyright-status']) || '';
+    const label = rightsLabel(licenseUrl, rights, status);
+    if (!label) return null;
+    return { label, licenseUrl, rights, status };
+}
+
 export async function getTracks(albumId, filter = null, opts = {}) {
     if (!albumId) return [];
     const exts = extsFor(opts.mediaType);
@@ -223,6 +266,9 @@ export async function getTracks(albumId, filter = null, opts = {}) {
         || md['access-restricted'] === 'true'
         || md.is_dark === 'true';
     if (isRestricted) return [];
+
+    const rights = rightsFrom(md);
+    const detailUrl = `https://archive.org/details/${albumId}`;
 
     const files = data.files || [];
     // Group files by their underlying recording so we don't list each track
@@ -268,6 +314,8 @@ export async function getTracks(albumId, filter = null, opts = {}) {
             name: title || f.name.replace(/\.[^.]+$/, ''),
             time: formatLength(length),
             artist,
+            _rights: rights,
+            _detailUrl: detailUrl,
             _lengthSec: parseRuntimeStr(length),
             _bitrate: bitrate != null ? parseFloat(bitrate) : NaN,
         });
