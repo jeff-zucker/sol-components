@@ -275,6 +275,7 @@ class SolFeed extends HTMLElement {
 
   disconnectedCallback() {
     if (this._unsubDefaults) { this._unsubDefaults(); this._unsubDefaults = null; }
+    if (this._scrollIO) { this._scrollIO.disconnect(); this._scrollIO = null; }
   }
 
   /** Update the polite live region. Pass `isError` to colour it. */
@@ -981,19 +982,39 @@ class SolFeed extends HTMLElement {
     let remembered = null;
     try { remembered = localStorage.getItem(this.topicsSelectionKey); } catch {}
     const match = remembered && entries.find(e => e.src.url === remembered);
+    let selected = null;
     if (match) {
       selectSource(match.src, match.a);
-      // Bring the restored source into view within its scrollable column
-      // (the highlight is otherwise easy to miss below the fold).
-      requestAnimationFrame(() => match.a.scrollIntoView({ block: 'nearest' }));
+      selected = match.a;
     } else if (this.hasAttribute('select-first') && entries.length) {
       // Opt-in: with nothing remembered, open the first source so a cold
       // start lands on real articles instead of a "pick a source" prompt.
       // (Off by default — keeps mounting network-free for other consumers.)
       selectSource(entries[0].src, entries[0].a);
+      selected = entries[0].a;
     } else {
       showMsg('Select a source to see articles');
     }
+    if (selected) this._scrollSourceIntoView(selected);
+  }
+
+  /** Bring a source anchor into view within its scrollable column. At startup
+   *  the feed is usually rendered inside a still-hidden tab pane (sol-tabs
+   *  keep-alive renders every pane while hidden), where scrollIntoView is a
+   *  no-op for lack of a layout box. So when hidden, wait for the host to
+   *  become visible (one-shot IntersectionObserver) and scroll then. */
+  _scrollSourceIntoView(anchor) {
+    if (!anchor) return;
+    const doScroll = () => requestAnimationFrame(() => anchor.scrollIntoView({ block: 'nearest' }));
+    if (this.offsetParent !== null) { doScroll(); return; }   // already visible
+    this._scrollIO?.disconnect();
+    this._scrollIO = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) {
+        this._scrollIO.disconnect(); this._scrollIO = null;
+        doScroll();
+      }
+    });
+    this._scrollIO.observe(this);
   }
 
   /* ── editing (view="topics" + the `editable` attribute) ─────────────────
@@ -1312,22 +1333,6 @@ class SolFeed extends HTMLElement {
     title.textContent = it.title || '';
     a.appendChild(title);
 
-    // Optional ★: favouriting is open to everyone (the communal wall). The
-    // host opts in with `favouritable`; sol-feed just emits the article.
-    if (this.hasAttribute('favouritable')) {
-      const fav = document.createElement('button');
-      fav.type = 'button'; fav.className = 'feed-card-fav';
-      fav.textContent = '☆'; fav.title = 'Add to favourites'; fav.setAttribute('aria-label', 'Favourite');
-      fav.addEventListener('click', (ev) => {
-        ev.preventDefault(); ev.stopPropagation();
-        this.dispatchEvent(new CustomEvent('item-favourite', {
-          detail: { item: it.link, bucket: 'Text', schemaType: 'Article', name: it.title || it.link,
-                    link: it.link, download: false, thumbnail: it.image || '' },
-          bubbles: true, composed: true,
-        }));
-      });
-      a.appendChild(fav);
-    }
     return a;
   }
 }
