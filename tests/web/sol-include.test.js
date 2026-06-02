@@ -50,6 +50,7 @@ beforeAll(async () => {
 afterEach(() => {
   document.body.innerHTML = '';
   _fetchCalls = [];
+  try { delete window.SolidKitchen; } catch { /* ignore */ }
 });
 
 function createElement(attrs = {}) {
@@ -221,6 +222,65 @@ describe('attribute changes', () => {
     el.setAttribute('source', 'https://example.org/second.txt');
     await new Promise(r => setTimeout(r, 50));
     expect(shadowText(el)).toContain('Second');
+  });
+});
+
+// ── if-logged-in (login-aware source) ──────────────────────────────────────
+
+describe('if-logged-in attribute', () => {
+  test('guest (no session) fetches the plain source', async () => {
+    mockFetch('guest help', { contentType: 'text/plain' });
+    const el = await mount({ source: 'guest.txt', 'if-logged-in': 'owner.txt' });
+    expect(_fetchCalls[0].url).toBe('guest.txt');
+    expect(shadowText(el)).toContain('guest help');
+  });
+
+  test('window.SolidKitchen is treated exactly as logged-in → fetches the alt', async () => {
+    window.SolidKitchen = true;
+    mockFetch('owner help', { contentType: 'text/plain' });
+    const el = await mount({ source: 'guest.txt', 'if-logged-in': 'owner.txt' });
+    expect(_fetchCalls[0].url).toBe('owner.txt');
+    expect(shadowText(el)).toContain('owner help');
+  });
+
+  test('a logged-in <sol-login> → fetches the alt', async () => {
+    const login = document.createElement('sol-login');
+    login.isLoggedIn = true;
+    document.body.appendChild(login);
+    mockFetch('owner help', { contentType: 'text/plain' });
+    const el = await mount({ source: 'guest.txt', 'if-logged-in': 'owner.txt' });
+    expect(_fetchCalls[0].url).toBe('owner.txt');
+  });
+
+  test('re-evaluates on sol-login / sol-logout', async () => {
+    const login = document.createElement('sol-login');
+    login.isLoggedIn = false;
+    document.body.appendChild(login);
+
+    mockFetch('guest help', { contentType: 'text/plain' });
+    const el = await mount({ source: 'guest.txt', 'if-logged-in': 'owner.txt' });
+    expect(_fetchCalls[0].url).toBe('guest.txt');
+
+    // log in → reloads to the alt
+    login.isLoggedIn = true;
+    mockFetch('owner help', { contentType: 'text/plain' });
+    document.dispatchEvent(new CustomEvent('sol-login', { bubbles: true, composed: true }));
+    await new Promise(r => setTimeout(r, 50));
+    expect(_fetchCalls[0].url).toBe('owner.txt');
+
+    // log out → reloads back to the plain source
+    login.isLoggedIn = false;
+    mockFetch('guest help', { contentType: 'text/plain' });
+    document.dispatchEvent(new CustomEvent('sol-logout', { bubbles: true, composed: true }));
+    await new Promise(r => setTimeout(r, 50));
+    expect(_fetchCalls[0].url).toBe('guest.txt');
+  });
+
+  test('without if-logged-in, login state is ignored', async () => {
+    window.SolidKitchen = true;
+    mockFetch('plain', { contentType: 'text/plain' });
+    const el = await mount({ source: 'only.txt' });
+    expect(_fetchCalls[0].url).toBe('only.txt');
   });
 });
 

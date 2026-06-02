@@ -7,6 +7,10 @@
  *
  * @element sol-include
  * @attr {string} source - URL of the resource to fetch (required)
+ * @attr {string} if-logged-in - alternate source used when a user is logged in
+ *                 (a live Solid session OR the window.SolidKitchen dev flag,
+ *                 treated identically); falls back to `source` otherwise.
+ *                 Re-evaluates on sol-login / sol-logout.
  * @attr {string} selector - CSS selector — show only matching elements
  * @attr {boolean} raw - show source text verbatim without rendering
  * @attr {boolean} trusted - skip DOMPurify sanitization
@@ -14,6 +18,7 @@
  * @example
  * <sol-include source="https://example.org/readme.md"></sol-include>
  * <sol-include source="page.html" selector="article"></sol-include>
+ * <sol-include source="guest.html" if-logged-in="owner.html"></sol-include>
  */
 import { sanitizeHtml } from '../core/utils.js';
 import { define } from '../core/define.js';
@@ -26,6 +31,24 @@ function browserContainer(html) {
   const div = document.createElement('div');
   div.innerHTML = html;
   return div;
+}
+
+/**
+ * Is there an authenticated user? True for a live Solid session (a logged-in
+ * <sol-login>, or any logged-in session in the shared AuthManager) AND for the
+ * `window.SolidKitchen` dev flag, which is treated as exactly equivalent to
+ * being logged in. Used by the `if-logged-in` source switch.
+ */
+function isLoggedIn() {
+  try { if (typeof window !== 'undefined' && window.SolidKitchen === true) return true; } catch { /* ignore */ }
+  if (typeof document === 'undefined') return false;
+  const login = document.querySelector('sol-login');
+  if (login && login.isLoggedIn) return true;
+  try {
+    const am = window.SolidWebComponents?.AuthManager?.shared;
+    if (am && [...am.sessions.values()].some((s) => s.info?.isLoggedIn)) return true;
+  } catch { /* ignore */ }
+  return false;
 }
 
 /**
@@ -50,22 +73,48 @@ function browserContainer(html) {
  */
 class SolInclude extends HTMLElement {
   static get observedAttributes() {
-    return ['source', 'selector', 'raw', 'trusted'];
+    return ['source', 'if-logged-in', 'selector', 'raw', 'trusted'];
   }
 
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this._abortCtl = null;
+    this._authListener = null;
   }
 
-  connectedCallback()                         { if (this.isConnected) this._load(); }
+  connectedCallback() {
+    if (!this.isConnected) return;
+    // Only watch auth state when an `if-logged-in` alternate is declared, so the
+    // displayed source follows login / logout.
+    if (this.hasAttribute('if-logged-in') && !this._authListener) {
+      this._authListener = () => { if (this.isConnected) this._load(); };
+      document.addEventListener('sol-login', this._authListener);
+      document.addEventListener('sol-logout', this._authListener);
+    }
+    this._load();
+  }
   attributeChangedCallback(n, oldV, newV)     { if (oldV !== newV && this.isConnected) this._load(); }
-  disconnectedCallback()                      { this._abortCtl?.abort(); this._abortCtl = null; }
+  disconnectedCallback() {
+    this._abortCtl?.abort(); this._abortCtl = null;
+    if (this._authListener) {
+      document.removeEventListener('sol-login', this._authListener);
+      document.removeEventListener('sol-logout', this._authListener);
+      this._authListener = null;
+    }
+  }
+
+  /** The source to show now: the `if-logged-in` alternate when authenticated,
+   *  otherwise the plain `source`. */
+  _effectiveSource() {
+    const alt = this.getAttribute('if-logged-in');
+    if (alt && isLoggedIn()) return alt;
+    return this.getAttribute('source');
+  }
 
   // ── Main load ─────────────────────────────────────────────────────────────────
   async _load() {
-    const source   = this.getAttribute('source');
+    const source   = this._effectiveSource();
     const selector = this.getAttribute('selector') || '';
     const raw      = this.hasAttribute('raw');
     const trusted  = this.hasAttribute('trusted');
