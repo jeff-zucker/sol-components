@@ -23,9 +23,14 @@
  * `endpoint`, and all other anchor attributes pass through — so e.g.
  * `wanted="? ? ?"` on an anchor with `handler="sol-query"` just works.
  *
+ * `handler` and the forwarded attributes may be written `data-*` to keep a
+ * standard <a> HTML-valid; the `data-` prefix is stripped when forwarding
+ * (`data-handler` picks the tag, `data-src` → `src`, `data-view` → `view`, …).
+ *
  *   <sol-tabs>
  *     <a href="notes.md">Notes</a>
  *     <a href="data.ttl" handler="sol-query" wanted="? ? ?">Table</a>
+ *     <a href="lib.ttl" data-handler="ia-player" data-src="lib.ttl">Music</a>
  *   </sol-tabs>
  *
  *   <sol-tabs handler="sol-live-edit">
@@ -209,12 +214,14 @@ class SolTabs extends HTMLElement {
   _harvestAnchors() {
     const anchors = Array.from(this.querySelectorAll(':scope > a[href]'));
     if (!anchors.length) return [];
-    const parentHandler = (this.getAttribute('handler') || '').trim();
-    const SKIP = new Set(['href', 'handler', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
+    // `handler` may be written plain or as `data-handler` (the latter keeps a
+    // standard <a> HTML-valid). Same for the forwarded attributes below.
+    const parentHandler = (this.getAttribute('data-handler') || this.getAttribute('handler') || '').trim();
+    const SKIP = new Set(['href', 'handler', 'data-handler', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
     return anchors.map((a, i) => {
       const label = (a.textContent || '').trim() || `Tab ${i + 1}`;
       const url = a.getAttribute('href');
-      const handlerTag = (a.getAttribute('handler') || parentHandler || 'sol-include').trim();
+      const handlerTag = (a.getAttribute('data-handler') || a.getAttribute('handler') || parentHandler || 'sol-include').trim();
       return {
         name: label,
         id: a.id || undefined,
@@ -225,7 +232,10 @@ class SolTabs extends HTMLElement {
           el.setAttribute('endpoint', url);
           for (const attr of a.attributes) {
             if (SKIP.has(attr.name)) continue;
-            el.setAttribute(attr.name, attr.value);
+            // `data-*` author attributes forward with the prefix stripped, so a
+            // standard <a> stays HTML-valid: data-src → src, data-view → view.
+            const name = attr.name.startsWith('data-') ? attr.name.slice(5) : attr.name;
+            el.setAttribute(name, attr.value);
           }
           el.classList.add('sol-tab-embed');
           body.appendChild(el);

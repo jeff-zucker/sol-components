@@ -345,6 +345,34 @@ describe('SolTabs — declarative and imperative APIs', () => {
     el.switchTab('Y');
     expect(content(el).textContent).toBe('y-body');
   });
+
+  test('data-* anchor attrs: data-handler picks the tag, data-* forward with prefix stripped', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="lib.ttl" id="panel-music" data-handler="ia-player"'
+      + ' data-src="lib.ttl" data-storage-ns="music" data-favourites-only data-defer>Music</a>';
+    attached(el);
+    el.switchTab('Music');
+    const embed = content(el).querySelector('.sol-tab-embed');
+    expect(embed).toBeTruthy();
+    expect(embed.tagName.toLowerCase()).toBe('ia-player');     // data-handler → tag
+    expect(embed.id).toBe('panel-music');                      // plain id passes through
+    expect(embed.getAttribute('src')).toBe('lib.ttl');         // data-src → src
+    expect(embed.getAttribute('storage-ns')).toBe('music');    // data-storage-ns → storage-ns
+    expect(embed.hasAttribute('favourites-only')).toBe(true);  // boolean data-* → boolean
+    expect(embed.hasAttribute('defer')).toBe(true);
+    expect(embed.getAttribute('source')).toBe('lib.ttl');      // href still → source/endpoint
+    expect(embed.hasAttribute('data-src')).toBe(false);        // no stale data-* left on the element
+  });
+
+  test('plain (non-data) anchor attrs still forward (back-compat)', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="x.md" handler="sol-include" foo="bar">X</a>';
+    attached(el);
+    el.switchTab('X');
+    const embed = content(el).querySelector('.sol-tab-embed');
+    expect(embed.tagName.toLowerCase()).toBe('sol-include');
+    expect(embed.getAttribute('foo')).toBe('bar');
+  });
 });
 
 // ── keep-alive ──────────────────────────────────────────────────────────────
