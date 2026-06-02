@@ -135,3 +135,33 @@ describe('inline region', () => {
     expect(document.querySelector('#host > .sol-inline-panel')).not.toBeNull();
   });
 });
+
+describe('<sol-button handler="<action>">', () => {
+  test('a bare-name handler dispatches sol-command (with parsed params) instead of mounting', async () => {
+    document.body.innerHTML = `
+      <div id="host"></div>
+      <sol-button id="c" handler="cycleFontSize" params='{"step":1}'>A</sol-button>`;
+    const b = document.getElementById('c');
+    await settle();
+    const seen = [];
+    document.addEventListener('sol-command', (e) => seen.push(e.detail));
+    trigger(b).click(); await settle();
+    expect(seen).toHaveLength(1);
+    expect(seen[0].command).toBe('cycleFontSize');
+    expect(seen[0].params).toEqual({ step: 1 });
+    // No launcher behaviour: nothing mounted anywhere.
+    expect(document.querySelector('#host > .sol-inline-panel')).toBeNull();
+    expect(document.querySelector('sol-include')).toBeNull();
+  });
+
+  test('params left as a bare string when not JSON', async () => {
+    document.body.innerHTML = `<sol-button id="c2" handler="go" params="left">x</sol-button>`;
+    const b = document.getElementById('c2');
+    await settle();
+    let detail;
+    document.addEventListener('sol-command', (e) => { detail = e.detail; });
+    trigger(b).click(); await settle();
+    expect(detail.command).toBe('go');
+    expect(detail.params).toBe('left');
+  });
+});

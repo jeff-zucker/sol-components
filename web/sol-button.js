@@ -26,6 +26,12 @@
  *              can be declared once on <sol-default> rather than on every button.
  *   for      — (inline only) explicit host selector, overriding the cascade;
  *              defaults to the button's own parent when nothing resolves.
+ *
+ * `handler` names what the button does — a component OR an action, treated the
+ * same way. A custom-element tag (has a "-", e.g. sol-include) is mounted; a
+ * bare name that isn't a registered element (e.g. "installPod") is an action:
+ * it dispatches `sol-command` (detail.command = the handler) for the host app's
+ * registry to resolve, with `params` (JSON or a bare string) as detail.params.
  *   name     — wrapper identifier (data-menu-item); defaults to the
  *              element's id if set, otherwise to a slug of source
  *   source   — forwarded to the handler (e.g. sol-include's `source`)
@@ -59,10 +65,10 @@
  */
 
 import { define } from '../core/define.js';
-import { ensureHandler } from '../core/rdf-render.js';
+import { ensureHandler, dispatchCommand, isCommandName } from '../core/rdf-render.js';
 import { displayItem, isExternal, resolveRegion } from '../core/display-target.js';
 
-const RESERVED = new Set(['handler', 'region', 'name', 'replace', 'inline', 'for', 'class', 'style']);
+const RESERVED = new Set(['handler', 'region', 'name', 'replace', 'inline', 'for', 'params', 'class', 'style']);
 
 class SolButton extends HTMLElement {
   constructor() {
@@ -134,6 +140,18 @@ class SolButton extends HTMLElement {
   }
 
   _activate() {
+    // `handler` names what the button does — a component (a custom-element tag,
+    // mounted) OR an action (a bare name that isn't a registered element →
+    // dispatch `sol-command` for the app's registry, same allow-list as sol-menu
+    // command items). isCommandName() draws the line (custom elements need a -).
+    const handler = this.getAttribute('handler');
+    if (handler && isCommandName(handler)) {
+      const raw = this.getAttribute('params');
+      let params;
+      if (raw != null) { try { params = JSON.parse(raw); } catch { params = raw; } }
+      dispatchCommand(this, handler, params);
+      return;
+    }
     if (this.hasAttribute('inline')) { this.toggleInline(); return; }
 
     const { tag, attrs, href, replace } = this._handlerSpec();
