@@ -77,7 +77,8 @@ class SolDropdownButton extends SolMenu {
   static get observedAttributes() { return ['source', 'from-rdf']; }
 
   // Where the menu data lives. `source` is canonical (sol-* launcher parity);
-  // `from-rdf` is accepted for <sol-menu> parity.
+  // `from-rdf` is accepted for <sol-menu> parity. With neither, the inline
+  // <menu> children are harvested instead.
   _menuUri() { return this.getAttribute('source') || this.getAttribute('from-rdf'); }
 
   attributeChangedCallback(name, oldValue, newValue) {
