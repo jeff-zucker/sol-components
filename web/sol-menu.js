@@ -53,7 +53,7 @@ import { define } from '../core/define.js';
 import { adopt } from '../core/adopt.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
-import { loadMenuFromUri } from '../core/menu-rdf.js';
+import { registerMenuConsumer } from '../core/menu-consumer.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, paramsToObject, dispatchCommand } from '../core/rdf-render.js';
 
 /**
@@ -95,6 +95,12 @@ class SolMenu extends HTMLElement {
   }
 
   static get observedAttributes() { return ['from-rdf']; }
+
+  // `from-rdf` rendering is an opt-in capability: importing `web/menu-from-rdf.js`
+  // installs the rdflib-backed loader here (inherited by SolMenu subclasses such
+  // as sol-dropdown-button). Null → declarative-only, no rdflib (see
+  // core/menu-consumer.js).
+  static fromRdfLoader = null;
 
   /** Editor declaration consumed by core/editor.js. Menus are edited
    *  with sol-tree-edit (head fields + per-item shapes + drill into
@@ -244,8 +250,13 @@ class SolMenu extends HTMLElement {
   }
 
   async _loadFromRdf(uri) {
+    const load = this.constructor.fromRdfLoader;
+    if (!load) {
+      console.warn(`<${this.localName} from-rdf> needs the menu-from-rdf add-on; ignoring.`);
+      return;
+    }
     try {
-      const result = await loadMenuFromUri(uri, document.baseURI);
+      const result = await load(uri, document.baseURI);
       if (!result) return;
       if (!this.hasAttribute('orientation')) this.setAttribute('orientation', result.orientation);
       this._items = this._wrapRdfItems(result.items);
@@ -575,5 +586,6 @@ class SolMenu extends HTMLElement {
 }
 
 define('sol-menu', SolMenu);
+registerMenuConsumer(SolMenu);
 export { SolMenu };
 export default SolMenu;

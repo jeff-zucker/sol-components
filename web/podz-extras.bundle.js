@@ -23,6 +23,7 @@
 
 import './sol-modal.js';
 import './sol-tabs.js';
+import './menu-from-rdf.js';   // keep sol-tabs `from-rdf` working in this bundle
 import './sol-pod.js';
 import './sol-pod-ops.js';
 import './sol-live-edit.js';

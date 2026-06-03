@@ -68,7 +68,7 @@ import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
-import { loadMenuFromUri } from '../core/menu-rdf.js';
+import { registerMenuConsumer } from '../core/menu-consumer.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName } from '../core/rdf-render.js';
 
 // For auto-wiring an inline action launcher to this tabs' content area we need
@@ -104,6 +104,11 @@ class SolTabs extends HTMLElement {
   }
 
   static get observedAttributes() { return ['from-rdf']; }
+
+  // `from-rdf` rendering is an opt-in capability: importing `web/menu-from-rdf.js`
+  // installs the rdflib-backed loader here. Null → this component is declarative-
+  // only and carries no rdflib (see core/menu-consumer.js).
+  static fromRdfLoader = null;
 
   // Keep-alive: render every tab once into its own persistent pane and
   // switch by toggling visibility, so components are never torn down —
@@ -181,8 +186,13 @@ class SolTabs extends HTMLElement {
   // document can drive either element. A nested ui:Menu becomes a tab whose
   // body holds a slimmer <sol-tabs variant="sub"> strip of its children.
   async _loadFromRdf(uri) {
+    const load = this.constructor.fromRdfLoader;
+    if (!load) {
+      console.warn(`<${this.localName} from-rdf> needs the menu-from-rdf add-on; ignoring.`);
+      return;
+    }
     try {
-      const result = await loadMenuFromUri(uri, document.baseURI);
+      const result = await load(uri, document.baseURI);
       if (!result) return;
       if (result.orientation && !this.hasAttribute('orientation')) {
         this.setAttribute('orientation', result.orientation);
@@ -429,5 +439,6 @@ class SolTabs extends HTMLElement {
 }
 
 define('sol-tabs', SolTabs);
+registerMenuConsumer(SolTabs);
 export { SolTabs };
 export default SolTabs;

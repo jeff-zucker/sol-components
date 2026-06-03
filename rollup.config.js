@@ -139,6 +139,24 @@ export default [
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
     },
   },
+  // ── menu-from-rdf (opt-in add-on: switches on `from-rdf` for the menu
+  //    family; the lone rdflib pull — keeps sol-tabs/sol-menu themselves
+  //    zero-dep). Load alongside the components on a page that wants RDF menus. ─
+  {
+    input:    'web/menu-from-rdf.js',
+    external,
+    plugins,
+    output: {
+      file:    minify ? 'dist/menu-from-rdf.umd.min.js' : 'dist/menu-from-rdf.umd.js',
+      format:  'umd',
+      name:    'MenuFromRdf',
+      exports: 'named',
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+      // menu-rdf → rdf-utils lazily import()s heavier RDF helpers; inline so the
+      // UMD stays one self-contained file.
+      inlineDynamicImports: true,
+    },
+  },
   // ── sol-feed (RSS/Atom viewer; rdflib stays external, only needed for ──────
   //    RDF source lists) ────────────────────────────────────────────────────
   {

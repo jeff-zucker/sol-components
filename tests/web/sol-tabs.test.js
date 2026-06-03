@@ -29,6 +29,10 @@ jest.unstable_mockModule('../../core/rdf-utils.js', () => ({
 }));
 
 const { SolTabs } = await import('../../web/sol-tabs.js');
+// `from-rdf` is now an opt-in capability — install the loader the way the
+// web/menu-from-rdf.js add-on does on a real page (rdf-utils is mocked above).
+const { loadMenuFromUri } = await import('../../core/menu-rdf.js');
+SolTabs.fromRdfLoader = loadMenuFromUri;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

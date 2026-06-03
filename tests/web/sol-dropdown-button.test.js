@@ -25,6 +25,10 @@ jest.unstable_mockModule('../../core/rdf-utils.js', () => ({
 }));
 
 const { SolDropdownButton } = await import('../../web/sol-dropdown-button.js');
+// `from-rdf`/`source` is now an opt-in capability — install the loader the way
+// the web/menu-from-rdf.js add-on does on a real page (rdf-utils is mocked above).
+const { loadMenuFromUri } = await import('../../core/menu-rdf.js');
+SolDropdownButton.fromRdfLoader = loadMenuFromUri;
 
 function buildStore() {
   const store = rdflib.graph();

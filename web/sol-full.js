@@ -23,6 +23,7 @@
  */
 
 import './sol-menu.js';
+import './menu-from-rdf.js';   // keep sol-menu `from-rdf` working in this bundle
 import './sol-include.js';
 import './sol-query.js';
 import './sol-login.js';

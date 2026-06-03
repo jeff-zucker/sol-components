@@ -37,6 +37,7 @@
 import './sol-include.js';
 import './sol-button.js';
 import './sol-menu.js';
+import './menu-from-rdf.js';   // keep sol-menu `from-rdf` working (rdflib already a peer here)
 import './sol-login.js';
 import './sol-form.js';
 import './sol-settings.js';   // statically pulls in sol-accordion
