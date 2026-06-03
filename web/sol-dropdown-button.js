@@ -34,6 +34,9 @@
  * Attributes:
  *   source   — URL of the ui:Menu document (where the menu data lives).
  *              `from-rdf` is accepted as a fallback for <sol-menu> parity.
+ *              OPT-IN: building from RDF is inert until `web/menu-from-rdf.js`
+ *              is imported; with neither attribute the inline <menu> is used and
+ *              no rdflib is needed.
  *   label    — trigger text (default "⋮")
  *
  * Parts: `trigger` (the button), `requires-write` (items needing write access).

@@ -44,6 +44,11 @@
  * Attributes:
  *   orientation="horizontal"  — lay the nav bar on top instead of the side
  *   handler="sol-*"           — default component for rendering each item
+ *   from-rdf="menu.ttl#Name"  — build the menu from a ui:Menu RDF document
+ *                               instead of light-DOM children. OPT-IN: inert
+ *                               until `web/menu-from-rdf.js` is imported (the
+ *                               lone rdflib pull); the declarative path above
+ *                               needs no rdflib.
  *
  * Events (bubbling, composed):
  *   sol-menu-change — detail: { name }
@@ -53,7 +58,7 @@ import { define } from '../core/define.js';
 import { adopt } from '../core/adopt.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
-import { registerMenuConsumer } from '../core/menu-consumer.js';
+import { registerMenuConsumer, deferUntilLoader } from '../core/menu-consumer.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, paramsToObject, dispatchCommand } from '../core/rdf-render.js';
 
 /**
@@ -251,10 +256,7 @@ class SolMenu extends HTMLElement {
 
   async _loadFromRdf(uri) {
     const load = this.constructor.fromRdfLoader;
-    if (!load) {
-      console.warn(`<${this.localName} from-rdf> needs the menu-from-rdf add-on; ignoring.`);
-      return;
-    }
+    if (!load) { deferUntilLoader(this); return; }   // wait for the menu-from-rdf add-on
     try {
       const result = await load(uri, document.baseURI);
       if (!result) return;

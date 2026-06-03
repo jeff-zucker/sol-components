@@ -14,14 +14,28 @@
 // install-after-register both end up wired.
 
 const KEY = Symbol.for('solid-web-components.menu-consumers');
-const reg = (globalThis[KEY] ||= { consumers: new Set(), loader: null });
+const reg = (globalThis[KEY] ||= { consumers: new Set(), loader: null, pending: new Set() });
 
 export function registerMenuConsumer(klass) {
   reg.consumers.add(klass);
   if (reg.loader) klass.fromRdfLoader = reg.loader;   // add-on already active
 }
 
+// Called by a component from `_loadFromRdf` when no loader is installed yet:
+// the element parks itself and renders nothing for now. If/when the add-on
+// arrives it is driven via reload() — so activation is order-independent (the
+// add-on may load before OR after the component, sync, deferred or as ESM).
+// Returns true when parked (caller should return), false if a loader is ready.
+export function deferUntilLoader(el) {
+  if (reg.loader) return false;
+  reg.pending.add(el);
+  return true;
+}
+
 export function installFromRdfLoader(loader) {
   reg.loader = loader;
   for (const klass of reg.consumers) klass.fromRdfLoader = loader;
+  const waiting = [...reg.pending];
+  reg.pending.clear();
+  for (const el of waiting) { try { el.reload?.(); } catch { /* el gone / not ready */ } }
 }

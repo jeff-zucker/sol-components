@@ -49,11 +49,15 @@
  *     <sol-button inline handler="sol-include" source="help.html">?</sol-button>
  *   </sol-tabs>
  *
- * RDF usage: point `from-rdf` at a ui:Menu document — the same RDF shape
- * <sol-menu> consumes. Each ui:Link / ui:Component part becomes a tab; a
+ * RDF usage (opt-in): point `from-rdf` at a ui:Menu document — the same RDF
+ * shape <sol-menu> consumes. Each ui:Link / ui:Component part becomes a tab; a
  * nested ui:Menu becomes a tab whose content is a slimmer
- * <sol-tabs variant="sub"> strip of that group's children.
+ * <sol-tabs variant="sub"> strip of that group's children. `from-rdf` is inert
+ * until the `web/menu-from-rdf.js` add-on is imported (the lone rdflib pull —
+ * it keeps the declarative path dependency-free); without it this element stays
+ * declarative-only and waits for the add-on if one arrives later.
  *
+ *   import 'solid-web-components/menu-from-rdf.js';   // activation
  *   <sol-tabs from-rdf="./demo-tabs.ttl#MainTabs"></sol-tabs>
  *
  * The tab bar is hidden when only one tab is supplied. Set attribute
@@ -68,7 +72,7 @@ import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
-import { registerMenuConsumer } from '../core/menu-consumer.js';
+import { registerMenuConsumer, deferUntilLoader } from '../core/menu-consumer.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName } from '../core/rdf-render.js';
 
 // For auto-wiring an inline action launcher to this tabs' content area we need
@@ -187,10 +191,7 @@ class SolTabs extends HTMLElement {
   // body holds a slimmer <sol-tabs variant="sub"> strip of its children.
   async _loadFromRdf(uri) {
     const load = this.constructor.fromRdfLoader;
-    if (!load) {
-      console.warn(`<${this.localName} from-rdf> needs the menu-from-rdf add-on; ignoring.`);
-      return;
-    }
+    if (!load) { deferUntilLoader(this); return; }   // wait for the menu-from-rdf add-on
     try {
       const result = await load(uri, document.baseURI);
       if (!result) return;
