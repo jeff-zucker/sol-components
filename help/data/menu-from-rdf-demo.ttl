@@ -1,0 +1,19 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+
+# A ui:Menu drives <sol-menu from-rdf>. ui:parts is an ordered list of items;
+# each hyphen-free ui:name is a command (clicking fires `sol-command`). A nested
+# ui:Menu becomes a fly-out submenu.
+
+<#MainMenu> a ui:Menu ; ui:label "Demo" ;
+  ui:parts ( <#New> <#Open> <#Tools> ) .
+
+<#New>  a ui:Component ; ui:label "New"  ; ui:name "newItem" .
+<#Open> a ui:Component ; ui:label "Open" ; ui:name "openItem" .
+
+<#Tools> a ui:Menu ; ui:label "Tools" ;
+  ui:parts ( <#Export> <#Settings> ) .
+
+<#Export> a ui:Component ; ui:label "Export" ; ui:name "export" ;
+  ui:attribute [ schema:name "format" ; schema:value "csv" ] .
+<#Settings> a ui:Component ; ui:label "Settings" ; ui:name "settings" .

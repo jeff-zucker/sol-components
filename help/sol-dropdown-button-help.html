@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-dropdown-button Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+  <!-- A light-DOM, zero-dependency component: load its own bundle directly. -->
+  <script defer src="../dist/sol-dropdown-button.umd.min.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>sol-dropdown-button component</h1>
+  <p>A trigger button that drops a menu in a floating popup. Declare the items inline
+  in a <code>&lt;menu&gt;</code>: each item's <code>handler</code> says what it does — a
+  bare name is a <b>command</b> (it fires an event for your app to handle on click), a
+  custom-element tag or an <code>&lt;a href&gt;</code> mounts a component. Nothing is
+  pre-selected; the popup opens on click and closes on pick / outside-click / Escape.</p>
+
+  <h2>Live demo</h2>
+  <div class="demo-area" style="align-items:center; gap:1rem;">
+    <sol-dropdown-button label="⋮ Actions">
+      <menu>
+        <button handler="newItem">New…</button>
+        <button handler="duplicate">Duplicate</button>
+        <button handler="remove">Delete</button>
+      </menu>
+    </sol-dropdown-button>
+    <span>Last command: <code id="dd-status">—</code></span>
+  </div>
+  <script>
+    // Demo glue: command items fire `sol-command`; an app would route these to
+    // its own handlers. Here we just echo the chosen command.
+    document.addEventListener('sol-command', (e) => {
+      document.getElementById('dd-status').textContent = e.detail?.command || '?';
+    });
+  </script>
+
+  <h2>Authoring</h2>
+  <p>The items live in a single <code>&lt;menu&gt;</code> child. An item whose
+  <code>handler</code> is a bare name (no hyphen, not a registered element) is a command:
+  clicking it dispatches <code>sol-command</code> with
+  <code>detail: { command, params }</code> — your page listens and acts. An item that is
+  an <code>&lt;a href&gt;</code>, or whose <code>handler</code> is a component tag, mounts
+  that content instead; point it at a <code>region</code> (e.g.
+  <code>region="modal"</code>) to choose where it surfaces. Nest a
+  <code>&lt;submenu&gt;</code> for a fly-out group.</p>
+  <p>Mark an item <code>requires-write</code> (or <code>if-logged-in</code>) and it is
+  exposed as <code>::part(requires-write)</code> so the host page can hide or disable it
+  for guests — the dropdown itself takes no policy.</p>
+
+  <h2>Attributes</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>label</code></td>
+          <td>Trigger text (default <code>⋮</code>).</td></tr>
+      <tr><td><code>handler</code> <span class="muted">(on an item)</span></td>
+          <td>Bare name → command (fires <code>sol-command</code>); component tag →
+              mount that element.</td></tr>
+      <tr><td><code>params</code> <span class="muted">(on a command item)</span></td>
+          <td>JSON forwarded in the <code>sol-command</code> detail.</td></tr>
+      <tr><td><code>requires-write</code> <span class="muted">(on an item)</span></td>
+          <td>Flag an item as owner-only; surfaced via
+              <code>::part(requires-write)</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>The trigger is exposed as <code>::part(trigger)</code>.</p>
+
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- command items: each fires sol-command on click --&gt;
+&lt;sol-dropdown-button label="⋮ More"&gt;
+  &lt;menu&gt;
+    &lt;button handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
+    &lt;button handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
+    &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
+  &lt;/menu&gt;
+&lt;/sol-dropdown-button&gt;
+
+&lt;script&gt;
+  document.addEventListener('sol-command', (e) =&gt; {
+    const { command, params } = e.detail;
+    // dispatch to your app's handlers…
+  });
+&lt;/script&gt;</code></pre>
+
+</body>
+</html>

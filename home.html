@@ -27,8 +27,24 @@
 
 <section class="table" role="table" aria-label="Components list">
  <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-menu-from-rdf.html">sol-menu</a></span>
-   <span class="cell" role="cell">Define a menu entirely in RDF using the <i><code>ui:</code></i> vocabulary; run it as a GUI with a simple web component; run it in a terminal with a single command.</span>
+   <span class="cell name" role="cell"><a href="help/sol-tabs-help.html">sol-tabs</a></span>
+   <span class="cell" role="cell">Tabbed container &mdash; fill it with <code>&lt;a href&gt;</code> children and each becomes a tab whose content loads on first open. Keep-alive panes preserve scroll, media playback and form state across switches.</span>
+ </article>
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-menu-help.html">sol-menu</a></span>
+   <span class="cell" role="cell">Sidebar (or top) navigation plus a content panel. Anchor children become entries; nest <code>&lt;submenu&gt;</code> groups to any depth. Clicking an entry loads it into the panel.</span>
+ </article>
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-dropdown-button-help.html">sol-dropdown-button</a></span>
+   <span class="cell" role="cell">A trigger button that drops a menu in a floating popup. Declare items inline in a <code>&lt;menu&gt;</code>; a bare-name handler fires a <code>sol-command</code>, a tag or <code>&lt;a href&gt;</code> mounts content.</span>
+ </article>
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/sol-button-help.html">sol-button</a></span>
+   <span class="cell" role="cell">A declarative launcher: a trigger that renders a handler component into a <b>region</b> &mdash; a page pane or a conjured modal / floating / window surface.</span>
+ </article>
+ <article class="row" role="row">
+   <span class="cell name" role="cell"><a href="help/menu-from-rdf.html">menus from RDF</a></span>
+   <span class="cell" role="cell">Drive <code>sol-menu</code>, <code>sol-tabs</code> or <code>sol-dropdown-button</code> from a <code>ui:Menu</code> RDF document instead of HTML children: switch on the opt-in <code>menu-from-rdf</code> add-on and set a <code>from-rdf</code> attribute. (Showcase: <a href="help/sol-menu-from-rdf.html">a menu in GUI &amp; terminal</a>.)</span>
  </article>
  <article class="row" role="row">
    <span class="cell name" role="cell"><a href="help/sol-query-help.html">sol-query</a></span>

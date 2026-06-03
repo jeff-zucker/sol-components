@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-tabs Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+  <!-- sol-tabs is a light-DOM, zero-dependency component: load its own bundle
+       directly. sol-include is loaded too because tab content here is fetched
+       HTML (the default content handler). Nothing else is required. -->
+  <script defer src="../dist/sol-include.umd.min.js"></script>
+  <script defer src="../dist/sol-tabs.umd.min.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>sol-tabs component</h1>
+  <p>A tabbed container. Fill it with <code>&lt;a href&gt;</code> children — each anchor
+  becomes a tab whose label is the link text and whose content is loaded from the
+  <code>href</code> the first time you open it. The bar hides itself when there is
+  only one tab.</p>
+
+  <h2>Live demo</h2>
+  <div class="demo-area">
+    <sol-tabs keep-alive style="display:block; min-height:6rem;">
+      <a href="./data/sample-a.html" trusted>Overview</a>
+      <a href="./data/sample-b.html" trusted>Details</a>
+      <a href="./data/sample-c.html" trusted>About</a>
+    </sol-tabs>
+  </div>
+
+  <h2>Authoring</h2>
+  <p>Each tab is an anchor. The <code>href</code> is the content URL; the link text is
+  the tab label. By default the content is mounted with <code>sol-include</code> (fetch
+  &amp; show HTML/markdown/text); set <code>handler="sol-*"</code> on an anchor — or on
+  <code>&lt;sol-tabs&gt;</code> as a default for every tab — to mount a different
+  component instead. The <code>href</code> is handed to that component as both
+  <code>source</code> and <code>endpoint</code>, and every other attribute on the anchor
+  is forwarded too.</p>
+  <p>To keep a standard <code>&lt;a&gt;</code> valid you may write any forwarded attribute
+  as <code>data-*</code>; the prefix is stripped when forwarding
+  (<code>data-handler</code> picks the component, <code>data-view</code> →
+  <code>view</code>, and so on).</p>
+
+  <h2>Attributes</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>handler</code></td>
+          <td>Default component tag for every tab (an anchor's own
+              <code>handler</code> overrides it). Falls back to
+              <code>sol-include</code>.</td></tr>
+      <tr><td><code>keep-alive</code></td>
+          <td>Render every tab once into its own persistent pane and switch by
+              toggling visibility — nothing is torn down, so scroll position,
+              media playback and in-flight state survive a switch.</td></tr>
+      <tr><td><code>orientation</code></td>
+          <td><code>horizontal</code> (default) or <code>vertical</code>.</td></tr>
+      <tr><td><code>variant</code></td>
+          <td><code>sub</code> for the slimmer nested-subtab styling.</td></tr>
+    </tbody>
+  </table>
+  <p>A non-anchor child (a button or custom control) is treated as a toolbar
+  <b>action</b> and re-homed onto the tab bar instead of becoming a tab; mark an
+  anchor <code>slot="actions"</code> to force it there too. Switching tabs fires
+  <code>sol-tab-change</code> (detail: <code>{ name }</code>).</p>
+
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- three tabs, content fetched on first open --&gt;
+&lt;sol-tabs&gt;
+  &lt;a href="overview.html"&gt;Overview&lt;/a&gt;
+  &lt;a href="notes.md"&gt;Notes&lt;/a&gt;
+  &lt;a href="about.html"&gt;About&lt;/a&gt;
+&lt;/sol-tabs&gt;
+
+&lt;!-- keep every panel alive (audio/scroll survive a switch) --&gt;
+&lt;sol-tabs keep-alive&gt;
+  &lt;a href="player.html"&gt;Player&lt;/a&gt;
+  &lt;a href="queue.html"&gt;Queue&lt;/a&gt;
+&lt;/sol-tabs&gt;
+
+&lt;!-- a default handler for all tabs + a forwarded attribute --&gt;
+&lt;sol-tabs handler="sol-live-edit"&gt;
+  &lt;a href="readme.md"&gt;Readme&lt;/a&gt;
+  &lt;a href="todo.md" data-view="preview"&gt;Todo&lt;/a&gt;
+&lt;/sol-tabs&gt;
+
+&lt;!-- a toolbar action alongside the tabs (non-anchor child) --&gt;
+&lt;sol-tabs&gt;
+  &lt;a href="a.html"&gt;A&lt;/a&gt;
+  &lt;sol-button inline source="help.html"&gt;?&lt;/sol-button&gt;
+&lt;/sol-tabs&gt;</code></pre>
+
+</body>
+</html>

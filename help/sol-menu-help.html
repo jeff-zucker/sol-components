@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-menu Component</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+  <!-- sol-menu is a light-DOM, zero-dependency component: load its own bundle
+       directly. sol-include is loaded too because the menu content here is
+       fetched HTML (the default content handler). Nothing else is required. -->
+  <script defer src="../dist/sol-include.umd.min.js"></script>
+  <script defer src="../dist/sol-menu.umd.min.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>sol-menu component</h1>
+  <p>A navigation strip plus a content panel. Fill it with <code>&lt;a href&gt;</code>
+  children — each becomes a menu entry; clicking one loads its <code>href</code> into the
+  panel. Group entries under collapsible <code>&lt;submenu&gt;</code> sections to any
+  depth. The first entry is selected on load so the panel is never empty.</p>
+
+  <h2>Live demo</h2>
+  <div class="demo-area">
+    <sol-menu style="display:flex; gap:1rem; min-height:7rem;">
+      <a href="./data/sample-a.html" trusted>Home</a>
+      <submenu open>
+        <label>Docs</label>
+        <a href="./data/sample-b.html" trusted>Quickstart</a>
+        <a href="./data/sample-c.html" trusted>About</a>
+      </submenu>
+    </sol-menu>
+  </div>
+
+  <h2>Authoring</h2>
+  <p>Entries are anchors, exactly like <code>&lt;sol-tabs&gt;</code>: <code>href</code> is
+  the content URL, the link text is the label, and content mounts with
+  <code>sol-include</code> unless you set a <code>handler</code> (per anchor, or on
+  <code>&lt;sol-menu&gt;</code> as a default). A <code>&lt;submenu&gt;</code> holds a
+  <code>&lt;label&gt;</code> heading followed by its own entries (or further
+  <code>&lt;submenu&gt;</code>s) and opens as a fly-out.</p>
+  <p>An entry can be marked <code>if-logged-in</code> (or <code>requires-write</code>) to
+  flag that it needs an authenticated, writable session. The menu takes no policy
+  itself — it exposes such entries as <code>::part(requires-write)</code> so the host
+  page decides whether to hide or disable them.</p>
+
+  <h2>Attributes</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>handler</code></td>
+          <td>Default component tag for every entry (an anchor's own
+              <code>handler</code> overrides it). Falls back to
+              <code>sol-include</code>.</td></tr>
+      <tr><td><code>orientation</code></td>
+          <td><code>horizontal</code> lays the nav bar on top; default is a sidebar
+              on the left.</td></tr>
+      <tr><td><code>icon</code> <span class="muted">(on an entry)</span></td>
+          <td>Show an icon (image URL or inline SVG data-URI) instead of text;
+              the label becomes the tooltip / aria-label.</td></tr>
+      <tr><td><code>if-logged-in</code> <span class="muted">(on an entry)</span></td>
+          <td>Flag the entry as needing a writable session; surfaced via
+              <code>::part(requires-write)</code> for the host to gate.</td></tr>
+    </tbody>
+  </table>
+  <p>The content panel is a light-DOM <code>.sol-menu-content</code> child, so results are
+  reachable by ordinary page CSS / queries. Selecting an entry fires
+  <code>sol-menu-change</code> (detail: <code>{ name }</code>).</p>
+
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- sidebar with a nested group --&gt;
+&lt;sol-menu&gt;
+  &lt;a href="home.html"&gt;Home&lt;/a&gt;
+  &lt;submenu&gt;
+    &lt;label&gt;Docs&lt;/label&gt;
+    &lt;a href="quickstart.md"&gt;Quickstart&lt;/a&gt;
+    &lt;submenu&gt;
+      &lt;label&gt;API&lt;/label&gt;
+      &lt;a href="api/query.md"&gt;Query&lt;/a&gt;
+      &lt;a href="api/modal.md"&gt;Modal&lt;/a&gt;
+    &lt;/submenu&gt;
+  &lt;/submenu&gt;
+&lt;/sol-menu&gt;
+
+&lt;!-- a top nav bar with a default handler --&gt;
+&lt;sol-menu orientation="horizontal" handler="sol-live-edit"&gt;
+  &lt;a href="readme.md"&gt;Readme&lt;/a&gt;
+  &lt;a href="changelog.md"&gt;Changelog&lt;/a&gt;
+&lt;/sol-menu&gt;</code></pre>
+
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adding from-rdf to a menu</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+  <!-- Activation, in three script tags:
+       1. rdflib (peer) — publishes window.$rdf; the add-on reads it.
+       2. the component itself (sol-menu / sol-tabs / sol-dropdown-button).
+       3. the menu-from-rdf add-on — this is what turns the `from-rdf`
+          attribute on. Drop tag #1 and #3 and the component is declarative-
+          only. (defer: run after the document so the elements upgrade with
+          their attributes already in place.) -->
+  <script src="../dist/vendor/rdflib.umd.js"></script>
+  <script defer src="../dist/sol-menu.umd.min.js"></script>
+  <script defer src="../dist/menu-from-rdf.umd.min.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>Adding <code>from-rdf</code> to a menu</h1>
+  <p>By default <code>&lt;sol-menu&gt;</code>, <code>&lt;sol-tabs&gt;</code> and
+  <code>&lt;sol-dropdown-button&gt;</code> are declarative-only: you author their items as
+  light-DOM children (see the per-component help). <b>To build the same menu from an RDF
+  document instead</b>, switch on one opt-in capability — the <code>menu-from-rdf</code>
+  add-on — and point a <code>from-rdf</code> attribute at a <code>ui:Menu</code> subject.
+  The add-on is the only piece that pulls in rdflib; without it, <code>from-rdf</code> is
+  inert (the component logs a one-line notice and renders nothing from RDF).</p>
+
+  <h2>1 · Switch the capability on</h2>
+  <p>Load the add-on alongside the component. Pick the form that matches how you already
+  load components:</p>
+  <pre><code>&lt;!-- UMD: a peer rdflib, the component, then the add-on --&gt;
+&lt;script src="dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
+&lt;script src="dist/sol-menu.umd.min.js"&gt;&lt;/script&gt;
+&lt;script src="dist/menu-from-rdf.umd.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- …or ESM: import the add-on once, anywhere --&gt;
+&lt;script type="module"&gt;
+  import 'solid-web-components/sol-menu.js';
+  import 'solid-web-components/menu-from-rdf.js';   // ← activation
+&lt;/script&gt;</code></pre>
+  <p>Importing <code>menu-from-rdf</code> once activates <code>from-rdf</code> for every
+  member of the menu family on the page — <code>sol-menu</code>, <code>sol-tabs</code> and
+  <code>sol-dropdown-button</code> alike — in any load order.</p>
+
+  <h2>2 · Point <code>from-rdf</code> at a <code>ui:Menu</code></h2>
+  <p>The attribute is a URL with a fragment naming the root <code>ui:Menu</code> subject.
+  The same RDF shape drives any member of the family — swap the tag, keep the document.</p>
+  <pre><code>&lt;sol-menu            from-rdf="menu.ttl#MainMenu"&gt;&lt;/sol-menu&gt;
+&lt;sol-tabs            from-rdf="menu.ttl#MainMenu"&gt;&lt;/sol-tabs&gt;
+&lt;sol-dropdown-button from-rdf="menu.ttl#MainMenu"&gt;&lt;/sol-dropdown-button&gt;</code></pre>
+
+  <h2>Live demo</h2>
+  <p>This page loaded all three activation tags above. The menu below is built from
+  <code>data/menu-from-rdf-demo.ttl#MainMenu</code> — its items are commands, so clicking
+  one fires <code>sol-command</code> (echoed here):</p>
+  <div class="demo-area" style="gap:1rem;">
+    <sol-menu from-rdf="./data/menu-from-rdf-demo.ttl#MainMenu"
+              orientation="horizontal" style="display:block;"></sol-menu>
+    <span>Last command: <code id="cmd-status">—</code></span>
+  </div>
+  <script>
+    document.addEventListener('sol-command', (e) => {
+      document.getElementById('cmd-status').textContent = e.detail?.command || '?';
+    });
+  </script>
+
+  <h2>3 · The <code>ui:Menu</code> shape</h2>
+  <p>A <code>ui:Menu</code> has a <code>ui:label</code> and a <code>ui:parts</code> list of
+  items. Each item is a <code>ui:Link</code> (a URL to load), a <code>ui:Component</code>
+  (a custom element, or — when <code>ui:name</code> has no hyphen — a command), or a
+  nested <code>ui:Menu</code> (a submenu).</p>
+  <pre><code>@prefix ui:     &lt;http://www.w3.org/ns/ui#&gt; .
+@prefix schema: &lt;http://schema.org/&gt; .
+
+&lt;#MainMenu&gt; a ui:Menu ; ui:label "Demo" ;
+  ui:parts ( &lt;#New&gt; &lt;#Open&gt; &lt;#Tools&gt; ) .
+
+&lt;#New&gt;  a ui:Component ; ui:label "New"  ; ui:name "newItem" .   # command
+&lt;#Open&gt; a ui:Component ; ui:label "Open" ; ui:name "openItem" .  # command
+
+&lt;#Tools&gt; a ui:Menu ; ui:label "Tools" ;                          # submenu
+  ui:parts ( &lt;#Export&gt; &lt;#Settings&gt; ) .
+
+&lt;#Export&gt; a ui:Component ; ui:label "Export" ; ui:name "export" ;
+  ui:attribute [ schema:name "format" ; schema:value "csv" ] .   # → params
+&lt;#Settings&gt; a ui:Component ; ui:label "Settings" ; ui:name "settings" .</code></pre>
+
+  <table class="attr-table">
+    <thead><tr><th>Term</th><th>On</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>ui:label</code></td><td>any item</td><td>Display text.</td></tr>
+      <tr><td><code>ui:parts</code></td><td><code>ui:Menu</code></td>
+          <td>Ordered list (an RDF Collection) of the menu's items.</td></tr>
+      <tr><td><code>ui:orientation</code></td><td><code>ui:Menu</code></td>
+          <td><code>ui:Horizontal</code> (default) or <code>ui:Vertical</code>.</td></tr>
+      <tr><td><code>ui:href</code> / <code>ui:contents</code></td><td><code>ui:Link</code></td>
+          <td>A URL to load, or literal HTML to render inline.</td></tr>
+      <tr><td><code>ui:name</code></td><td><code>ui:Component</code></td>
+          <td>A hyphenated custom-element tag to mount, <i>or</i> a hyphen-free
+              <b>command</b> key (click → <code>sol-command</code>).</td></tr>
+      <tr><td><code>ui:attribute</code></td><td><code>ui:Component</code></td>
+          <td><code>schema:name</code>/<code>schema:value</code> pairs — element
+              attributes, or a command's <code>params</code>.</td></tr>
+      <tr><td><code>ui:icon</code></td><td>link / component</td><td>Icon URL.</td></tr>
+    </tbody>
+  </table>
+  <p>The canonical shape lives in <code>shapes/menu.shacl</code>. A command's
+  <code>ui:name</code> is just a key — no code is named in the RDF; your app maps the key
+  to a handler when it receives the <code>sol-command</code> event.</p>
+
+</body>
+</html>
