@@ -12,16 +12,22 @@
 //   static get shape()
 //     - "https://…/shape.shacl"           → implicit sol-form in shape-driven mode
 //
+//   a `shape="…"` ATTRIBUTE on the instance overrides the class shape — so a
+//   generic element (e.g. <sol-default shape="./app-settings.shacl">) is
+//   configurable without any class-level declaration. This is what lets
+//   sol-settings work with anyone's components.
+//
 // `editor` takes precedence over `shape`. When neither is set the
 // component is not editable; resolveEditorSpec returns null.
 
 /**
  * @param {Function | undefined} Ctor — custom-element class
+ * @param {Element} [el] — the instance, so a per-instance `shape` attribute can
+ *        override the class shape (and make a class-less element editable).
  * @returns {{tag: string, subjectAttr: string, attrs: object, save: boolean} | null}
  */
-export function resolveEditorSpec(Ctor) {
-  if (!Ctor) return null;
-  const ed = Ctor.editor;
+export function resolveEditorSpec(Ctor, el) {
+  const ed = Ctor && Ctor.editor;
   if (ed && typeof ed === 'object' && ed.inline) return null;
 
   if (typeof ed === 'string') {
@@ -37,8 +43,11 @@ export function resolveEditorSpec(Ctor) {
     };
   }
 
-  if (typeof Ctor.shape === 'string') {
-    return { tag: 'sol-form', subjectAttr: 'subject', attrs: { shape: Ctor.shape }, save: true };
+  // Instance attribute wins over the class default; either makes it editable.
+  const shape = (el && el.getAttribute && el.getAttribute('shape')) ||
+                (Ctor && typeof Ctor.shape === 'string' ? Ctor.shape : null);
+  if (shape) {
+    return { tag: 'sol-form', subjectAttr: 'subject', attrs: { shape }, save: true };
   }
   return null;
 }
@@ -60,7 +69,7 @@ export function editorSubjectOf(el) {
  * listening for `sol-form-save` if it wants to refresh the host.
  */
 export function buildEditorElement(el) {
-  const spec = resolveEditorSpec(el.constructor);
+  const spec = resolveEditorSpec(el.constructor, el);
   if (!spec) return null;
   const subject = editorSubjectOf(el);
 

@@ -20,9 +20,9 @@
  * Deliberately NOT here (they need the RDF / Solid stack):
  *   sol-login, sol-form, sol-settings, sol-query, sol-solidos.
  * Also NOT here: `menu-from-rdf` — driving the menu family from RDF is the
- * opt-in add-on that pulls rdflib; load `dist/menu-from-rdf.umd.min.js`
- * alongside this bundle when a page wants `from-rdf`. Keeping it out is what
- * keeps this tier truly dependency-free.
+ * opt-in add-on that pulls rdflib; import the `menu-from-rdf` module (it
+ * resolves via the importmap) when a page wants `from-rdf`. Keeping it out is
+ * what keeps this tier truly dependency-free.
  *
  * dompurify and marked (sol-include's sanitiser / Markdown renderer) are the
  * only third-party code, and they're bundled IN. There is no rdflib peer.

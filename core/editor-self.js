@@ -63,7 +63,7 @@ function gearSheet() {
  *   no editor at all.
  */
 export function attachEditorSelfGear(el) {
-  if (!resolveEditorSpec(el.constructor)) return null;
+  if (!resolveEditorSpec(el.constructor, el)) return null;
   if (el._editorSelfGear) return el._editorSelfGear;
 
   const root = el.shadowRoot ?? el;

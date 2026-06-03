@@ -37,13 +37,11 @@ class SolDefault extends HTMLElement {
   // the observer.)
   static get observedAttributes() { return []; }
 
-  /** SHACL shape describing the editable knobs (proxy etc.). Shares
-   *  data-kitchen-settings.shacl with the chrome's theme / font /
-   *  editor-keys knobs so a single sol-form can edit everything
-   *  together. */
-  static get shape() {
-    return new URL('../shapes/data-kitchen-settings.shacl', import.meta.url).href;
-  }
+  // No hardcoded shape: which knobs <sol-default> holds is app-specific, so the
+  // editable SHACL shape comes from a per-instance `shape="…"` attribute
+  // (resolved by core/editor.js → sol-form). e.g.
+  //   <sol-default shape="./shapes/app-settings.shacl" theme="dark" …>
+  // Without a `shape`, sol-default is a non-editable defaults record.
 
   constructor() {
     super();

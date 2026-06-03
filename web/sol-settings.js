@@ -44,23 +44,29 @@ class SolSettings extends HTMLElement {
     // attached before discovery walks.
     queueMicrotask(() => this._build());
 
-    // Re-discover when nav activates a different tab. The mount layer
-    // fires sol-tab-activate whenever a [data-menu-item] wrapper is
-    // shown/created; if sol-settings was the destination *and* a new
-    // editable widget appeared while we were away, the accordion needs
-    // to grow a panel for it. Cheap to re-run discovery; the rebuild
-    // only happens when the widget set has actually changed.
-    this._onTabActivate = () => {
+    // Re-discover when the editable-component set changes. Generic trigger: a
+    // debounced MutationObserver on the whole document — works with any app, no
+    // swc-specific navigation needed. `sol-tab-activate` stays as an extra hint
+    // for keep-alive tab UIs (harmless if no one fires it). The rebuild only
+    // happens when the discovered set actually changed (signature compare).
+    this._rebuild = () => {
       if (this.offsetParent === null) return;   // we're hidden; ignore
       this._rebuildIfChanged();
     };
-    document.addEventListener('sol-tab-activate', this._onTabActivate);
+    this._mo = new MutationObserver(() => {
+      clearTimeout(this._moTimer);
+      this._moTimer = setTimeout(this._rebuild, 50);
+    });
+    this._mo.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('sol-tab-activate', this._rebuild);
   }
 
   disconnectedCallback() {
-    if (this._onTabActivate) {
-      document.removeEventListener('sol-tab-activate', this._onTabActivate);
-      this._onTabActivate = null;
+    if (this._mo) { this._mo.disconnect(); this._mo = null; }
+    clearTimeout(this._moTimer);
+    if (this._rebuild) {
+      document.removeEventListener('sol-tab-activate', this._rebuild);
+      this._rebuild = null;
     }
   }
 
@@ -156,7 +162,7 @@ class SolSettings extends HTMLElement {
         // A class's editor/shape getter may throw (e.g. import.meta.url maths
         // that breaks once bundled); never let one bad widget abort discovery.
         let spec = null;
-        try { spec = resolveEditorSpec(ctor); } catch (_) { spec = null; }
+        try { spec = resolveEditorSpec(ctor, el); } catch (_) { spec = null; }
         if (spec) {
           found.push({
             el,
@@ -171,9 +177,13 @@ class SolSettings extends HTMLElement {
   }
 }
 
+// Fallback label when an element has no `label` attribute. Drops the leading
+// vendor-prefix segment (sol-, dk-, my-, …) generically and title-cases the
+// rest — `sol-weather` → "Weather", `my-thing` → "Thing", `sol-dropdown-button`
+// → "Dropdown Button". Any component can override with an explicit `label`.
 function labelFromTag(tag) {
   return tag
-    .replace(/^sol-|^dk-/, '')
+    .replace(/^[a-z0-9]+-/, '')
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
