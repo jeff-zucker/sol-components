@@ -187,7 +187,19 @@ class SolTabs extends HTMLElement {
       if (result.orientation && !this.hasAttribute('orientation')) {
         this.setAttribute('orientation', result.orientation);
       }
-      this._tabs = this._wrapRdfItems(result.items);
+      // A part marked slot="actions" is a toolbar launcher, not a tab — build it
+      // as an element on the bar's action row (mirrors the inline non-anchor
+      // launchers). In RDF mode these REPLACE any inline launchers (the
+      // completeness principle: everything comes from RDF).
+      const isAction = (d) => d.type === 'component'
+        && (d.params || []).some(([k, v]) => k === 'slot' && v === 'actions');
+      const items = result.items || [];
+      const actionItems = items.filter(isAction);
+      this._tabs = this._wrapRdfItems(items.filter((d) => !isAction(d)));
+      if (actionItems.length) {
+        this._launchers = actionItems.map((d) => this._buildLauncher(d));
+        for (const el of this._launchers) this._wireInlineAction(el);
+      }
       this._renderBar();
       if (this._tabs.length) this._activateInitial();
     } catch (err) {
@@ -197,6 +209,19 @@ class SolTabs extends HTMLElement {
         detail: { source: 'sol-tabs', kind: 'rdf-load', uri, message: err.message },
       }));
     }
+  }
+
+  // Build a toolbar launcher element from an RDF action descriptor (ui:name =
+  // tag, ui:label → text, ui:attribute → attributes; the slot="actions" marker
+  // is dropped). Mirrors an inline non-anchor launcher.
+  _buildLauncher(desc) {
+    const el = document.createElement(desc.tag);
+    for (const [k, v] of desc.params || []) {
+      if (k === 'slot' && v === 'actions') continue;
+      el.setAttribute(k, v);
+    }
+    if (desc.name) el.textContent = desc.name;   // ?, A, 🌙 — empty for login/dropdown
+    return el;
   }
 
   // Wrap the plain item descriptions from core/menu-rdf.js with render
