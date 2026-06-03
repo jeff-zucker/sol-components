@@ -2,9 +2,9 @@
   "_doc": "Single source of truth for external runtime dependencies. Used by tools/build-importmaps.mjs and tools/vendor.mjs. The CDN major-version pin should match the major version that npm install actually resolves into node_modules; otherwise CDN mode and offline mode behave differently. List entries even for deps used by components that aren't yet in web/sol-full.js — the importmap covers them so the offline page won't 404 when a component is added. A `umd` field, when set, tells vendor.mjs to additionally emit a `<flat-name>.umd.js` bundle exposing the dep at `window.<umd>` — used for `<script>`-tag drop-in (e.g. sol-login + the inrupt auth client).",
   "deps": {
     "rdflib":                                { "version": "^2.3.6", "cdn": "https://esm.sh/rdflib@2", "umd": "$rdf" },
-    "dompurify":                             { "version": "^3.4.0", "cdn": "https://esm.sh/dompurify@3" },
+    "dompurify":                             { "version": "^3.4.0", "cdn": "https://esm.sh/dompurify@3", "umd": "DOMPurify" },
     "ical.js":                               { "version": "^2.2.1", "cdn": "https://esm.sh/ical.js@2", "umd": "ICAL" },
-    "marked":                                { "version": "^4",     "cdn": "https://esm.sh/marked@4" },
+    "marked":                                { "version": "^4",     "cdn": "https://esm.sh/marked@4", "umd": "marked" },
     "@comunica/query-sparql":                { "version": "^5.1.3", "cdn": "https://esm.sh/@comunica/query-sparql@5", "umd": "Comunica" },
 
     "solid-ui":                              { "version": "^3.1.0", "cdn": "https://esm.sh/solid-ui@3" },

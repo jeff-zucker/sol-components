@@ -17,6 +17,34 @@
   <h1>Invoking Components</h1>
 
   <div class="hero">
+    <h2>0. Simplest: one tag — the loader</h2>
+      <code>dist/sol-loader.min.js</code> injects the right vendor peers and
+      bundles, in dependency order, from a small config. In <code>data-bundles</code>
+      list the <code>basic</code> bundle, the <code>pods</code> group, or
+      individual components (widgets like <code>time</code>/<code>weather</code>
+      are picked individually). In <code>data-with</code> add capabilities —
+      <code>auth</code> (⇒ sol-login), <code>sparql</code> (⇒ sol-query), and
+      <code>rdf</code> (the solid-ui editing stack ⇒ sol-form/settings/tree-edit,
+      loaded as ESM via the importmap). It skips any peer global already present.
+<pre><code>&lt;script src="../dist/sol-loader.min.js"
+        data-stage="local"
+        data-bundles="basic time weather feed"
+        data-with="auth sparql rdf"&gt;&lt;/script&gt;</code></pre>
+      Run code once everything is ready:
+<pre><code>&lt;script&gt;
+  await SolidWebComponents.ready;        // or: document.addEventListener('swc:ready', …)
+  // …or load programmatically:
+  await SolidWebComponents.load(['basic', 'time'], { with: ['auth', 'rdf'] });
+&lt;/script&gt;</code></pre>
+      <div class="note-box"><strong>Forms too:</strong> add <code>forms</code>
+        to <code>data-bundles</code> and the loader injects the ESM bootstrap for
+        <code>sol-form</code> / <code>sol-settings</code> / <code>sol-tree-edit</code>
+        (solid-logic → solid-ui → the components) through the same importmap — no
+        app code, no separate module recipe. The manual <code>&lt;script&gt;</code>
+        steps below still give full control when you want it.</div>
+  </div>
+
+  <div class="hero">
     <h2>1. If your app needs Solid Authentication, import @inrupt/solid-client-authn-browser</h2>
       A pre-built bundle is included in the Solid-Web-Components dist/vendor folder.
 <pre><code>&lt;script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js""&gt;&lt;/script&gt;</code></pre>
@@ -35,9 +63,15 @@
 </div>
 
   <div class="hero">
-    <h2>4. Always import Solid-Web-Components</h2>
-      A pre-built bundle containing all components is included in the Solid-Web-Components dist folder.
-<pre><code>&lt;script src="../dist/solid-web-components.bundle.min.js"&gt;&lt;/script&gt;</code></pre>
+    <h2>4. Import the Solid-Web-Components you need</h2>
+      One app-tier bundle covers the no-RDF UI; everything else is a self-contained per-component UMD (<code>dist/sol-&lt;name&gt;.umd.min.js</code>) you drop in individually:
+      <ul>
+        <li><code>sol-basic.bundle.min.js</code> — no-RDF UI primitives (button, dropdown-button, include, menu, tabs, accordion, rolodex). No peer deps.</li>
+        <li>Solid-data components — <code>sol-login.umd.min.js</code>, <code>sol-query.umd.min.js</code>, <code>sol-solidos.umd.min.js</code> — each its own UMD (need rdflib, step 3). The solid-ui editing stack (<code>sol-form</code>/<code>sol-settings</code>/<code>sol-tree-edit</code>) is ESM-only — load it via the importmap + module recipe, or just use the loader's <code>data-with="rdf"</code> (option&nbsp;0).</li>
+        <li>Widgets (time, weather, search, calendar, feed, gallery) — each its own <code>sol-&lt;name&gt;.umd.min.js</code>. The pod family: <code>sol-pod.umd.min.js</code> and <code>sol-live-edit.umd.min.js</code> stand alone; <code>pod-ops</code> + <code>wac</code> ship combined as <code>sol-pod-extras.umd.min.js</code> (load alongside sol-pod). See <a href="#per-component">per-component</a> below.</li>
+      </ul>
+      The <code>sol-query</code> example below is in the RDF tier:
+<pre><code>&lt;script src="../dist/sol-rdf.bundle.min.js"&gt;&lt;/script&gt;</code></pre>
 </div>
 
   <div class="hero">

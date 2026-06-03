@@ -27,9 +27,9 @@
   <h2>Runtime dependencies (bring-your-own)</h2>
   <p>sol-solidos relies on mashlib + solid-panes (a substantial
      dependency tree — RDF store, panes, login UI, theme module).
-     These are <em>not</em> in the all-in-one
-     <code>solid-web-components.bundle.min.js</code> or in
-     <code>podz-extras.bundle.min.js</code>. You must load mashlib
+     <code>sol-solidos</code> itself ships as
+     <code>sol-solidos.umd.min.js</code>, but mashlib is <em>not</em>
+     bundled in (and never was). You must load mashlib
      separately so that <code>window.panes</code>,
      <code>window.SolidLogic</code>, and <code>window.Mashlib</code>
      are populated before sol-solidos's <code>connectedCallback</code>

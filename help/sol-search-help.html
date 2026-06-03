@@ -216,8 +216,11 @@ sol-search::part(submit) { background: var(--accent); }</code></pre>
        points at a TTL engine list. -->
   <script src="../dist/vendor/rdflib.umd.js"></script>
 
-  <!-- sol-search as part of the sol-full bundle. -->
-  <script src="../dist/sol-full.umd.min.js?v=1"></script>
+  <!-- sol-search ships as its own per-component UMD. dompurify/marked are its
+       BYO sanitiser / Markdown peers. -->
+  <script src="../dist/vendor/dompurify.umd.js"></script>
+  <script src="../dist/vendor/marked.umd.js"></script>
+  <script src="../dist/sol-search.umd.min.js"></script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

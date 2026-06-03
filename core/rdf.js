@@ -104,5 +104,20 @@ class Rdf {
   get Statement()     { return _lib.Statement; }
 }
 
-export const rdf = new Rdf();
+// Cross-bundle singleton. Every bundle (each UMD component, the app's own
+// code, solid-ui's world) compiles its own copy of this module; without a
+// shared instance each would mint its OWN store + storeFetcher, so e.g.
+// <sol-login>'s `_integrateWithRdflib()` patch would be invisible to an app
+// reading `rdf.store` from a different bundle. Publishing ONE instance on
+// `window` makes the store, fetcher and loaded-set page-wide, so any app can
+// just load components from sol-loader and share one coherent store — no
+// bundling-from-source workaround. (Paired with the rdflib→window.$rdf shim
+// so all bundles also share one rdflib *library*, for term `instanceof`.)
+//
+// Browser only: in Node / jest each module keeps its own instance (no `window`),
+// preserving test isolation.
+const _RDF_SINGLETON = Symbol.for('solid-web-components:rdf-singleton');
+export const rdf = (typeof window !== 'undefined')
+  ? (window[_RDF_SINGLETON] || (window[_RDF_SINGLETON] = new Rdf()))
+  : new Rdf();
 export default rdf;

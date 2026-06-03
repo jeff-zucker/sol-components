@@ -5,7 +5,11 @@ let _purify = null;
 async function _getDOMPurify() {
   if (_purify) return _purify;
   const win = typeof window !== 'undefined' ? window : {};
-  if (win.DOMPurify?.sanitize) { _purify = win.DOMPurify; return _purify; }
+  // The global may be the purify instance directly (official purify.min.js UMD)
+  // or a module namespace wrapping it (our esbuild vendor UMD → `{ default }`).
+  const g = win.DOMPurify;
+  const inst = g?.sanitize ? g : (g?.default?.sanitize ? g.default : null);
+  if (inst) { _purify = inst; return _purify; }
   try {
     const mod = await import('dompurify');
     _purify = mod.default ?? mod;

@@ -1,55 +1,50 @@
 /**
- * sol-basic.js — curated bundle entry: the everyday-app subset.
+ * sol-basic.js — bundle entry: the no-RDF, html-first tier.
  *
- * Registers exactly six author-facing components:
- *   sol-include, sol-button, sol-menu, sol-login, sol-form, sol-settings
- * …plus the helpers those six conjure / instantiate by tag name at runtime.
- * These helpers are COMPOSED INTERNALLY — not meant to be author-placed —
- * but they're global custom elements all the same, so they must be
- * registered for the six to run at full capacity:
- *   sol-accordion   — settings panel chrome (static dep of sol-settings)
- *   sol-default     — singleton holding shared non-CSS defaults (proxy, …)
+ * Registers the everyday UI primitives that work from plain HTML and never
+ * need the RDF / Solid stack at runtime:
+ *   sol-button, sol-dropdown-button, sol-include, sol-menu, sol-tabs,
+ *   sol-accordion, sol-rolodex
+ * …plus the registered-by-tag helpers these conjure / instantiate at runtime:
+ *   sol-default     — singleton holding shared non-CSS defaults (proxy, region…)
  *   sol-modal       — the "modal" display surface + the editor-self gear popup
  *   sol-window      — the "floating" display surface
- *   sol-tree-edit   — sol-menu's editor (settings/gear mount it via core/editor)
- *   sol-breadcrumb  — sol-tree-edit's drill-in/out navigation crumb
  * The author-facing surface for the conjured ones is the region KEYWORD
  * (region="modal" / "floating"), not the tag — see core/display-target.js.
- * Nothing else is pulled in.
  *
- * Everything these components need is bundled IN (dompurify, marked, n3,
- * rdf-validate-shacl are inlined). Bring-your-own runtime peers, loaded
- * BEFORE this bundle, IN THIS ORDER (rdflib → solid-logic → solid-ui — a
- * singleton handshake; see project memory):
- *   - rdflib                              → `window.$rdf` (vendored UMD script tag)
- *   - solid-logic                         → singleton rdflib store (ESM, importmap)
- *   - solid-ui                            → `window.UI` widgets (ESM, importmap)
- *   - @inrupt/solid-client-authn-browser  → `window.solidClientAuthn`
- *     (only sol-login; vendored UMD script tag)
+ * sol-menu's EDITOR (sol-tree-edit + sol-breadcrumb) is NOT here: editing a
+ * menu reads/writes it as RDF (SHACL + Turtle), so it's part of the solid-ui
+ * editing stack — loaded via sol-loader's `rdf` capability (or the importmap +
+ * module recipe). sol-menu conjures sol-tree-edit by tag when it's present.
  *
- * NOTE: solid-ui/solid-logic ship only as ESM, so a page that uses sol-form
- * or sol-settings needs an importmap for those two plus a tiny bootstrap
- * module that imports them (side-effects window.UI + the store). The
- * include/button/menu/login subset, which never touches window.UI, can run
- * from just the rdflib (+auth) UMD script tags and this bundle.
+ * Deliberately NOT here (they need the RDF / Solid stack):
+ *   sol-login, sol-form, sol-settings, sol-query, sol-solidos.
+ * Also NOT here: `menu-from-rdf` — driving the menu family from RDF is the
+ * opt-in add-on that pulls rdflib; load `dist/menu-from-rdf.umd.min.js`
+ * alongside this bundle when a page wants `from-rdf`. Keeping it out is what
+ * keeps this tier truly dependency-free.
+ *
+ * dompurify and marked (sol-include's sanitiser / Markdown renderer) are the
+ * only third-party code, and they're bundled IN. There is no rdflib peer.
  */
 
 import './sol-include.js';
 import './sol-button.js';
+import './sol-dropdown-button.js';
 import './sol-menu.js';
-import './menu-from-rdf.js';   // keep sol-menu `from-rdf` working (rdflib already a peer here)
-import './sol-login.js';
-import './sol-form.js';
-import './sol-settings.js';   // statically pulls in sol-accordion
+import './sol-tabs.js';
+import './sol-accordion.js';
+import './sol-rolodex.js';
 
-// Registered-by-tag helpers the six conjure / instantiate at runtime:
+// Registered-by-tag helpers the primitives conjure / instantiate at runtime:
 import './sol-default.js';    // singleton holding shared non-CSS defaults (proxy, region…)
 import './sol-modal.js';      // modal display surface + editor-self gear popup
 import './sol-window.js';     // floating-window display surface
-import './sol-tree-edit.js';  // sol-menu's editor
-import './sol-breadcrumb.js'; // sol-tree-edit's drill-in/out navigation crumb
 
 // Surface the JS API on `window.SolBasic.*` for hosts that need the class
 // symbols, not just the registered custom-element tags.
-export { AuthManager } from './sol-login.js';
-export { solFetch } from '../core/auth-fetch.js';
+export { SolButton } from './sol-button.js';
+export { SolDropdownButton } from './sol-dropdown-button.js';
+export { SolInclude } from './sol-include.js';
+export { SolMenu } from './sol-menu.js';
+export { SolTabs } from './sol-tabs.js';

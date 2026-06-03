@@ -12,8 +12,8 @@
 
 <p class="note" style="padding:.5rem .75rem; border-left:3px solid var(--accent,#888); background:var(--surface-2,#f3f3f3);">
 <code>from-rdf</code> is an <b>opt-in capability</b>: a page must load the
-<code>menu-from-rdf</code> add-on (already included in the all-in-one bundle this
-demo uses). To switch it on with the individual component bundles, see
+<code>menu-from-rdf</code> add-on (a separate UMD this demo loads alongside
+<code>sol-basic</code>). To switch it on with the individual component bundles, see
 <a href="menu-from-rdf.html">Adding <code>from-rdf</code> to a menu</a>.
 </p>
 
@@ -46,7 +46,9 @@ demo uses). To switch it on with the individual component bundles, see
 <div class="tab-panel" id="tab-html">
 <p>This is the full HTML to load the live demo</p>
 <pre><code>&lt;script src="<i>../dist/vendor/@comunica-query-sparql.umd.js</i>"&gt;&lt;/script&gt;
-&lt;script src="<i>../dist/solid-web-components.bundle.min.js</i>" type="module"&gt;&lt;/script&gt;
+&lt;script src="<i>../dist/sol-basic.bundle.min.js</i>"&gt;&lt;/script&gt;
+&lt;script src="<i>../dist/sol-rdf.bundle.min.js</i>"&gt;&lt;/script&gt;
+&lt;script src="<i>../dist/menu-from-rdf.umd.min.js</i>"&gt;&lt;/script&gt;
 
 &lt;sol-menu from-rdf="<i>data/demo-menu.ttl#MainMenu</i>"&gt;&lt;/sol-menu&gt;</code></pre>
 <p>
@@ -129,10 +131,15 @@ one) — in that region instead.
   -->
 
   <!--
-    Solid-web-components (required) : this demo's menu launches a sol-query
-    item, which is NOT in sol-basic — so it uses the broader self-contained
-    bundle. For a menu that only launches sol-basic components, sol-basic
-    (+ rdflib UMD) is enough; see sol-button / sol-form help.
+    Solid-web-components (required) : sol-menu is in sol-basic; this demo's menu
+    launches a sol-query item (sol-rdf tier); from-rdf is the menu-from-rdf
+    add-on. Load all three (rdflib above is their shared peer). For a menu that
+    only launches sol-basic components, sol-basic + menu-from-rdf (+ rdflib) is
+    enough; see sol-button / sol-form help.
   -->
-  <script src="../dist/solid-web-components.bundle.min.js"></script>
+  <script src="../dist/vendor/dompurify.umd.js"></script>
+  <script src="../dist/vendor/marked.umd.js"></script>
+  <script src="../dist/sol-basic.bundle.min.js"></script>
+  <script src="../dist/sol-query.umd.min.js"></script>
+  <script src="../dist/menu-from-rdf.umd.min.js"></script>
 <!-- ---------------------------------------------------------------- -->

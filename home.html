@@ -9,10 +9,14 @@
   <link rel="stylesheet" href="web/styles/help.css">
   <script src="web/scripts/prefs.js"></script>
 <style>
-  .table { display:table; border-spacing:0 1rem; }
+  .table { display:table; border-spacing:0 0.7rem; }
   .row { display:table-row; }
-  .cell { display:table-cell; padding-right:1rem;}
-  .cell.name { font-weight:bold; white-space: nowrap; text-decoration:none; }
+  .cell { display:table-cell; padding-right:1rem; vertical-align:baseline; }
+  .cell.name { font-weight:bold; white-space:nowrap; }
+  .cell.links a, .cell.links span { display:inline-block; margin-right:0.7rem; }
+  .cell.links span { color:var(--muted, #888); }   /* component without its own help page yet */
+  .companion .cell.name { font-weight:normal; font-style:italic; color:var(--muted, #777); }
+  .companion { font-size:0.95em; }
 </style>
 </head>
 <body>
@@ -25,74 +29,73 @@
     <b><a href="help/custom-views.html">Creating custom views</a></b>
   </nav>
 
-<section class="table" role="table" aria-label="Components list">
+<section class="table" role="table" aria-label="Components by group">
  <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-tabs-help.html">sol-tabs</a></span>
-   <span class="cell" role="cell">Tabbed container &mdash; fill it with <code>&lt;a href&gt;</code> children and each becomes a tab whose content loads on first open. Keep-alive panes preserve scroll, media playback and form state across switches.</span>
+   <span class="cell name" role="cell">sol-basic</span>
+   <span class="cell links" role="cell">
+     <a href="help/sol-button-help.html">button</a>
+     <a href="help/sol-dropdown-button-help.html">dropdown-button</a>
+     <a href="help/sol-include-help.html">include</a>
+     <a href="help/sol-menu-help.html">menu</a>
+     <a href="help/sol-tabs-help.html">tabs</a>
+     <span>accordion</span>
+     <span>rolodex</span>
+     <span>default</span>
+   </span>
  </article>
  <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-menu-help.html">sol-menu</a></span>
-   <span class="cell" role="cell">Sidebar (or top) navigation plus a content panel. Anchor children become entries; nest <code>&lt;submenu&gt;</code> groups to any depth. Clicking an entry loads it into the panel.</span>
+   <span class="cell name" role="cell">sol-rdf</span>
+   <span class="cell links" role="cell">
+     <a href="help/sol-login-help.html">login</a>
+     <a href="help/sol-form-help.html">form</a>
+     <a href="help/sol-settings-help.html">settings</a>
+     <a href="help/sol-query-help.html">query</a>
+     <a href="help/sol-solidos-help.html">solidos</a>
+   </span>
  </article>
  <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-dropdown-button-help.html">sol-dropdown-button</a></span>
-   <span class="cell" role="cell">A trigger button that drops a menu in a floating popup. Declare items inline in a <code>&lt;menu&gt;</code>; a bare-name handler fires a <code>sol-command</code>, a tag or <code>&lt;a href&gt;</code> mounts content.</span>
+   <span class="cell name" role="cell">sol-widgets</span>
+   <span class="cell links" role="cell">
+     <a href="help/sol-time-help.html">time</a>
+     <a href="help/sol-weather-help.html">weather</a>
+     <a href="help/sol-search-help.html">search</a>
+     <a href="help/sol-calendar-help.html">calendar</a>
+     <a href="help/sol-feed-help.html">feed</a>
+     <span>gallery</span>
+     <a href="help/sol-pod-demo.html">pod</a>
+     <span>live-edit</span>
+   </span>
  </article>
  <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-button-help.html">sol-button</a></span>
-   <span class="cell" role="cell">A declarative launcher: a trigger that renders a handler component into a <b>region</b> &mdash; a page pane or a conjured modal / floating / window surface.</span>
+   <span class="cell name" role="cell">apps</span>
+   <span class="cell links" role="cell">
+     <span>data-kitchen</span>
+     <span>open-media-browser</span>
+   </span>
  </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/menu-from-rdf.html">menus from RDF</a></span>
-   <span class="cell" role="cell">Drive <code>sol-menu</code>, <code>sol-tabs</code> or <code>sol-dropdown-button</code> from a <code>ui:Menu</code> RDF document instead of HTML children: switch on the opt-in <code>menu-from-rdf</code> add-on and set a <code>from-rdf</code> attribute. (Showcase: <a href="help/sol-menu-from-rdf.html">a menu in GUI &amp; terminal</a>.)</span>
+</section>
+
+<section class="table" role="table" aria-label="Companion components">
+ <article class="row companion" role="row">
+   <span class="cell name" role="cell">document with pod</span>
+   <span class="cell links" role="cell">
+     <span>pod-ops</span>
+     <span>wac</span>
+   </span>
  </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-query-help.html">sol-query</a></span>
-   <span class="cell" role="cell">Search data sources using Comunica with inline or stored SPARQL or using triple patterns.  Display the results as a table, an auto-complete field, a rolodex, other built-in and custom views.</span>
+ <article class="row companion" role="row">
+   <span class="cell name" role="cell">document with menu</span>
+   <span class="cell links" role="cell">
+     <span>tree-edit</span>
+     <span>breadcrumb</span>
+   </span>
  </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-login-help.html">sol-login</a></span>
-   <span class="cell" role="cell">Dynamically generated login/logout button. Once logged in, the authenticated fetch is propagated to all other fetches, including Comunica queries and HTML/Markdown page includes.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-include-help.html">sol-include</a></span>
-   <span class="cell" role="cell">Fetch text based documents and display their contents inline. Supports authenticated fetch, robust modular page construction, CSS/RDFa filetering, Markdown conversion, and always sanitizes by default.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-pod-demo.html">sol-pod</a></span>
-   <span class="cell" role="cell">Opens an expand/collapse tree of one or more pods, their containers, and resources. You can control what happens when parts of the tree are clicked so it becomes a generic resource picker.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-feed-help.html">sol-feed</a></span>
-   <span class="cell" role="cell">Display RSS and Atom feeds three ways: a single feed, a multi-source picker, or a Google-News-like grid of randomized article cards with images and reveal-on-focus descriptions.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-calendar-help.html">sol-calendar</a></span>
-   <span class="cell" role="cell">Inline agenda view of any public iCalendar (ICS) feed &mdash; Google, Apple, Outlook, Proton, Solid pod. Merges multiple calendars into one sorted list; meeting URLs (Jitsi / Zoom / Meet) become click targets on the event titles.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-search-help.html">sol-search</a></span>
-   <span class="cell" role="cell">Multi-engine search field with an icon-trigger popup or an always-visible inline layout. Engines come from a bookmark-style RDF list, a JSON attribute, or a built-in default list (DuckDuckGo, Google, Wikipedia, prefix.cc, LOV, &hellip;).</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-weather-help.html">sol-weather</a></span>
-   <span class="cell" role="cell">Compact current-conditions card backed by the no-key-required Open-Meteo API. Pass coordinates or let it geocode a place name; choose metric, imperial, or both; tune the max-precip lookahead window.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-time-help.html">sol-time</a></span>
-   <span class="cell" role="cell">Compact clock widget &mdash; always shows local and GMT; optionally adds a third timezone (label + UTC offset). Ticks once a minute; settings can come inline or from a small RDF config block.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-form-help.html">sol-form</a></span>
-   <span class="cell" role="cell">Auto-saving editable forms bound to RDF. Two paths: <b>shape-driven</b> &mdash; point at a SHACL shape + data document and sol-form generates the inputs from the shape; <b>form-driven</b> &mdash; supply a hand-authored <code>ui:Form</code> TTL and solid-ui renders it. Includes a live SHACL-to-form demo on the help page.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><a href="help/sol-solidos-help.html">sol-solidos</a></span>
-   <span class="cell" role="cell">Mount the SolidOS data browser (mashlib panes) inside a custom element; set <code>source</code> to navigate. Requires loading <code>mashlib</code> separately as a UMD &mdash; not in the all-in-one bundle. Help page covers the standard wiring, the known empty-<code>window.Mashlib</code> quirk, and a panes-only embedding pattern for hosts (like an iframe) that just want the outline.</span>
- </article>
- <article class="row" role="row">
-   <span class="cell name" role="cell"><b>dashboard</b></span>
-   <span class="cell" role="cell">A worked-example page combining <a href="help/sol-weather-help.html">sol-weather</a>, <a href="help/sol-time-help.html">sol-time</a>, <a href="help/sol-calendar-help.html">sol-calendar</a>, and <a href="help/sol-feed-help.html">sol-feed</a> into a single dashboard layout. Open <a href="dashboard.html">dashboard.html</a> in the repo root to see them all working together.</span>
+ <article class="row companion" role="row">
+   <span class="cell name" role="cell">document with button</span>
+   <span class="cell links" role="cell">
+     <span>modal</span>
+     <span>window</span>
+   </span>
  </article>
 </section>
 

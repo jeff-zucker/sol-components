@@ -2,8 +2,47 @@ import resolve  from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import json     from '@rollup/plugin-json';
 import terser   from '@rollup/plugin-terser';
+import { readFileSync } from 'node:fs';
 
 const minify = !!process.env.MINIFY;
+
+// Build sol-loader's per-stage importmaps from the single source of truth
+// (tools/external-deps.json). `__BASE__` is resolved to the loader's own dir at
+// runtime. `local` points at the vendored ESM (dist/vendor/<flat>.js); `cdn`
+// uses each dep's esm.sh url. Plus the swc-source mappings the form stack needs.
+function buildSwcStages() {
+  const { deps } = JSON.parse(readFileSync('tools/external-deps.json', 'utf8'));
+  const flat = (n) => n.replace(/\//g, '-');               // matches tools/vendor.mjs
+  const local = {}, cdn = {};
+  for (const [name, d] of Object.entries(deps)) {
+    local[name] = `__BASE__vendor/${flat(name)}.js`;
+    cdn[name]   = d.cdn;
+  }
+  // rdflib resolves to the window.$rdf shim in BOTH stages (not a second ESM
+  // copy), so all bundles share the one rdflib the loader's UMD peer publishes —
+  // term `instanceof` / store identity stay coherent. See tools/vendor.mjs.
+  local.rdflib = '__BASE__vendor/rdflib-global.js';
+  cdn.rdflib   = '__BASE__vendor/rdflib-global.js';
+  // swc source resolution (relative to the dist/ base the loader ships from)
+  const src = [['solid-web-components/core/', '../core/'],
+               ['solid-web-components/data/', '../data/'],
+               ['solid-web-components/',      '../web/']];
+  for (const [key, sub] of src) {
+    local[key] = `__BASE__${sub}`;
+    cdn[key]   = `https://esm.sh/solid-web-components/${sub.replace('../', '')}`;
+  }
+  return { local, cdn };
+}
+
+// Replace the `__SWC_STAGES__` token in web/sol-loader.js with the generated
+// stages object so the loader ships them inline.
+const injectSwcStages = () => ({
+  name: 'inject-swc-stages',
+  transform(code, id) {
+    if (!id.replace(/\\/g, '/').endsWith('web/sol-loader.js')) return null;
+    return { code: code.replace(/__SWC_STAGES__/g, JSON.stringify(buildSwcStages())), map: null };
+  },
+});
 
 // External dependencies — never bundled; supplied by the host page (via an
 // importmap, vendored ESM, or UMD globals).
@@ -41,6 +80,21 @@ const bundlePlugins = [
   json(),
 ];
 if (minify) bundlePlugins.push(terser());
+
+// Replace `rdflib` with an empty stub — used ONLY for the no-RDF sol-basic
+// bundle. core/rdf.js does `import * as _rdflib from 'rdflib'` but never
+// touches it until a method runs, and every method is gated behind
+// `rdf.isReady()` (which an empty stub makes false). So sol-default's optional
+// RDF-config path (`<sol-default source="…ttl">`) degrades off and the bundle
+// needs no `$rdf` global — it drops in standalone. Must precede resolve() so
+// 'rdflib' never reaches node_modules. (Source consumers import the real
+// rdflib; the RDF menu editor lives in sol-rdf, not here.)
+const stubRdflib = () => ({
+  name: 'stub-rdflib',
+  resolveId(id) { return id === 'rdflib' ? '\0stub:rdflib' : null; },
+  load(id) { return id === '\0stub:rdflib' ? 'export default {};' : null; },
+});
+const basicPlugins = [stubRdflib(), ...bundlePlugins];
 
 export default [
   // ── sol-query (component + RDF engine + UI + triple-pattern parser) ────────
@@ -232,30 +286,20 @@ export default [
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
     },
   },
-  // ── sol-pod-ops (optional file-operations panel — load alongside sol-pod) ──
+  // ── sol-pod-extras (sol-pod's companions combined: file-operations panel +
+  //    WAC/ACL editor). pod-ops/wac aren't useful standalone, so they ship as
+  //    one drop-in loaded alongside sol-pod. UMD: rdflib/dompurify/marked stay
+  //    external globals — shared with sol-pod.umd, so no duplication. ─────────
   {
-    input:    'web/sol-pod-ops.js',
+    input:    'web/sol-pod-extras.js',
     external,
     plugins,
     output: {
-      file:    minify ? 'dist/sol-pod-ops.umd.min.js' : 'dist/sol-pod-ops.umd.js',
+      file:    minify ? 'dist/sol-pod-extras.umd.min.js' : 'dist/sol-pod-extras.umd.js',
       format:  'umd',
-      name:    'SolPodOps',
+      name:    'SolPodExtras',
       exports: 'named',
       inlineDynamicImports: true,
-      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
-    },
-  },
-  // ── sol-wac (WAC/ACL editor, light-DOM) ────────────────────────────────────
-  {
-    input:    'web/sol-wac.js',
-    external,
-    plugins,
-    output: {
-      file:    minify ? 'dist/sol-wac.umd.min.js' : 'dist/sol-wac.umd.js',
-      format:  'umd',
-      name:    'SolWac',
-      exports: 'named',
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
     },
   },
@@ -270,6 +314,41 @@ export default [
       name:    'SolSolidos',
       exports: 'named',
       globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked', mashlib: 'Mashlib' },
+    },
+  },
+  // ── per-component UMDs for the previously bundle-only components ───────────
+  //    button/accordion/rolodex/default/modal/window/tree-edit/breadcrumb are
+  //    no-export side-effect modules — the UMD just registers the tag.
+  ...[
+    'sol-button', 'sol-accordion', 'sol-rolodex', 'sol-default',
+    'sol-modal', 'sol-window', 'sol-tree-edit', 'sol-breadcrumb',
+    'sol-time', 'sol-weather', 'sol-search', 'sol-gallery',
+  ].map((tag) => ({
+    input:    `web/${tag}.js`,
+    external,
+    plugins,
+    output: {
+      file:    minify ? `dist/${tag}.umd.min.js` : `dist/${tag}.umd.js`,
+      // PascalCase global name: sol-tree-edit → SolTreeEdit
+      name:    tag.split('-').map((s) => s[0].toUpperCase() + s.slice(1)).join(''),
+      format:  'umd',
+      exports: 'named',
+      inlineDynamicImports: true,
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked' },
+    },
+  })),
+  // ── sol-settings (settings panel — wraps sol-form, so same SHACL externals) ─
+  {
+    input:    'web/sol-settings.js',
+    external: [...external, 'n3', 'rdf-validate-shacl'],
+    plugins,
+    output: {
+      file:    minify ? 'dist/sol-settings.umd.min.js' : 'dist/sol-settings.umd.js',
+      format:  'umd',
+      name:    'SolSettings',
+      exports: 'named',
+      inlineDynamicImports: true,
+      globals: { rdflib: '$rdf', dompurify: 'DOMPurify', marked: 'marked', n3: 'N3', 'rdf-validate-shacl': 'SHACLValidator' },
     },
   },
   // ── sol-full (side-effect aggregator: registers every covered component) ───
@@ -287,16 +366,16 @@ export default [
       inlineDynamicImports: true,
     },
   },
-  // ── sol-basic (curated subset: include/button/menu/login/form/settings +
-  //    the helpers those six instantiate by tag: accordion/modal/window/
-  //    tree-edit). dompurify/marked/n3/rdf-validate-shacl are bundled IN;
-  //    rdflib stays the lone BYO peer ($rdf global). solid-ui/solid-logic/
-  //    auth are runtime globals the components probe — never imported, so
-  //    there is nothing to externalize for them. ─────────────────────────────
+  // ── sol-basic (no-RDF, html-first tier: button/dropdown-button/include/
+  //    menu/tabs/accordion/rolodex + the helpers they instantiate by tag:
+  //    default/modal/window). dompurify/marked stay external globals (shared,
+  //    so two app bundles don't duplicate them); rdflib is stubbed out, so
+  //    there is no $rdf peer. `from-rdf` is the opt-in menu-from-rdf UMD; the
+  //    RDF menu editor (tree-edit/breadcrumb) is in sol-rdf. ─────────────────
   {
     input:   'web/sol-basic.js',
-    external: (id) => id === 'rdflib' || id.startsWith('https://esm.sh/'),
-    plugins: bundlePlugins,
+    external: (id) => id === 'dompurify' || id === 'marked' || id.startsWith('https://esm.sh/'),
+    plugins: basicPlugins,   // rdflib stubbed out → no $rdf peer (dompurify/marked are BYO globals)
     output: {
       file:      minify
         ? 'dist/sol-basic.bundle.min.js'
@@ -305,47 +384,28 @@ export default [
       name:      'SolBasic',
       exports:   'named',
       inlineDynamicImports: true,
-      globals:   { rdflib: '$rdf' },
+      globals:   { dompurify: 'DOMPurify', marked: 'marked' },
     },
   },
-  // ── all-in-one bundle: every component, rdflib externalized as $rdf ─────────
-  // rdflib is treated as a runtime peer (BYO), shipped as
-  // `dist/vendor/rdflib.umd.js` which self-publishes `window.$rdf`. Page
-  // authors load that UMD via `<script>` tag *before* this bundle. Keeps
-  // a single rdflib instance on the page for sol-pod / sol-query / mashlib
-  // / solid-ui / solid-logic to share.
+  // No sol-rdf IIFE bundle: the RDF/Solid-data components ship as per-component
+  // UMDs (sol-login / sol-query / sol-solidos), and the solid-ui editing stack
+  // (sol-form/settings/tree-edit) is ESM-only — loaded via sol-loader's `rdf`
+  // capability (module bootstrap + importmap), not as a UMD bundle.
+
+  // The widgets (time/weather/search/calendar/feed/gallery) and the pod family
+  // (pod/pod-ops/wac/live-edit) ship ONLY as per-component UMDs above — each is
+  // a self-contained drop-in, so there is no overall sol-widgets / sol-pods
+  // group bundle. Only the two app tiers (sol-basic, sol-rdf) get an IIFE.
+
+  // ── sol-loader (one-tag loader: injects vendor peers + bundles in order from
+  //    data-bundles/data-with, and a stage-selected importmap from data-stage).
+  //    The stages are baked in from external-deps.json at build time. ──────────
   {
-    input:   'web/solid-web-components.bundle.js',
-    external: (id) => id === 'rdflib' || id.startsWith('https://esm.sh/'),
-    plugins: bundlePlugins,
+    input:   'web/sol-loader.js',
+    plugins: [injectSwcStages(), ...plugins],
     output: {
-      file:      minify
-        ? 'dist/solid-web-components.bundle.min.js'
-        : 'dist/solid-web-components.bundle.js',
-      format:    'iife',
-      name:      'SolidWebComponents',
-      exports:   'named',
-      inlineDynamicImports: true,
-      globals:   { rdflib: '$rdf' },
-    },
-  },
-  // ── podz-extras sibling bundle: components used by podz (and similar
-  //    multi-pod hosts) that aren't in the lean public bundle above.
-  //    Load *after* the core bundle so the core's already-defined custom
-  //    elements aren't redefined. rdflib is BYO here too.
-  {
-    input:   'web/podz-extras.bundle.js',
-    external: (id) => id === 'rdflib' || id.startsWith('https://esm.sh/'),
-    plugins: bundlePlugins,
-    output: {
-      file:      minify
-        ? 'dist/podz-extras.bundle.min.js'
-        : 'dist/podz-extras.bundle.js',
-      format:    'iife',
-      name:      'PodzExtras',
-      exports:   'named',
-      inlineDynamicImports: true,
-      globals:   { rdflib: '$rdf' },
+      file:   minify ? 'dist/sol-loader.min.js' : 'dist/sol-loader.js',
+      format: 'iife',
     },
   },
 ];

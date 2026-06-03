@@ -8,12 +8,14 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- sol-basic bundle registers sol-login. rdflib UMD ($rdf) + the inrupt
-       auth UMD (window.solidClientAuthn) are sol-login's BYO peers; load
-       both before the bundle. -->
+  <!-- sol-rdf bundle registers sol-login. rdflib UMD ($rdf), dompurify, marked
+       and the inrupt auth UMD (window.solidClientAuthn) are sol-login's BYO
+       peers; load them before the bundle. -->
   <script src="../dist/vendor/rdflib.umd.js"></script>
+  <script src="../dist/vendor/dompurify.umd.js"></script>
+  <script src="../dist/vendor/marked.umd.js"></script>
   <script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"></script>
-  <script src="../dist/sol-basic.bundle.min.js"></script>
+  <script src="../dist/sol-login.umd.min.js"></script>
   <style>
     body { padding-top: 8px; }
     b { color: orange; }

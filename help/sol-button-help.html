@@ -9,10 +9,11 @@
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
   <!-- sol-basic bundle registers sol-button + its display surfaces
-       (sol-include / sol-modal / sol-window are bundled in). rdflib UMD
-       first: the bundle reads window.$rdf. No window.UI needed here —
-       buttons don't render forms. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
+       (sol-include / sol-modal / sol-window are bundled in). dompurify + marked
+       are sol-include's BYO peers (sanitizer / Markdown). No rdflib needed —
+       sol-basic is the no-RDF tier (rdflib is stubbed out). -->
+  <script src="../dist/vendor/dompurify.umd.js"></script>
+  <script src="../dist/vendor/marked.umd.js"></script>
   <script src="../dist/sol-basic.bundle.min.js"></script>
 </head>
 <body class="scroll-help">
