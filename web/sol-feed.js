@@ -33,11 +33,8 @@
  *                     empty). Case-insensitive substring match against
  *                     each feed's label OR URL. Falls back to checking
  *                     the first feed when no item matches.
- *   select-first      (view="topics" only) boolean — when present and no
- *                     source is remembered, auto-select the first source
- *                     and load its articles (a cold start lands on real
- *                     articles). Off by default, so mounting stays
- *                     network-free until the user picks a source.
+ *   (view="topics" auto-opens the first source on a cold start when nothing
+ *    is remembered, so the reader lands on real articles.)
  *
  * @element sol-feed
  *
@@ -986,14 +983,11 @@ class SolFeed extends HTMLElement {
     if (match) {
       selectSource(match.src, match.a);
       selected = match.a;
-    } else if (this.hasAttribute('select-first') && entries.length) {
-      // Opt-in: with nothing remembered, open the first source so a cold
-      // start lands on real articles instead of a "pick a source" prompt.
-      // (Off by default — keeps mounting network-free for other consumers.)
+    } else if (entries.length) {
+      // With nothing remembered, open the first source so a cold start lands
+      // on real articles rather than an empty "pick a source" prompt.
       selectSource(entries[0].src, entries[0].a);
       selected = entries[0].a;
-    } else {
-      showMsg('Select a source to see articles');
     }
     if (selected) this._scrollSourceIntoView(selected);
   }
