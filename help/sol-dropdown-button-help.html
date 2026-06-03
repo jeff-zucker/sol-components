@@ -8,8 +8,10 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- A light-DOM, zero-dependency component: load its own bundle directly. -->
-  <script defer src="../dist/sol-dropdown-button.umd.min.js"></script>
+  <!-- The loader registers sol-dropdown-button (part of sol-basic). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic"></script>
 </head>
 <body class="scroll-help">
 

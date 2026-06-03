@@ -42,8 +42,9 @@
       <tr><td><code>time:hours</code></td><td>integer</td><td>Max-precip lookahead, in hours (default 12).</td></tr>
     </tbody>
   </table>
-  <p>Reading the settings file needs <code>rdflib</code> on the page
-  (it publishes <code>window.$rdf</code>). The schema.org namespace is
+  <p>Reading the settings file needs <code>rdflib</code> on the page — the
+  loader pulls it in transitively (deduped to one shared instance via the
+  injected importmap). The schema.org namespace is
   always <code>http://schema.org/</code>, never the HTTPS form.</p>
 
   <h2>Theming</h2>
@@ -55,22 +56,12 @@
 sol-weather::part(desc) { display: inline; } /* show verbose description */</code></pre>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- sol-weather isn't in sol-full (chrome widget); load it + sol-include
-       as ESM, with vendored deps mapped for their bare specifiers. -->
-  <script type="importmap">
-  {
-    "imports": {
-      "rdflib":    "../dist/vendor/rdflib.js",
-      "n3":        "../dist/vendor/n3.js",
-      "dompurify": "../dist/vendor/dompurify.js",
-      "marked":    "../dist/vendor/marked.js"
-    }
-  }
-  </script>
-  <script type="module">
-    import '../web/sol-include.js';
-    import '../web/sol-weather.js';
-  </script>
+  <!-- The loader injects the importmap and import()s the modules (rdflib,
+       dompurify, marked ride in transitively). sol-include renders the
+       data/weather-settings.ttl listing on this page. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-include sol-weather"></script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

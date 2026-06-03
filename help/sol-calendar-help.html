@@ -49,8 +49,9 @@
     </tbody>
   </table>
   <p>An HTML attribute of the same name always overrides the value from
-  the TTL. Reading the file needs <code>rdflib</code> on the page
-  (it publishes <code>window.$rdf</code>). The schema.org namespace is
+  the TTL. Reading the file needs <code>rdflib</code> on the page — the
+  loader pulls it in transitively (deduped to one shared instance via the
+  injected importmap). The schema.org namespace is
   always <code>http://schema.org/</code>, never the HTTPS form.</p>
 
   <h2>proxy</h2>
@@ -98,23 +99,12 @@
   Teams, Whereby); then any URL in the description.</p>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- sol-calendar isn't in sol-full (chrome widget, ical dep); load it +
-       sol-include as ESM, with vendored deps mapped for their bare specifiers. -->
-  <script type="importmap">
-  {
-    "imports": {
-      "rdflib":    "../dist/vendor/rdflib.js",
-      "n3":        "../dist/vendor/n3.js",
-      "dompurify": "../dist/vendor/dompurify.js",
-      "marked":    "../dist/vendor/marked.js",
-      "ical.js":   "../dist/vendor/ical.js.js"
-    }
-  }
-  </script>
-  <script type="module">
-    import '../web/sol-include.js';
-    import '../web/sol-calendar.js';
-  </script>
+  <!-- The loader injects the importmap and import()s the modules (rdflib,
+       dompurify, marked, ical.js ride in transitively). sol-include renders
+       the data/calendar-settings.ttl listing on this page. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-include sol-calendar"></script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

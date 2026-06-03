@@ -43,9 +43,13 @@
   <p>With no <code>source</code> attribute, <code>sol-pod.discover()</code> reads <code>/.meta</code>, <code>/.well-known/solid</code>, and <code>/.acl</code> at the current origin for owner WebIDs, then loads each WebID's profile and harvests <code>pim:storage</code> triples. It also walks <code>owl:sameAs</code> <b>in both directions</b> — a profile that asserts <code>&lt;remote&gt; owl:sameAs &lt;local&gt;</code> chains the same as one that asserts the inverse, so authoring direction doesn't matter. Logs each step at <code>console.info('[pod-ops] …')</code>.</p>
   <p>Discovery only fires when the shared pod registry is empty. A host that seeded the registry (e.g. podz restoring the previous session's pod list) is authoritative — sol-pod treats the seed as the dropdown's contents and skips discovery. Clear the seed to force re-discovery.</p>
 
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <script src="../dist/sol-pod.umd.min.js?v=7"></script>
-  <script>
+  <!-- The loader registers sol-pod and injects the importmap; its deps
+       (rdflib + dompurify) ride in transitively, deduped to one instance. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-pod"></script>
+  <script type="module">
+    await SolidWebComponents.ready;
     const pod = document.querySelector('sol-pod');
     pod.podClickAction = (item) => {
       document.body.querySelector('#results').innerHTML =

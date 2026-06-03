@@ -34,7 +34,9 @@
     <div class="demo-area">
       <sol-search default-engine="ddg"></sol-search>
     </div>
-    <pre class="demo-code"><code>&lt;script src="dist/sol-full.umd.min.js"&gt;&lt;/script&gt;
+    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
+        data-stage="local"
+        data-bundles="sol-search"&gt;&lt;/script&gt;
 
 &lt;sol-search <i>default-engine</i>="ddg"&gt;&lt;/sol-search&gt;</code></pre>
   </div>
@@ -212,15 +214,11 @@ sol-search::part(submit) { background: var(--accent); }</code></pre>
 </script>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- rdflib (peer dep) : publishes window.$rdf — needed when source=
-       points at a TTL engine list. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-
-  <!-- sol-search ships as its own per-component UMD. dompurify/marked are its
-       BYO sanitiser / Markdown peers. -->
-  <script src="../dist/vendor/dompurify.umd.js"></script>
-  <script src="../dist/vendor/marked.umd.js"></script>
-  <script src="../dist/sol-search.umd.min.js"></script>
+  <!-- The loader injects the importmap and import()s sol-search (rdflib,
+       dompurify, marked ride in transitively). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-search"></script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

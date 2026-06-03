@@ -34,7 +34,9 @@
                 source="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
                 proxy="http://localhost:3002/proxy?uri="></sol-feed>
     </div>
-    <pre class="demo-code"><code>&lt;script src="dist/sol-feed.umd.min.js"&gt;&lt;/script&gt;
+    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
+        data-stage="local"
+        data-bundles="sol-feed"&gt;&lt;/script&gt;
 
 &lt;sol-feed view="feed"
           source="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
@@ -49,8 +51,9 @@
                 source="data/feeds.ttl#News"
                 proxy="http://localhost:3002/proxy?uri="></sol-feed>
     </div>
-    <pre class="demo-code"><code>&lt;script src="dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
-&lt;script src="dist/sol-feed.umd.min.js"&gt;&lt;/script&gt;
+    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
+        data-stage="local"
+        data-bundles="sol-feed"&gt;&lt;/script&gt;
 
 &lt;sol-feed view="topic"
           source="data/feeds.ttl#News"
@@ -173,8 +176,9 @@
     the topic the picker is scoped to:</p>
     <pre><code>view="topic" source="<i>data/feeds.ttl</i>#<i>News</i>"
 view="all"   source="<i>data/feeds.ttl</i>#<i>Feeds</i>"</code></pre>
-    <p>This path needs <code>rdflib</code> on the page (it publishes
-    <code>window.$rdf</code>). The fragment is required &mdash; without it
+    <p>This path needs <code>rdflib</code> on the page — the loader pulls
+    it in transitively (deduped to one shared instance via the injected
+    importmap). The fragment is required &mdash; without it
     the component shows a clear error.</p>
 
     <h3>Bookmark form</h3>
@@ -382,13 +386,11 @@ sol-feed::part(articles) { border-radius: 0; padding: 0; }</code></pre>
 </script>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- rdflib (peer dep) : publishes window.$rdf — needed to read the
-       RDF/Turtle feed list (data/feeds.ttl) used by the demo. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-
-  <!-- solid-web-components : the standalone <sol-feed> UMD build.
-       ?v bump = cache-bust; raise it whenever dist/sol-feed.umd.min.js changes. -->
-  <script src="../dist/sol-feed.umd.min.js?v=29"></script>
+  <!-- The loader injects the importmap and import()s sol-feed (rdflib,
+       dompurify, marked ride in transitively). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-feed"></script>
 <!-- ------------------------------------------------------------------ -->
 
 </body>

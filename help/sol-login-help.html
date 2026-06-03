@@ -8,14 +8,12 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- sol-rdf bundle registers sol-login. rdflib UMD ($rdf), dompurify, marked
-       and the inrupt auth UMD (window.solidClientAuthn) are sol-login's BYO
-       peers; load them before the bundle. -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <script src="../dist/vendor/dompurify.umd.js"></script>
-  <script src="../dist/vendor/marked.umd.js"></script>
-  <script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"></script>
-  <script src="../dist/sol-login.umd.min.js"></script>
+  <!-- The loader registers sol-login. data-with="auth" pulls in its deps
+       (rdflib + @inrupt/solid-client-authn-browser, plus dompurify/marked)
+       transitively via the injected importmap — you never load them yourself. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-with="auth"></script>
   <style>
     body { padding-top: 8px; }
     b { color: orange; }
@@ -53,10 +51,13 @@
     know auth exists.</p>
 
   <h2>Prerequisites</h2>
-  <p>To use Solid login and authenticated fetch, apps must import the
-    Inrupt authentication library. The simplest setup is to import the
-    prebuilt UMD that ships in <code>dist/vendor/</code>:</p>
-  <pre style="margin:.5rem 0"><code>&lt;script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"&gt;&lt;/script&gt;</code></pre>
+  <p>To use Solid login and authenticated fetch, the page needs the Inrupt
+    authentication library. You never load it directly: the loader's
+    <code>data-with="auth"</code> capability pulls it in (along with rdflib)
+    through the injected importmap, deduped to one shared instance:</p>
+  <pre style="margin:.5rem 0"><code>&lt;script src="../dist/sol-loader.min.js"
+        data-stage="local"
+        data-with="auth"&gt;&lt;/script&gt;</code></pre>
 
   <h2>Usage</h2>
 

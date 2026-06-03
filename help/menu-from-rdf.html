@@ -8,16 +8,13 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- Activation, in three script tags:
-       1. rdflib (peer) — publishes window.$rdf; the add-on reads it.
-       2. the component itself (sol-menu / sol-tabs / sol-dropdown-button).
-       3. the menu-from-rdf add-on — this is what turns the `from-rdf`
-          attribute on. Drop tag #1 and #3 and the component is declarative-
-          only. (defer: run after the document so the elements upgrade with
-          their attributes already in place.) -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <script defer src="../dist/sol-menu.umd.min.js"></script>
-  <script defer src="../dist/menu-from-rdf.umd.min.js"></script>
+  <!-- Activation, in one loader tag: the menu-from-rdf add-on rides in
+       alongside sol-basic (the component family). The add-on is what turns the
+       `from-rdf` attribute on; without it the component is declarative-only.
+       rdflib is pulled in transitively. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic menu-from-rdf"></script>
 </head>
 <body class="scroll-help">
 
@@ -33,10 +30,10 @@
   <h2>1 · Switch the capability on</h2>
   <p>Load the add-on alongside the component. Pick the form that matches how you already
   load components:</p>
-  <pre><code>&lt;!-- UMD: a peer rdflib, the component, then the add-on --&gt;
-&lt;script src="dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
-&lt;script src="dist/sol-menu.umd.min.js"&gt;&lt;/script&gt;
-&lt;script src="dist/menu-from-rdf.umd.min.js"&gt;&lt;/script&gt;
+  <pre><code>&lt;!-- The loader: name the component family + the add-on; rdflib rides in --&gt;
+&lt;script src="../dist/sol-loader.min.js"
+        data-stage="local"
+        data-bundles="sol-basic menu-from-rdf"&gt;&lt;/script&gt;
 
 &lt;!-- …or ESM: import the add-on once, anywhere --&gt;
 &lt;script type="module"&gt;

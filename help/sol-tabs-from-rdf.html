@@ -12,8 +12,9 @@
 
 <p class="note" style="padding:.5rem .75rem; border-left:3px solid var(--accent,#888); background:var(--surface-2,#f3f3f3);">
 <code>from-rdf</code> is an <b>opt-in capability</b>: a page must load the
-<code>menu-from-rdf</code> add-on (a separate UMD this demo loads alongside
-<code>sol-basic</code>). To switch it on with the individual component bundles, see
+<code>menu-from-rdf</code> add-on (this demo names it alongside
+<code>sol-basic</code> in the loader tag). To switch it on for the individual
+components, see
 <a href="menu-from-rdf.html">Adding <code>from-rdf</code> to a menu</a>.
 </p>
 
@@ -40,10 +41,10 @@ document can drive either element.<div>
 
 <div class="tab-panel" id="tab-html">
 <p>This is the full HTML to load the live demo</p>
-<pre><code>&lt;script src="<i>../dist/vendor/@comunica-query-sparql.umd.js</i>"&gt;&lt;/script&gt;
-&lt;script src="<i>../dist/sol-basic.bundle.min.js</i>"&gt;&lt;/script&gt;
-&lt;script src="<i>../dist/sol-rdf.bundle.min.js</i>"&gt;&lt;/script&gt;
-&lt;script src="<i>../dist/menu-from-rdf.umd.min.js</i>"&gt;&lt;/script&gt;
+<pre><code>&lt;script src="<i>../dist/sol-loader.min.js</i>"
+        data-stage="local"
+        data-bundles="<i>sol-basic sol-query menu-from-rdf</i>"
+        data-with="<i>sparql</i>"&gt;&lt;/script&gt;
 
 &lt;sol-tabs from-rdf="<i>data/demo-tabs.ttl#MainTabs</i>"&gt;&lt;/sol-tabs&gt;</code></pre>
 <p>
@@ -114,25 +115,14 @@ tab can't "run" something; put commands in a <i>&lt;sol-menu&gt;</i> /
 </script>
 <!-- IMPORTED SCRIPTS ---------------------------------------------- -->
   <!--
-    rdflib (required) : peer dep — publishes window.$rdf
+    One loader tag. sol-tabs is in sol-basic; this demo's tab set launches a
+    sol-query item (data-with="sparql"); from-rdf is the menu-from-rdf add-on.
+    Deps (rdflib, comunica, dompurify, marked) ride in transitively.
   -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-
-  <!--
-    Comunica (optional) : load if using SPARQL
-  -->
-  <script src="../dist/vendor/@comunica-query-sparql.umd.js"></script>
-
-  <!--
-    Solid-web-components (required) : sol-tabs is in sol-basic; this demo's tab
-    set launches a sol-query item (sol-rdf tier); from-rdf is the menu-from-rdf
-    add-on. Load all three (rdflib above is their shared peer).
-  -->
-  <script src="../dist/vendor/dompurify.umd.js"></script>
-  <script src="../dist/vendor/marked.umd.js"></script>
-  <script src="../dist/sol-basic.bundle.min.js"></script>
-  <script src="../dist/sol-query.umd.min.js"></script>
-  <script src="../dist/menu-from-rdf.umd.min.js"></script>
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic sol-query menu-from-rdf"
+          data-with="sparql"></script>
 <!-- ---------------------------------------------------------------- -->
 </body>
 </html>

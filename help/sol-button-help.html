@@ -8,13 +8,13 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- sol-basic bundle registers sol-button + its display surfaces
-       (sol-include / sol-modal / sol-window are bundled in). dompurify + marked
-       are sol-include's BYO peers (sanitizer / Markdown). No rdflib needed —
-       sol-basic is the no-RDF tier (rdflib is stubbed out). -->
-  <script src="../dist/vendor/dompurify.umd.js"></script>
-  <script src="../dist/vendor/marked.umd.js"></script>
-  <script src="../dist/sol-basic.bundle.min.js"></script>
+  <!-- The loader registers sol-button + its display surfaces (sol-include /
+       sol-modal / sol-window are part of sol-basic). dompurify + marked ride in
+       transitively (sol-include's sanitizer / Markdown). No rdflib needed —
+       sol-basic is the no-RDF tier. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic"></script>
 </head>
 <body class="scroll-help">
 

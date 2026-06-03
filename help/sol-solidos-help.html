@@ -24,22 +24,20 @@
         with <code>window.location.href</code> as the subject.</li>
   </ul>
 
-  <h2>Runtime dependencies (bring-your-own)</h2>
+  <h2>Runtime dependencies</h2>
   <p>sol-solidos relies on mashlib + solid-panes (a substantial
      dependency tree — RDF store, panes, login UI, theme module).
-     <code>sol-solidos</code> itself ships as
-     <code>sol-solidos.umd.min.js</code>, but mashlib is <em>not</em>
-     bundled in (and never was). You must load mashlib
-     separately so that <code>window.panes</code>,
+     mashlib is a heavy peer that sol-solidos does <em>not</em> bundle
+     in. The loader's <code>data-with="solidos"</code> capability pulls
+     it in for you (rdflib + mashlib), in order, and injects the
+     importmap — so <code>window.panes</code>,
      <code>window.SolidLogic</code>, and <code>window.Mashlib</code>
      are populated before sol-solidos's <code>connectedCallback</code>
-     runs.</p>
+     runs. You don't name the deps yourself.</p>
 
-  <pre><code>&lt;script src="dist/vendor/rdflib.umd.js"&gt;&lt;/script&gt;
-&lt;script src="dist/vendor/@inrupt-solid-client-authn-browser.umd.js"&gt;&lt;/script&gt;
-&lt;link rel="stylesheet" href="node_modules/mashlib/dist/mash.css"&gt;
-&lt;script src="node_modules/mashlib/dist/mashlib.min.js"&gt;&lt;/script&gt;
-&lt;script src="dist/sol-solidos.umd.min.js"&gt;&lt;/script&gt;
+  <pre><code>&lt;script src="../dist/sol-loader.min.js"
+        data-stage="local"
+        data-with="solidos"&gt;&lt;/script&gt;
 
 &lt;sol-solidos source="https://your.pod/some/resource"&gt;&lt;/sol-solidos&gt;</code></pre>
 
@@ -53,7 +51,8 @@
      on <code>window.panes</code>. Patch it before mounting
      sol-solidos:</p>
 
-  <pre><code>&lt;script&gt;
+  <pre><code>&lt;script type="module"&gt;
+  await SolidWebComponents.ready;   // mashlib globals are populated by now
   if (window.Mashlib &amp;&amp; window.panes &amp;&amp; window.panes.initMainPage) {
     window.Mashlib.initMainPage = window.panes.initMainPage;
   }
@@ -98,7 +97,8 @@ sol-solidos &gt; #PageFooter { display: block !important; }</code></pre>
     &lt;/div&gt;
   &lt;/main&gt;
   &lt;footer id="PageFooter"&gt;&lt;/footer&gt;
-  &lt;script&gt;
+  &lt;script type="module"&gt;
+    await SolidWebComponents.ready;   // window.panes / window.SolidLogic ready
     const store = window.SolidLogic.solidLogicSingleton.store;
     window.panes.initMainPage(store, 'https://your.pod/foo');
   &lt;/script&gt;
@@ -111,8 +111,9 @@ sol-solidos &gt; #PageFooter { display: block !important; }</code></pre>
      navigation after the initial render, hold the outliner and call
      it directly:</p>
 
-  <pre><code>const outliner = window.panes.getOutliner(document);
-outliner.GotoSubject(window.$rdf.sym(newUrl), true, undefined, true, undefined);</code></pre>
+  <pre><code>const $rdf = await import('rdflib');   // bare specifier resolved by the loader's importmap
+const outliner = window.panes.getOutliner(document);
+outliner.GotoSubject($rdf.sym(newUrl), true, undefined, true, undefined);</code></pre>
 
   <h2>Working embedded example</h2>
   <p>See <a href="https://github.com/jeff-zucker/data-kitchen">data-kitchen</a>

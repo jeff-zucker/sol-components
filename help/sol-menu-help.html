@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- sol-menu is a light-DOM, zero-dependency component: load its own bundle
-       directly. sol-include is loaded too because the menu content here is
-       fetched HTML (the default content handler). Nothing else is required. -->
-  <script defer src="../dist/sol-include.umd.min.js"></script>
-  <script defer src="../dist/sol-menu.umd.min.js"></script>
+  <!-- The loader registers sol-menu and its default content handler
+       sol-include (both part of sol-basic). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic"></script>
 </head>
 <body class="scroll-help">
 

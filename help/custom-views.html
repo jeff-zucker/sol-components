@@ -16,11 +16,12 @@
   </style>
 
 <!-- IMPORTED SCRIPTS ---------------------------------------------- -->
-   <script src="../dist/vendor/rdflib.umd.js"></script>
-   <script src="../dist/vendor/dompurify.umd.js"></script>
-   <script src="../dist/vendor/marked.umd.js"></script>
-   <script src="../dist/vendor/@comunica-query-sparql.umd.js"></script>
-   <script src="../dist/sol-query.umd.min.js"></script>
+   <!-- One loader tag. sol-query needs SPARQL (data-with="sparql"); deps
+        (rdflib, comunica, dompurify, marked) ride in transitively. -->
+   <script src="../dist/sol-loader.min.js"
+           data-stage="local"
+           data-bundles="sol-query"
+           data-with="sparql"></script>
 <!-- ---------------------------------------------------------------- -->
 
 </head>

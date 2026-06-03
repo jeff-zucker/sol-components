@@ -10,20 +10,14 @@
   <script src="../web/scripts/prefs.js"></script>
 
 <!-- IMPORTED SCRIPTS ---------------------------------------------- -->
-  <!-- rdflib (required) : peer dep — publishes window.$rdf -->
-  <script src="../dist/vendor/rdflib.umd.js"></script>
-  <script src="../dist/vendor/dompurify.umd.js"></script>
-  <script src="../dist/vendor/marked.umd.js"></script>
-
-  <!-- Comunica (optional) : load if using SPARQL
-  -->
-  <script src="../dist/vendor/@comunica-query-sparql.umd.js"></script>
-
-  <!-- Inrupt Auth (optional) : load if accesing restricted Solid resources
-  <script src="../dist/vendor/@inrupt-solid-client-authn-browser.umd.js"></script>
-  -->
-
-  <script src="../dist/sol-query.umd.min.js"></script>
+  <!-- The loader registers sol-query and injects the importmap. data-bundles
+       names the module; data-with="auth sparql" pulls in the SPARQL engine
+       (@comunica/query-sparql) and the auth stack (rdflib + inrupt authn),
+       plus dompurify/marked — all transitively, deduped to one instance. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-query"
+          data-with="auth sparql"></script>
 <!-- ---------------------------------------------------------------- -->
 
 </head>

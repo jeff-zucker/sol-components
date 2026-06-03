@@ -9,37 +9,24 @@
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
 
-  <!-- core/shape-to-form.js needs rdflib at runtime AND solid-ui's
-       fieldFunction for widget rendering (window.UI.widgets.fieldFunction).
-       solid-logic supplies the singleton store solid-ui's enumerators walk.
-       Paths are relative to this file (help/ is one level below project root). -->
-  <script type="importmap">
-  {
-    "imports": {
-      "rdflib":             "../dist/vendor/rdflib.js",
-      "n3":                 "../dist/vendor/n3.js",
-      "dompurify":          "../dist/vendor/dompurify.js",
-      "marked":             "../dist/vendor/marked.js",
-      "solid-ui":           "../dist/vendor/solid-ui.js",
-      "solid-logic":        "../dist/vendor/solid-logic.js",
-      "rdf-validate-shacl": "../dist/vendor/rdf-validate-shacl.js"
-    }
-  }
-  </script>
+  <!-- The loader injects the importmap and loads the ordered editing stack
+       (solid-logic → solid-ui → sol-tree-edit → sol-form → sol-settings) for
+       data-with="rdf", plus the sol-basic family for the demo tags. solid-logic
+       self-registers its singleton store (the one solid-ui's enumerators walk)
+       before solid-ui sets window.UI (fieldFunction) that sol-form renders
+       through — the loader does that ordering for you. Paths are relative to
+       this file (help/ is one level below project root). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-bundles="sol-basic"
+          data-with="rdf"></script>
   <script type="module">
-    // BYO peers in the singleton-handshake order rdflib → solid-logic →
-    // solid-ui: solid-logic self-registers its singleton store
-    // (Symbol.for('solid-logic-singleton')) that swc's core/rdf.js adopts;
-    // solid-ui then sets window.UI (fieldFunction) that sol-form renders
-    // through. (rdflib is pulled in transitively by both, via the importmap.)
-    import * as solidLogic from 'solid-logic';
-    import 'solid-ui';
+    // Expose solid-logic for the demo once the stack is ready. The loader's
+    // injected importmap makes the bare 'solid-logic' specifier resolvable, and
+    // SolidWebComponents.ready guarantees the singleton store is registered.
+    await SolidWebComponents.ready;
+    const solidLogic = await import('solid-logic');
     if (typeof window !== 'undefined') window.solidLogic = solidLogic;
-    // Register the curated component set via the sol-basic ESM ENTRY — not the
-    // IIFE bundle. The bundle is a classic script that would define sol-form
-    // before this deferred module sets window.UI, racing the auto-rendering
-    // demo; the ESM entry shares this module graph so init order holds.
-    import '../web/sol-basic.js';
   </script>
 
 </head>
