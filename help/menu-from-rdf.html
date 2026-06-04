@@ -14,7 +14,8 @@
        rdflib is pulled in transitively. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-bundles="sol-basic menu-from-rdf"></script>
+          data-bundles="sol-basic menu-from-rdf"
+  ></script>
 </head>
 <body class="scroll-help">
 
@@ -33,7 +34,8 @@
   <pre><code>&lt;!-- The loader: name the component family + the add-on; rdflib rides in --&gt;
 &lt;script src="../dist/sol-loader.min.js"
         data-stage="local"
-        data-bundles="sol-basic menu-from-rdf"&gt;&lt;/script&gt;
+        data-bundles="sol-basic menu-from-rdf"
+&gt;&lt;/script&gt;
 
 &lt;!-- …or ESM: import the add-on once, anywhere --&gt;
 &lt;script type="module"&gt;
@@ -57,7 +59,8 @@
   one fires <code>sol-command</code> (echoed here):</p>
   <div class="demo-area" style="gap:1rem;">
     <sol-menu from-rdf="./data/menu-from-rdf-demo.ttl#MainMenu"
-              orientation="horizontal" style="display:block;"></sol-menu>
+              orientation="horizontal" style="display:block;"
+    ></sol-menu>
     <span>Last command: <code id="cmd-status">—</code></span>
   </div>
   <script>
