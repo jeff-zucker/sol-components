@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SWC capability attributes — SPARQL on any element</title>
+
+  <!-- The sparql capability provides the data-from-query attribute (the query
+       engine). The sol-query component is a separate bundle (data-extend-with="sol-query"). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-extend-with="sparql"></script>
+
+  <style>
+    :root { color-scheme: light; }
+    html, body { background: #ffffff; color: #1a1a1a; }
+    body { font: 15px/1.55 system-ui, sans-serif; margin: 2rem; max-width: 50rem; }
+    .note { background: #f3f6fa; border: 1px solid #c9d3df; border-radius: 6px;
+            padding: .75rem 1rem; font-size: .92rem; color: #1a1a1a; }
+    code { background: #e7e9f5; color: #1a1a1a; padding: 0 .25rem; border-radius: 3px; }
+    .target { border: 1px dashed #999; border-radius: 8px; padding: .5rem; margin: 1rem 0;
+              background: #ffffff; color: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+<h1>SPARQL on a plain element — <code>data-from-query</code></h1>
+
+<p class="note">
+  A plain <code>&lt;div&gt;</code> made query-driven: the <code>sparql</code> capability's activator
+  reads the element's <code>data-from-query</code> + the usual <code>sol-query</code> attributes
+  (<code>endpoint</code>, <code>view</code>, …), runs the query, and replaces the element's content.
+  HTML views render in place; a URL view (<code>view="…/view.js"</code>) gets the result as a
+  <strong>W3C SPARQL 1.1 Query Results JSON</strong> object via <code>render(container, data, el)</code>.
+</p>
+
+<div class="target"
+     data-from-query
+     endpoint="sample-profile.ttl"
+     pattern="?s foaf:name ?name"
+     view="table"></div>
+
+</body>
+</html>

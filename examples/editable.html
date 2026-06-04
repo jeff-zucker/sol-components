@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SWC capability attributes — editing any element via a shape</title>
+
+  <!-- The rdf capability: components sol-form/sol-settings + the editing
+       attributes (data-edit-shape / data-edit-mode / data-subject). -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-extend-with="rdf"></script>
+
+  <style>
+    :root { color-scheme: light; }
+    html, body { background: #ffffff; color: #1a1a1a; }
+    body { font: 15px/1.55 system-ui, sans-serif; margin: 2rem; max-width: 50rem; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1.05rem; }
+    .note { background: #f3f6fa; border: 1px solid #c9d3df; border-radius: 6px;
+            padding: .75rem 1rem; font-size: .92rem; color: #1a1a1a; }
+    .card { border: 1px solid #c4c4c4; border-radius: 8px; padding: 1rem; margin: 1rem 0;
+            background: #ffffff; color: #1a1a1a; }
+    code { background: #e7e9f5; color: #1a1a1a; padding: 0 .25rem; border-radius: 3px; }
+    pre  { color: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+<h1>Editing any element from a SHACL shape — attributes only</h1>
+
+<p class="note">
+  Load <code>data-extend-with="rdf"</code>, then make <em>any</em> element editable with attributes
+  — no manifest, no component code. The element below is a plain <code>&lt;div&gt;</code>; the
+  <code>rdf</code> capability's activator reads its <code>data-edit-shape</code> /
+  <code>data-subject</code> / <code>data-edit-mode</code> and <code>sol-form</code> auto-generates
+  the editor from the SHACL shape.
+</p>
+
+<h2>Collected — gathered into a settings panel</h2>
+<div class="card">
+  <div data-edit-shape="profile.shape.ttl"
+       data-subject="sample-profile.ttl#me"
+       data-edit-mode="collected"
+       label="Profile"></div>
+  <sol-settings></sol-settings>
+</div>
+
+<h2>In place — a gear on the element itself</h2>
+<div class="card">
+  <div data-edit-shape="profile.shape.ttl"
+       data-subject="sample-profile.ttl#me"
+       data-edit-mode="inPlace"
+       label="Profile (inline)"
+       style="min-height:2rem">Hover for the edit gear ⚙ (top-right).</div>
+</div>
+
+<p class="note">
+  Same three attributes, two placements. The plain <code>&lt;div&gt;</code> never had to be a
+  component — the capability supplied the behavior. (Saving needs write access; against this static
+  sample it renders and edits the form, the PUT is what a real pod would accept.)
+</p>
+
+<h2><code>data-from-rdf</code> — load TTL, hand back W3C SPARQL JSON</h2>
+<div class="card">
+  <p class="note">Loads a Turtle doc and hands the element the same
+  <strong>W3C SPARQL Results JSON</strong> object that <code>data-from-query</code> returns (its
+  triples as <code>?s ?p ?o</code> bindings) — no rendering of its own; a custom
+  <code>view</code> module here just dumps it.</p>
+  <div data-from-rdf="sample-profile.ttl" view="./views/json-view.js"></div>
+</div>
+
+</body>
+</html>

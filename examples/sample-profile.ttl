@@ -1,0 +1,12 @@
+# Sample profile data the editable demo reads, using the same standard
+# predicates as the shape (foaf + vcard).
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+
+<#me>
+  a foaf:Person ;
+  foaf:name "Ada Lovelace" ;
+  vcard:fn "Augusta Ada King, Countess of Lovelace" ;
+  vcard:role "Mathematician" ;
+  vcard:organization-name "Analytical Engine Programme" ;
+  vcard:note "First to publish an algorithm intended for a machine." .

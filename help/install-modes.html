@@ -32,7 +32,9 @@
     token is a tag name, like <code>sol-basic</code> for the everyday UI plus
     widgets such as <code>sol-feed</code>.</li>
     <li><code>data-extend-with</code> — extra capabilities to switch on:
-    <code>auth</code> (sign-in), <code>sparql</code> (queries), and
+    <code>auth</code> (sign-in), <code>sparql</code> (the
+    <code>data-from-query</code> attribute, so any element can run a query),
+    <code>sol-query</code> (the query <em>component</em>), and
     <code>rdf</code> (the editing components).</li>
     <li><code>data-stage</code> — where the code is loaded from:
     <code>local</code> for files you host yourself, or <code>cdn</code> for
@@ -59,7 +61,8 @@
       <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>that widget and what it needs</td></tr>
       <tr><td>Pods (pod, live-edit; pod-ops + wac as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>the pod components</td></tr>
       <tr><td>Sign-in</td><td><code>data-extend-with="auth"</code></td><td>sol-login</td></tr>
-      <tr><td>SPARQL queries</td><td><code>data-extend-with="sparql"</code></td><td>sol-query (with the Comunica engine)</td></tr>
+      <tr><td>Query from any element (the <code>data-from-query</code> attribute)</td><td><code>data-extend-with="sparql"</code></td><td>the query engine (Comunica)</td></tr>
+      <tr><td>The <code>&lt;sol-query&gt;</code> component</td><td><code>data-extend-with="sol-query"</code></td><td>sol-query</td></tr>
       <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-extend-with="rdf"</code></td><td>the editing components</td></tr>
     </tbody>
   </table>
