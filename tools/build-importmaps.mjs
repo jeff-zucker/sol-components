@@ -72,14 +72,42 @@ const manifest = {
     cdn:   { imports: cdn.imports },      // esm.sh
   },
   capabilities: {
-    auth:    { modules: ['sol-login'] },
-    sparql:  { modules: ['@comunica/query-sparql', 'sol-query'] },
-    rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings'] },
+    // Each capability lists its `modules` (loaded in order) AND its `attributes`
+    // — the cross-cutting data-* vocabulary it activates on any element. The
+    // loader uses `attributes` to warn when one is used without the capability.
+    // inrupt-global is a tiny shim that publishes window.solidClientAuthn from
+    // the ESM inrupt build, so sol-login finds the Session class on every stage
+    // without a separate UMD <script>. It MUST precede sol-login.
+    auth:    { modules: ['solid-web-components/core/inrupt-global.js', 'sol-login'], attributes: [] },
+    sparql:  { modules: ['@comunica/query-sparql', 'sol-query', 'solid-web-components/core/from-query.js'],
+               attributes: ['data-from-query'] },
+    rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings',
+                         'solid-web-components/core/edit-placements.js', 'solid-web-components/core/from-rdf.js'],
+               attributes: ['data-edit-shape', 'data-edit-mode', 'data-subject', 'data-from-rdf'] },
     // NOTE: solidos is PARKED — intentionally not wired here. mashlib's
     // published bundle inlines its own rdflib/solid-ui/solid-logic, so loading
     // it through the importmap would create a second rdflib instance and break
     // single-instance coherence. Re-enabling it needs a from-source mashlib
     // build (externalising those deps) before sol-solidos can be loader-driven.
+  },
+  // ── interop: what swc PROVIDES and CONSUMES on the host surface, declared so
+  // the loader can wire swc to a foreign library (e.g. PodOS) with no page glue.
+  // Symmetric with a foreign library's manifest: each `provides` names its
+  // delivery channel (here the host-services registry); each `consumes` names a
+  // whitelisted surface method swc exposes for adopting a foreign value.
+  interop: {
+    provides: {
+      rdf:  { service: 'rdf',  path: 'store' },   // value: services.get('rdf').store
+      auth: { service: 'auth', path: 'fetch' },   // value: services.get('auth').fetch
+    },
+    consumes: {
+      rdf:  { call: 'rdf.useStore' },             // adopt a foreign rdflib store
+      auth: { call: 'adoptFetch' },               // adopt a foreign authenticated fetch
+    },
+    resource: {
+      emits:   { event: 'sol-navigate', path: 'detail.url' },
+      accepts: { selector: 'sol-query', attr: 'endpoint', transform: 'stripHash' },
+    },
   },
 };
 // Named for the loader, not the library: the loader auto-loads its sibling

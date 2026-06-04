@@ -38,8 +38,13 @@ export function getAuthFetch(url, opts = {}) {
     try {
       const f = login.fetchFor(url, tag);
       if (typeof f === 'function') return f;
-    } catch { /* fall through to global fetch */ }
+    } catch { /* fall through to adopted / global fetch */ }
   }
+  // No <sol-login> (or it declined): a host may have adopted a foreign
+  // authenticated fetch via SolidWebComponents.adoptFetch (e.g. PodOS's
+  // authenticatedFetch). Prefer it over the unauthenticated global fetch.
+  const adopted = (typeof window !== 'undefined') && window.SolidWebComponents?.adoptedFetch;
+  if (typeof adopted === 'function') return adopted;
   // `globalThis.fetch` may be missing in some Node test environments —
   // return undefined so callers fall back to their own default (most use
   // `fetchFn = globalThis.fetch` as the parameter default).

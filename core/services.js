@@ -68,4 +68,30 @@ export function get(name)            { return services().get(name); }
 export function has(name)            { return services().has(name); }
 export function whenReady(name)      { return services().whenReady(name); }
 
+/**
+ * Adopt a foreign authenticated fetch as the page's default authenticated fetch
+ * when no <sol-login> is present. This lets swc components ride a session
+ * established by another component library (e.g. PodOS, which hands its
+ * `authenticatedFetch` out via its `pod-os:loaded` event). getAuthFetch()
+ * (core/auth-fetch.js) returns it as the fallback after the <sol-login> lookup.
+ * A logged-in <sol-login> still wins — this is the no-sol-login fallback.
+ *
+ * @param {(input: RequestInfo, init?: RequestInit) => Promise<Response>} fn
+ * @param {object} [info]  e.g. { webId }
+ * @returns the adopted fetch (or null when cleared)
+ */
+export function adoptFetch(fn, info) {
+  const r = root();
+  r.adoptedFetch = (typeof fn === 'function') ? fn : null;
+  if (info && info.webId) r.adoptedWebId = info.webId;
+  return r.adoptedFetch;
+}
+
+// Expose adoptFetch on the host surface so import-free host glue can call
+// `window.SolidWebComponents.adoptFetch(fn, { webId })`.
+if (typeof window !== 'undefined') {
+  const r = root();
+  if (!r.adoptFetch) r.adoptFetch = adoptFetch;
+}
+
 export { EVENTS };

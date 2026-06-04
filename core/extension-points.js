@@ -23,10 +23,40 @@
 // delegates to core/editor.js so the existing `static get editor()` /
 // `static get shape()` / `shape=` attribute all keep working as sugar for it.
 
-import { resolveEditorSpec } from './editor.js';
+import { resolveEditorSpec, editorSpecFromDecl } from './editor.js';
 
 function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 function safe(fn) { try { return fn(); } catch (_) { return null; } }
+
+// ── externally-registered points ───────────────────────────────────────────
+// A component declares points with a `static get extensionPoints()`. But a
+// FOREIGN component (another library's element) can't — so a manifest's
+// `interop.editable` map lets a host register points for elements matching a
+// CSS selector, with no class change and no library patch. findExtensionPoints
+// consults this registry alongside class statics, so sol-form/sol-settings
+// enhance those elements through the unchanged `edit` protocol.
+const _registered = [];   // [{ selector, points }]
+
+/** Register extension points for every element matching `selector`. `points`
+ *  is the same shape a class returns from `extensionPoints` (e.g.
+ *  `{ edit: { shape, subject:{attr}, forms, present, open } }`). */
+export function registerExtensionPoints(selector, points) {
+  if (!selector || !points) return;
+  _registered.push({ selector: String(selector), points });
+  // nudge live observers to re-scan (late registration / already-mounted els)
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('swc:offer', { bubbles: true, composed: true, detail: { selector, points } }));
+  }
+}
+
+// The raw registered declaration for one point on `el`, or null.
+function registeredPoint(el, point) {
+  if (!el || typeof el.matches !== 'function') return null;
+  for (const r of _registered) {
+    if (own(r.points, point) && safe(() => el.matches(r.selector))) return r.points[point];
+  }
+  return null;
+}
 
 // The component's declared point map (guarded — a class getter may throw).
 function pointsMap(Ctor) {
@@ -40,17 +70,22 @@ function editPoint(Ctor, el) {
   const legacy = safe(() => resolveEditorSpec(Ctor, el));
   if (legacy) return legacy;
   const e = pointsMap(Ctor).edit;
-  if (e == null) return null;
-  const synthetic = (typeof e === 'string') ? { editor: e }
-    : (e.shape ? { shape: e.shape } : { editor: e });
-  return safe(() => resolveEditorSpec(synthetic, el));
+  if (e != null) {
+    const synthetic = (typeof e === 'string') ? { editor: e }
+      : (e.shape ? { shape: e.shape } : { editor: e });
+    const spec = safe(() => resolveEditorSpec(synthetic, el));
+    if (spec) return spec;
+  }
+  // Finally, a manifest-registered edit descriptor for this element.
+  return editorSpecFromDecl(registeredPoint(el, 'edit'));
 }
 
 /** The spec a component offers for ONE point, or null. */
 export function resolveExtensionPoint(Ctor, el, point) {
   if (point === 'edit') return editPoint(Ctor, el);
   const raw = pointsMap(Ctor);
-  return own(raw, point) ? raw[point] : null;
+  if (own(raw, point)) return raw[point];
+  return registeredPoint(el, point);
 }
 
 /** Every point a component offers, as { [point]: spec }. `edit` (if any) is the
@@ -59,6 +94,11 @@ export function resolveExtensionPoints(Ctor, el) {
   const out = {};
   const raw = pointsMap(Ctor);
   for (const k in raw) if (own(raw, k) && k !== 'edit') out[k] = raw[k];
+  // manifest-registered non-edit points for this element (class statics win)
+  for (const r of _registered) {
+    if (!safe(() => el && el.matches && el.matches(r.selector))) continue;
+    for (const k in r.points) if (own(r.points, k) && k !== 'edit' && !own(out, k)) out[k] = r.points[k];
+  }
   const edit = editPoint(Ctor, el);
   if (edit) out.edit = edit;
   return out;
@@ -78,11 +118,11 @@ export function findExtensionPoints(point, opts) {
       if (seen.has(el)) continue;
       seen.add(el);
       if (el.hasAttribute && el.hasAttribute(skipAttr)) { if (el.shadowRoot) visit(el.shadowRoot); continue; }
+      // Resolve against the class statics AND the manifest registry (the latter
+      // works even for foreign elements whose ctor declares nothing).
       const ctor = customElements.get(el.localName);
-      if (ctor) {
-        const spec = safe(() => resolveExtensionPoint(ctor, el, point));
-        if (spec) out.push({ el, spec });
-      }
+      const spec = safe(() => resolveExtensionPoint(ctor, el, point));
+      if (spec) out.push({ el, spec });
       if (el.shadowRoot) visit(el.shadowRoot);
     }
   };
@@ -120,3 +160,30 @@ export function offerExtensionPoint(el, points) {
     bubbles: true, composed: true, detail: { el, points },
   }));
 }
+
+/** Register every `interop.editable` entry the loader collected from the page's
+ *  manifests, so a manifest can make any component (its own or a foreign
+ *  library's) editable with no class change. Each entry is keyed by CSS
+ *  selector → an edit descriptor `{ shape, subject:{attr}, forms, present, open }`.
+ *  Idempotent (a one-shot guard avoids double-registering on re-import). */
+export function registerInteropEditables() {
+  if (typeof window === 'undefined') return;
+  const api = window.SolidWebComponents;
+  const libs = (api && Array.isArray(api.interop)) ? api.interop : [];
+  for (const lib of libs) {
+    const editable = lib && lib.interop && lib.interop.editable;
+    if (!editable || typeof editable !== 'object') continue;
+    const seen = (lib._editableSeen = lib._editableSeen || {});
+    for (const selector in editable) {
+      if (!own(editable, selector) || seen[selector]) continue;
+      seen[selector] = true;
+      registerExtensionPoints(selector, { edit: editable[selector] });
+    }
+  }
+  // Inline placement (edit="inPlace" / present:"inPlace") is activated by
+  // core/edit-placements.js, loaded with the rdf capability.
+}
+
+// Run on import: the rdf capability (sol-form/sol-settings → this module) loads
+// after the loader has parsed manifests, so api.interop is already populated.
+registerInteropEditables();

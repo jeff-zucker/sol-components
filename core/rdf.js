@@ -16,6 +16,7 @@ class Rdf {
   constructor() {
     this._store = null;    // lazy shared singleton store
     this._fetcher = null;  // fetcher bound to _store
+    this._adopted = false; // a host explicitly adopted an external store (wins)
     this._loaded = new Set(); // URLs already parsed into _store (cache key)
   }
 
@@ -48,8 +49,12 @@ class Rdf {
   // Falls back to a freshly created graph in environments without solid-logic
   // (unit tests, headless scripts without the singleton wired up).
   get store() {
-    // Always re-probe so consumers reach solid-logic's singleton even if
-    // an early access happened before solid-logic finished loading. Once
+    // A host that explicitly adopted a foreign store (useStore — e.g. another
+    // component library's rdflib graph handed over at runtime) wins outright,
+    // so swc components share THAT graph regardless of solid-logic's singleton.
+    if (this._adopted && this._store) return this._store;
+    // Otherwise always re-probe so consumers reach solid-logic's singleton even
+    // if an early access happened before solid-logic finished loading. Once
     // solid-logic is up, every call returns ITS store; before then, a
     // local fresh graph is used and persists until the singleton appears.
     const sl = (typeof window !== 'undefined') &&
@@ -65,6 +70,7 @@ class Rdf {
     if (!externalStore || typeof externalStore.match !== 'function') return false;
     this._store = externalStore;
     this._fetcher = externalStore.fetcher || null;
+    this._adopted = true;
     this._loaded.clear();
     return true;
   }

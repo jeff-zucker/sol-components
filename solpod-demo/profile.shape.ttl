@@ -1,0 +1,41 @@
+# A minimal SHACL shape for a Solid WebID profile, using standard profile
+# predicates (foaf + vcard) — the same ones a Solid profile already carries.
+# sol-form auto-generates an editor from this.
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+
+<#ProfileShape>
+  a sh:NodeShape ;
+
+  sh:property [
+    sh:path foaf:name ;
+    sh:datatype xsd:string ; sh:maxCount 1 ;
+    sh:name "Name" ;
+    sh:description "Display name (foaf:name)." ;
+  ] ,
+  [
+    sh:path vcard:fn ;
+    sh:datatype xsd:string ; sh:maxCount 1 ;
+    sh:name "Full name" ;
+    sh:description "Formatted name (vcard:fn)." ;
+  ] ,
+  [
+    sh:path vcard:role ;
+    sh:datatype xsd:string ; sh:maxCount 1 ;
+    sh:name "Role" ;
+    sh:description "Job title or role (vcard:role)." ;
+  ] ,
+  [
+    sh:path vcard:organization-name ;
+    sh:datatype xsd:string ; sh:maxCount 1 ;
+    sh:name "Organization" ;
+    sh:description "Organization name (vcard:organization-name)." ;
+  ] ,
+  [
+    sh:path vcard:note ;
+    sh:datatype xsd:string ;
+    sh:name "Note" ;
+    sh:description "Free-text note (vcard:note)." ;
+  ] .

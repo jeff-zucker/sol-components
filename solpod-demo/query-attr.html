@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SWC capability attributes — SPARQL on any element</title>
+
+  <!-- The sparql capability: component sol-query + the data-from-query attribute. -->
+  <script src="../dist/sol-loader.min.js"
+          data-stage="local"
+          data-extend-with="sparql"></script>
+
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 50rem; }
+    .note { background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: .75rem 1rem; font-size: .9rem; }
+    code { background: #eef; padding: 0 .2rem; border-radius: 3px; }
+    .target { border: 1px dashed #bbb; border-radius: 8px; padding: .5rem; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+
+<h1>SPARQL on a plain element — <code>data-from-query</code></h1>
+
+<p class="note">
+  A plain <code>&lt;div&gt;</code> made query-driven: the <code>sparql</code> capability's activator
+  reads the element's <code>data-from-query</code> + the usual <code>sol-query</code> attributes
+  (<code>endpoint</code>, <code>view</code>, …), runs the query, and replaces the element's content.
+  HTML views render in place; a URL view (<code>view="…/view.js"</code>) gets the result as a
+  <strong>W3C SPARQL 1.1 Query Results JSON</strong> object via <code>render(container, data, el)</code>.
+</p>
+
+<div class="target"
+     data-from-query
+     endpoint="sample-profile.ttl"
+     pattern="?s foaf:name ?name"
+     view="table"></div>
+
+</body>
+</html>

@@ -22,10 +22,25 @@
  *   { "name": "…",
  *     "imports": { spec: url, … },                          // stage-agnostic, and/or
  *     "stages": { "local": {"imports":{…}}, "cdn": {"imports":{…}} },
- *     "capabilities": { cap: { "modules": [...] } } }
+ *     "capabilities": { cap: { "modules": [...] } },
+ *     "interop": {                                          // glueless cross-library wiring
+ *       "provides": { cap: { service|event: "…", path: "…" } },  // what this lib offers
+ *       "consumes": { cap: { call: "rdf.useStore" | "adoptFetch" } }, // and adopts
+ *       "resource": { "emits":   { event: "…", path: "…" },        // shared current-focus
+ *                     "accepts": { selector: "…", attr: "…", transform: "stripHash" } },
+ *       "editable": { "<selector>": {                              // make any component sol-form-editable
+ *         "shape": "…shacl",            // (a) accessible: SHACL for auto-gen; omit ⇒ not editable
+ *         "subject": { "attr": "uri" }, //     where the subject URI lives on the element
+ *         "forms": "auto" | "self",     // (b) sol-form generates vs the component edits itself
+ *         "present": "inPlace" | "collected", // (c) gear on the element vs gathered by sol-settings
+ *         "open": { "event"|"method": "…" } } } } }            // (forms:self) how to open its own editor
+ * (For components you author yourself, the manifest editable block is optional —
+ * just add `shape="…" subject="…" edit="inPlace|collected"` attributes to the tag.)
  * Relative import URLs resolve against THAT manifest's URL. The earlier manifest
  * wins a conflicting specifier — the default manifest is merged first, so its
- * shared deps (rdflib, …) stay the single ones.
+ * shared deps (rdflib, …) stay the single ones. The loader pairs a `consumes`
+ * cap with another library's `provides` cap (the adopt rule) and wires the
+ * `resource` channel — so a page mixing two libraries needs no bridge script.
  *
  * data-* attributes:
  *   - data-bundles      — module specifiers to import()
@@ -159,7 +174,9 @@
     var existing = MANIFEST.capabilities[name];
     var mods = (existing && existing.modules) ? existing.modules.slice() : [];
     ((def && def.modules) || []).forEach(function (m) { if (mods.indexOf(m) === -1) mods.push(m); });
-    MANIFEST.capabilities[name] = { modules: mods };
+    var attrs = (existing && existing.attributes) ? existing.attributes.slice() : [];
+    ((def && def.attributes) || []).forEach(function (a) { if (attrs.indexOf(a) === -1) attrs.push(a); });
+    MANIFEST.capabilities[name] = { modules: mods, attributes: attrs };
   }
   api.registerCapability = function (name, def) { mergeCapability(name, def); return api; };
 
@@ -170,6 +187,9 @@
     if (!m) return;
     var caps = m.capabilities || {};
     for (var name in caps) if (own(caps, name)) mergeCapability(name, caps[name]);
+    // Collect interop declarations per LIBRARY (keyed by name) — the matchmaker
+    // needs library identity to pair a provider with a consumer in another lib.
+    if (m.interop && m.name) interopSources.push({ name: m.name, interop: m.interop });
     var stage = (ds.stage || 'local').trim();
     var imp = {};
     assign(imp, m.imports);
@@ -215,6 +235,95 @@
     });
   }
 
+  // ── interop: glueless provide/consume matchmaking ──────────────────────────
+  // A manifest may carry an `interop` block declaring what its library PROVIDES
+  // and CONSUMES on the host surface, plus a shared `resource` (current-focus)
+  // contract. The loader pairs a consumer of capability K with a provider of K
+  // from ANOTHER library and wires them — so a page mixing two component
+  // libraries needs no bridge script. Generic by design: no library or
+  // capability name is baked in; only a small whitelist of safe surface calls
+  // and value transforms is. A provider declares its delivery channel —
+  // `{ service, path }` (a host-services registration) or `{ event, path }` (a
+  // DOM CustomEvent) — and a consumer declares `{ call }` (a surface method).
+  var interopSources = [];   // [{ name, interop }] collected from manifests
+  api.interop = interopSources;
+
+  function getByPath(obj, path) {
+    if (!path) return obj;
+    return String(path).split('.').reduce(function (o, k) { return (o == null) ? undefined : o[k]; }, obj);
+  }
+  function applyTransform(v, t) {
+    if (t === 'stripHash') return String(v).split('#')[0];
+    return v;
+  }
+  // Whitelisted consumer surface calls — NEVER eval an arbitrary manifest string.
+  function invokeConsumer(call, value) {
+    if (value == null) return;
+    if (call === 'rdf.useStore') { if (api.rdf && typeof api.rdf.useStore === 'function') api.rdf.useStore(value); return; }
+    if (call === 'adoptFetch')   { if (typeof api.adoptFetch === 'function') api.adoptFetch(value); return; }
+    console.warn('[sol-loader] interop: refusing unknown consumer call "' + call + '"');
+  }
+  // Deliver a provider's value (via its declared channel) to onValue, now and
+  // on every future emission (events) or once (service registration).
+  function onProvide(p, onValue) {
+    if (p.event) {
+      api.on(p.event, function (e) { var v = getByPath(e, p.path); if (v != null) onValue(v); });
+    } else if (p.service) {
+      api.services.whenReady(p.service).then(function (impl) { onValue(getByPath(impl, p.path)); });
+    }
+  }
+
+  function installInterop() {
+    if (api._interopWired) return;
+    api._interopWired = true;
+    var libs = interopSources.filter(function (s) { return s && s.interop; });
+    if (!libs.length) return;
+
+    // capabilities: pair each consumer with a provider from a DIFFERENT library
+    // (the "adopt the other library's provider" rule).
+    libs.forEach(function (cLib) {
+      var consumes = cLib.interop.consumes || {};
+      Object.keys(consumes).forEach(function (cap) {
+        var consumer = consumes[cap];
+        var provider = null, fromName = null;
+        for (var i = 0; i < libs.length; i++) {
+          var prov = libs[i].interop.provides && libs[i].interop.provides[cap];
+          if (prov && libs[i].name !== cLib.name) { provider = prov; fromName = libs[i].name; break; }
+        }
+        if (!provider) return;
+        onProvide(provider, function (value) {
+          invokeConsumer(consumer.call, value);
+          api.emit('swc:interop', { capability: cap, from: fromName, to: cLib.name });
+        });
+      });
+    });
+
+    // resource channel: one shared "current resource" across libraries. Any
+    // library's `emits` sets it; the loader applies it to every OTHER library's
+    // `accepts` (set attr on selector, with optional transform).
+    var specs = libs.map(function (l) {
+      return l.interop.resource ? { name: l.name, res: l.interop.resource } : null;
+    }).filter(Boolean);
+    var current = null;
+    function applyExcept(fromName, uri) {
+      specs.forEach(function (s) {
+        if (s.name === fromName || !s.res.accepts) return;
+        var a = s.res.accepts;
+        var el = document.querySelector(a.selector);
+        if (el) el.setAttribute(a.attr, applyTransform(uri, a.transform));
+      });
+    }
+    specs.forEach(function (s) {
+      var em = s.res.emits;
+      if (!em) return;
+      api.on(em.event, function (e) {
+        var uri = getByPath(e, em.path);
+        if (uri && String(uri) !== current) { current = String(uri); applyExcept(s.name, current); }
+      });
+    });
+  }
+  api.installInterop = installInterop;
+
   // ── loading ────────────────────────────────────────────────────────────────
   function importModule(spec) {
     return import(spec).then(
@@ -256,11 +365,39 @@
     window.dispatchEvent(new CustomEvent('swc:ready', { detail: detail }));
   }
 
+  // Dev aid: warn when a capability's declared attribute is on the page but the
+  // capability wasn't loaded — so `data-from-query` without data-extend-with
+  // "sparql" doesn't fail silently. Runs after the DOM is parsed.
+  function warnUnusedCapabilityAttrs() {
+    if (typeof document === 'undefined') return;
+    var caps = MANIFEST.capabilities || {};
+    Object.keys(caps).forEach(function (name) {
+      if (api._caps[name]) return;   // capability loaded — fine
+      (caps[name].attributes || []).forEach(function (attr) {
+        try {
+          if (document.querySelector('[' + attr + ']')) {
+            console.warn('[sol-loader] "' + attr + '" is used on the page but the "' + name +
+              '" capability is not loaded — add data-extend-with="' + name + '".');
+          }
+        } catch (e) {}
+      });
+    });
+  }
+  function whenDomReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+    else fn();
+  }
+
   // Auto-load: fetch the manifest(s), inject the importmap, then load. Always
   // async now (the import resolution lives in a fetched manifest, not baked in).
   var auto = (ds.bundles || ds.load || '').trim();
   loadManifests().then(function () {
     ensureImportmap();
+    installInterop();   // before load(): so listeners catch provider events that
+                        // fire while a library's modules import (e.g. pod-os:loaded)
     return load(auto, { with: ds.extendWith });
-  }).then(announce);
+  }).then(function () {
+    announce();
+    whenDomReady(warnUnusedCapabilityAttrs);
+  });
 })();

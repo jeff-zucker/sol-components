@@ -32,7 +32,7 @@
  */
 
 import { define } from '../core/define.js';
-import { buildEditorElement } from '../core/editor.js';
+import { buildEditorElement, triggerSelfEditor, editPlacement } from '../core/editor.js';
 import { findExtensionPoints } from '../core/extension-points.js';
 import './sol-accordion.js';
 
@@ -127,7 +127,17 @@ class SolSettings extends HTMLElement {
         if (mounted) return;
         mounted = true;
         section.innerHTML = '';
-        const editor = buildEditorElement(widget.el);
+        // forms:"self" — the component renders its own editor; offer a trigger.
+        if (widget.spec && widget.spec.self) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'sol-settings-self-open';
+          btn.textContent = `Edit ${widget.label}…`;
+          btn.addEventListener('click', () => triggerSelfEditor(widget.el, widget.spec));
+          section.appendChild(btn);
+          return;
+        }
+        const editor = buildEditorElement(widget.el, widget.spec);
         if (!editor) {
           section.textContent = 'No editor available.';
           return;
@@ -151,8 +161,11 @@ class SolSettings extends HTMLElement {
   _discover() {
     return findExtensionPoints('edit', { skipAttr: 'data-settings-skip' })
       .filter(({ el }) => el !== this && !this.contains(el))
-      .map(({ el }) => ({
-        el,
+      // inPlace editors render a gear ON the element itself — sol-settings
+      // gathers only the "collected" ones (the default placement).
+      .filter(({ el, spec }) => editPlacement(el, spec) === 'collected')
+      .map(({ el, spec }) => ({
+        el, spec,
         label: el.getAttribute('label') || labelFromTag(el.localName),
       }));
   }

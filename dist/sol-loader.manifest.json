@@ -105,13 +105,19 @@
   "capabilities": {
     "auth": {
       "modules": [
+        "solid-web-components/core/inrupt-global.js",
         "sol-login"
-      ]
+      ],
+      "attributes": []
     },
     "sparql": {
       "modules": [
         "@comunica/query-sparql",
-        "sol-query"
+        "sol-query",
+        "solid-web-components/core/from-query.js"
+      ],
+      "attributes": [
+        "data-from-query"
       ]
     },
     "rdf": {
@@ -120,8 +126,47 @@
         "solid-ui",
         "sol-tree-edit",
         "sol-form",
-        "sol-settings"
+        "sol-settings",
+        "solid-web-components/core/edit-placements.js",
+        "solid-web-components/core/from-rdf.js"
+      ],
+      "attributes": [
+        "data-edit-shape",
+        "data-edit-mode",
+        "data-subject",
+        "data-from-rdf"
       ]
+    }
+  },
+  "interop": {
+    "provides": {
+      "rdf": {
+        "service": "rdf",
+        "path": "store"
+      },
+      "auth": {
+        "service": "auth",
+        "path": "fetch"
+      }
+    },
+    "consumes": {
+      "rdf": {
+        "call": "rdf.useStore"
+      },
+      "auth": {
+        "call": "adoptFetch"
+      }
+    },
+    "resource": {
+      "emits": {
+        "event": "sol-navigate",
+        "path": "detail.url"
+      },
+      "accepts": {
+        "selector": "sol-query",
+        "attr": "endpoint",
+        "transform": "stripHash"
+      }
     }
   }
 }

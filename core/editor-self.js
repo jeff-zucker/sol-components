@@ -62,8 +62,10 @@ function gearSheet() {
  *   the component opted out via `editor = { inline: true }` or has
  *   no editor at all.
  */
-export function attachEditorSelfGear(el) {
-  if (!resolveEditorSpec(el.constructor, el)) return null;
+export function attachEditorSelfGear(el, spec) {
+  // `spec` (from a manifest's interop.editable) lets a FOREIGN element get a
+  // gear even though its class declares no editor; otherwise resolve from class.
+  if (!(spec || resolveEditorSpec(el.constructor, el))) return null;
   if (el._editorSelfGear) return el._editorSelfGear;
 
   const root = el.shadowRoot ?? el;
@@ -88,7 +90,7 @@ export function attachEditorSelfGear(el) {
   btn.textContent = '⚙';   // ⚙
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openEditorModal(el);
+    openEditorModal(el, spec);
   });
 
   root.appendChild(btn);
@@ -102,8 +104,8 @@ export function attachEditorSelfGear(el) {
  *
  * @param {HTMLElement} el - the component being edited
  */
-export function openEditorModal(el) {
-  const editor = buildEditorElement(el);
+export function openEditorModal(el, spec) {
+  const editor = buildEditorElement(el, spec);
   if (!editor) return;
 
   const modal = document.createElement('sol-modal');

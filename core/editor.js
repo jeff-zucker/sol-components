@@ -44,7 +44,9 @@ export function resolveEditorSpec(Ctor, el) {
   }
 
   // Instance attribute wins over the class default; either makes it editable.
-  const shape = (el && el.getAttribute && el.getAttribute('shape')) ||
+  // `data-edit-shape` is the canonical capability attribute; bare `shape` is the
+  // back-compat alias.
+  const shape = (el && el.getAttribute && (el.getAttribute('data-edit-shape') || el.getAttribute('shape'))) ||
                 (Ctor && typeof Ctor.shape === 'string' ? Ctor.shape : null);
   if (shape) {
     return { tag: 'sol-form', subjectAttr: 'subject', attrs: { shape }, save: true };
@@ -53,11 +55,69 @@ export function resolveEditorSpec(Ctor, el) {
 }
 
 /**
- * Resolve the subject URI being edited from a host component instance.
- * Falls back through `source` → `from-rdf` → empty.
+ * Normalize a manifest-declared edit spec (from a manifest's
+ * `interop.editable` map) into the canonical editor spec — so a component that
+ * declares NO `static editor`/`shape` (e.g. a foreign library's element) can be
+ * made editable purely from a manifest descriptor. The descriptor distinguishes:
+ *   - shape            (a) ACCESSIBLE: SHACL for auto-generation; absent ⇒ null
+ *   - forms: "self"    (b) the component renders its OWN form; we don't generate
+ *   - present          (c) "inline" (button on the element) | "collected" (sol-settings)
+ *   - subject.attr         which attribute on the element holds the subject URI
+ *   - open                 (self only) how to trigger the component's own editor
+ *
+ * @param {object} decl
+ * @returns {{tag,subjectAttr,attrs,save,subjectFrom?,present?} | {self:true,open,present} | null}
  */
-export function editorSubjectOf(el) {
-  return el.getAttribute('source') || el.getAttribute('from-rdf') || '';
+export function editorSpecFromDecl(decl) {
+  if (!decl || typeof decl !== 'object') return null;
+  if (decl.forms === 'self') {
+    return { self: true, open: decl.open || null, present: decl.present || 'inPlace' };
+  }
+  if (!decl.shape) return null;   // (a) no shape ⇒ not auto-editable
+  return {
+    tag: 'sol-form',
+    subjectAttr: 'subject',
+    attrs: { shape: decl.shape },
+    save: true,
+    subjectFrom: (decl.subject && decl.subject.attr) || null,
+    present: decl.present || 'collected',
+  };
+}
+
+/**
+ * Resolve the subject URI being edited from a host component instance.
+ * A spec's `subjectFrom` (from a manifest descriptor) wins; otherwise falls
+ * back through `source` → `from-rdf` → empty.
+ */
+export function editorSubjectOf(el, spec) {
+  if (spec && spec.subjectFrom) {
+    const v = el.getAttribute(spec.subjectFrom);
+    if (v) return v;
+  }
+  // `data-subject="…"` (canonical) / `subject="…"` (alias) is the explicit,
+  // foreign-friendly locator (a component whose subject isn't in
+  // `source`/`from-rdf` — e.g. a third party's element — just adds it). Then the
+  // usual fallbacks.
+  return el.getAttribute('data-subject') || el.getAttribute('subject')
+      || el.getAttribute('source') || el.getAttribute('from-rdf') || '';
+}
+
+/**
+ * Where an editable element's form lives:
+ *   "inPlace"   — a gear button ON the element (core/editor-self.js)
+ *   "collected" — gathered into a <sol-settings> panel
+ * The element's `edit="inPlace|collected"` attribute is the canonical control;
+ * the legacy `editor-self` attribute (⇒ inPlace) and a manifest descriptor's
+ * `present` are honored too. Default: "collected".
+ */
+export function editPlacement(el, spec) {
+  const a = ((el && el.getAttribute && (el.getAttribute('data-edit-mode') || el.getAttribute('edit'))) || '').toLowerCase();
+  if (a === 'inplace' || a === 'inline') return 'inPlace';
+  if (a === 'collected') return 'collected';
+  if (el && el.hasAttribute && el.hasAttribute('editor-self')) return 'inPlace';   // legacy alias
+  const p = spec && spec.present && String(spec.present).toLowerCase();
+  if (p) return (p === 'inplace' || p === 'inline') ? 'inPlace' : 'collected';
+  return 'collected';
 }
 
 /**
@@ -68,10 +128,10 @@ export function editorSubjectOf(el) {
  * Caller is responsible for inserting the element into the DOM and
  * listening for `sol-form-save` if it wants to refresh the host.
  */
-export function buildEditorElement(el) {
-  const spec = resolveEditorSpec(el.constructor, el);
-  if (!spec) return null;
-  const subject = editorSubjectOf(el);
+export function buildEditorElement(el, specOverride) {
+  const spec = specOverride || resolveEditorSpec(el.constructor, el);
+  if (!spec || spec.self) return null;   // self-editor: caller triggers via its own UI
+  const subject = editorSubjectOf(el, spec);
 
   const editorEl = document.createElement(spec.tag);
   if (subject) {
@@ -81,6 +141,19 @@ export function buildEditorElement(el) {
   }
   for (const [k, v] of Object.entries(spec.attrs)) editorEl.setAttribute(k, v);
   return editorEl;
+}
+
+/**
+ * Trigger a component's OWN editor (forms:"self" in a manifest descriptor),
+ * via the declared `open` hook — a method on the element or an event to
+ * dispatch on it. Returns true if a hook fired.
+ */
+export function triggerSelfEditor(el, spec) {
+  const open = spec && spec.open;
+  if (!open) return false;
+  if (open.method && typeof el[open.method] === 'function') { el[open.method](); return true; }
+  if (open.event) { el.dispatchEvent(new CustomEvent(open.event, { bubbles: true, composed: true })); return true; }
+  return false;
 }
 
 function absolute(uri) {

@@ -10,7 +10,23 @@ import {
   resolveExtensionPoints,
   findExtensionPoints,
   observeExtensionPoint,
+  registerExtensionPoints,
+  registerInteropEditables,
 } from '../../core/extension-points.js';
+import {
+  editorSpecFromDecl,
+  editorSubjectOf,
+  buildEditorElement,
+  triggerSelfEditor,
+  editPlacement,
+} from '../../core/editor.js';
+
+function defineForeign() {
+  const tag = `xp-foreign-${n++}`;
+  class Foreign extends HTMLElement {}   // declares NO editor/shape/extensionPoints
+  customElements.define(tag, Foreign);
+  return tag;
+}
 
 let n = 0;
 function defineEl(opts) {
@@ -58,6 +74,106 @@ test('findExtensionPoints walks the document; data-swc-skip opts out', () => {
   const found = findExtensionPoints('annotate').map((f) => f.el);
   expect(found).toContain(a);
   expect(found).not.toContain(b);
+});
+
+test('registerExtensionPoints makes a class-less foreign element editable', () => {
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  el.setAttribute('uri', 'https://pod/thing#it');
+  document.body.appendChild(el);
+
+  expect(resolveExtensionPoint(el.constructor, el, 'edit')).toBeNull();   // not editable yet
+
+  registerExtensionPoints(tag, { edit: { shape: 'https://s/p.shacl', subject: { attr: 'uri' }, present: 'collected' } });
+
+  expect(resolveExtensionPoint(el.constructor, el, 'edit')).toMatchObject({
+    tag: 'sol-form', attrs: { shape: 'https://s/p.shacl' }, subjectFrom: 'uri', present: 'collected',
+  });
+  expect(findExtensionPoints('edit').map((f) => f.el)).toContain(el);
+});
+
+test('editorSpecFromDecl + subject locator drive buildEditorElement', () => {
+  const spec = editorSpecFromDecl({ shape: 'https://s/p.shacl', subject: { attr: 'uri' } });
+  expect(spec).toMatchObject({ tag: 'sol-form', subjectFrom: 'uri', present: 'collected' });
+
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  el.setAttribute('uri', 'https://pod/p#me');
+  expect(editorSubjectOf(el, spec)).toBe('https://pod/p#me');
+
+  const ed = buildEditorElement(el, spec);
+  expect(ed.tagName.toLowerCase()).toBe('sol-form');
+  expect(ed.getAttribute('subject')).toContain('https://pod/p#me');
+  expect(ed.getAttribute('shape')).toBe('https://s/p.shacl');
+});
+
+test('editorSpecFromDecl with no shape is not editable', () => {
+  expect(editorSpecFromDecl({ subject: { attr: 'uri' } })).toBeNull();
+});
+
+test('forms:self yields a self spec; triggerSelfEditor fires the open hook', () => {
+  const spec = editorSpecFromDecl({ forms: 'self', open: { event: 'my-edit' } });
+  expect(spec).toEqual({ self: true, open: { event: 'my-edit' }, present: 'inPlace' });
+
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  expect(buildEditorElement(el, spec)).toBeNull();   // self ⇒ we don't generate a form
+
+  let fired = false;
+  el.addEventListener('my-edit', () => { fired = true; });
+  expect(triggerSelfEditor(el, spec)).toBe(true);
+  expect(fired).toBe(true);
+});
+
+test('editPlacement: edit attribute is canonical; default is collected', () => {
+  const mk = (attrs) => { const t = defineForeign(); const el = document.createElement(t); for (const k in attrs) el.setAttribute(k, attrs[k]); return el; };
+  expect(editPlacement(mk({ edit: 'inPlace' }))).toBe('inPlace');
+  expect(editPlacement(mk({ edit: 'inplace' }))).toBe('inPlace');   // case-insensitive
+  expect(editPlacement(mk({ edit: 'collected' }))).toBe('collected');
+  expect(editPlacement(mk({ 'editor-self': '' }))).toBe('inPlace'); // legacy alias
+  expect(editPlacement(mk({}))).toBe('collected');                  // default
+  // attribute wins over a manifest present
+  expect(editPlacement(mk({ edit: 'collected' }), { present: 'inPlace' })).toBe('collected');
+  // manifest present applies when no attribute
+  expect(editPlacement(mk({}), { present: 'inPlace' })).toBe('inPlace');
+});
+
+test('editorSubjectOf reads an explicit subject= attribute', () => {
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  el.setAttribute('subject', 'https://pod/s#me');
+  expect(editorSubjectOf(el)).toBe('https://pod/s#me');
+  // a spec.subjectFrom still wins
+  el.setAttribute('uri', 'https://pod/u#it');
+  expect(editorSubjectOf(el, { subjectFrom: 'uri' })).toBe('https://pod/u#it');
+});
+
+test('canonical data-* attributes drive editing (data-edit-shape/mode/subject)', () => {
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  el.setAttribute('data-edit-shape', 'https://s/p.shacl');
+  el.setAttribute('data-subject', 'https://pod/d#me');
+  el.setAttribute('data-edit-mode', 'inPlace');
+
+  const spec = resolveExtensionPoint(el.constructor, el, 'edit');
+  expect(spec).toMatchObject({ tag: 'sol-form', attrs: { shape: 'https://s/p.shacl' } });
+  expect(editorSubjectOf(el, spec)).toBe('https://pod/d#me');
+  expect(editPlacement(el, spec)).toBe('inPlace');
+});
+
+test('registerInteropEditables registers entries from the host surface', () => {
+  const tag = defineForeign();
+  const el = document.createElement(tag);
+  el.setAttribute('uri', 'https://pod/x#y');
+  document.body.appendChild(el);
+
+  window.SolidWebComponents = window.SolidWebComponents || {};
+  window.SolidWebComponents.interop = [
+    { name: 'foo', interop: { editable: { [tag]: { shape: 'https://s/x.shacl', subject: { attr: 'uri' } } } } },
+  ];
+  registerInteropEditables();
+
+  expect(resolveExtensionPoint(el.constructor, el, 'edit')).toMatchObject({ tag: 'sol-form', subjectFrom: 'uri' });
 });
 
 test('observeExtensionPoint fires for existing AND late-mounted elements', async () => {
