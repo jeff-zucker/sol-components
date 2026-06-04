@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharing data, login &amp; settings between components</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body>
+
+  <h1>Sharing data, login &amp; settings</h1>
+
+  <p style="border-left:4px solid var(--accent,#888); padding:.5rem .9rem; background:var(--surface,#f5f5f5);">
+  <strong>Newly implemented.</strong> This surface ships now, but hasn't been
+  exercised end-to-end in a real browser yet — treat runtime details as
+  provisional and report anything that misbehaves.</p>
+
+  <p>A page can hold components from several different authors at once. They all
+  share <strong>one data store</strong>, <strong>one login</strong>, and
+  <strong>one set of settings</strong> — so your component and everyone else's
+  read and write the same data and use the same signed-in user. You reach all of
+  it through a single object the loader puts on the page,
+  <code>window.SolidWebComponents</code>, with <strong>no imports</strong>.</p>
+
+  <h2>Step 1 — get the object and wait until it's ready</h2>
+  <p>The loader sets up <code>window.SolidWebComponents</code> and resolves
+  <code>.ready</code> once components have loaded:</p>
+  <pre><code>const SWC = window.SolidWebComponents;
+await SWC.ready;</code></pre>
+  <p>If you need one specific resource that might load after you, wait for just
+  that one:</p>
+  <pre><code>const rdf = await SWC.services.whenReady('rdf');</code></pre>
+
+  <h2>Step 2 — the shared data store</h2>
+  <p>One RDF store for the whole page. Anything you load into it is visible to
+  every other component, and deduped so it's only fetched once:</p>
+  <pre><code>await SWC.rdf.load('https://my.pod/things.ttl');   // shared + deduped
+const store = SWC.rdf.store;                        // the one rdflib store</code></pre>
+
+  <h2>Step 3 — the signed-in fetch</h2>
+  <p>If there's a <code>&lt;sol-login&gt;</code> on the page and the user is
+  signed in, <code>SWC.fetch</code> automatically carries their credentials;
+  otherwise it's the normal <code>fetch</code>. You don't wire anything up:</p>
+  <pre><code>const res = await SWC.fetch('https://my.pod/private.ttl');</code></pre>
+  <p>React to the user signing in or out:</p>
+  <pre><code>SWC.on(SWC.EVENTS.LOGIN,  () =&gt; this.reload());
+SWC.on(SWC.EVENTS.LOGOUT, () =&gt; this.reload());</code></pre>
+
+  <h2>Step 4 — shared settings</h2>
+  <p>Page-wide settings (for example a CORS <code>proxy</code>) live on one
+  <code>&lt;sol-default&gt;</code>. Read them, and react when they change, instead
+  of asking the user to configure each component separately:</p>
+  <pre><code>const proxy = SWC.defaults.get('proxy');
+SWC.defaults.onChange((name) =&gt; { if (name === 'proxy') this.reload(); });</code></pre>
+
+  <h2>Step 5 — check what's there, and degrade gracefully</h2>
+  <p>Don't assume a resource exists — ask, so your component still works on a page
+  that doesn't have it:</p>
+  <pre><code>if (SWC.has('auth')) this.showSaveButton();   // only if login is available</code></pre>
+
+  <h2>Sending &amp; receiving events</h2>
+  <p>Components coordinate by emitting and listening for events on the document.
+  Use the names in <code>SWC.EVENTS</code> rather than hardcoding strings, and
+  fire your own with <code>SWC.emit</code>:</p>
+  <pre><code>const off = SWC.on('acme-map-select', (e) =&gt; { /* … */ });   // listen
+SWC.emit('acme-map-select', { id });                          // send
+off();                                                        // stop listening</code></pre>
+  <p>Your own component's events should be named <code>your-tag-action</code> and
+  fire with <code>bubbles: true, composed: true</code> so anything on the page can
+  hear them.</p>
+
+  <h2>The whole surface</h2>
+  <table class="attr-table">
+    <thead><tr><th>You want…</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>The one shared data store</td><td><code>SWC.rdf.store</code>, <code>await SWC.rdf.load(url)</code></td></tr>
+      <tr><td>The signed-in fetch</td><td><code>await SWC.fetch(url)</code></td></tr>
+      <tr><td>React to sign-in / sign-out</td><td><code>SWC.on(SWC.EVENTS.LOGIN, fn)</code> / <code>…LOGOUT…</code></td></tr>
+      <tr><td>Page-wide settings</td><td><code>SWC.defaults.get(name)</code>, <code>SWC.defaults.onChange(fn)</code></td></tr>
+      <tr><td>Is something available?</td><td><code>SWC.has('auth')</code></td></tr>
+      <tr><td>Wait for a resource that loads later</td><td><code>await SWC.services.whenReady('rdf')</code></td></tr>
+      <tr><td>Listen / send events</td><td><code>SWC.on(name, fn)</code> / <code>SWC.emit(name, detail)</code>, <code>SWC.EVENTS</code></td></tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

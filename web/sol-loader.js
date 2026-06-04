@@ -30,9 +30,11 @@
  *                     into the single injected importmap (their own components/
  *                     deps); swc's baked entries win on conflict so shared deps
  *                     stay single. Works in every browser (one parse-time map).
- *   - data-manifest — space-separated SAME-ORIGIN manifest URLs whose
- *                     capabilities are merged before data-extend-with expands,
- *                     so a third party can add/extend capabilities.
+ *   - data-manifest — space-separated SAME-ORIGIN manifest URLs. A manifest's
+ *                     `capabilities` are merged before data-extend-with expands,
+ *                     and its `imports` ({specifier:url}) are folded into the
+ *                     importmap — so a consumer references an author's manifest +
+ *                     names the components, and supplies no URLs/import map.
  *
  * The per-stage importmaps and the manifest are baked in at build from
  * tools/external-deps.json + the manifest (see rollup.config.js). A third party
@@ -64,6 +66,7 @@
   // capability manifest.
   var IMPORTMAPS = __SWC_IMPORTMAPS__;
   var MANIFEST   = __SWC_MANIFEST__;
+  var manifestImports = {};   // {specifier:url} collected from data-manifest `imports` blocks
 
   var api = window.SolidWebComponents = window.SolidWebComponents || {};
   api.manifest = MANIFEST;
@@ -142,6 +145,16 @@
     }
   }
 
+  // All author-supplied importmap entries: a data-manifest's `imports` block plus
+  // any data-importmap-extra (the latter wins, so the page can override a
+  // manifest). swc's baked entries still win over both (see mergedImports).
+  function authorImports() {
+    var out = {}, e = extraImports(), k;
+    for (k in manifestImports) if (own(manifestImports, k)) out[k] = manifestImports[k];
+    for (k in e) if (own(e, k)) out[k] = e[k];
+    return out;
+  }
+
   // Merge swc's baked stage map with `extra`. swc's entries are applied LAST, so
   // they win on conflict — a third party can ADD specifiers (their components)
   // but never redirect a shared dep (rdflib, solid-ui, …), keeping it single.
@@ -157,24 +170,26 @@
   // who'd rather inline ONE combined <script type="importmap"> on the page.
   api.buildImportmap = function (extra) { return { imports: mergedImports(extra || {}) }; };
 
-  // Inject the stage importmap (swc's baked entries + any data-importmap-extra),
-  // UNLESS the page already provides one (then the app owns resolution — use
-  // api.buildImportmap to construct a combined map). Must run before any module
-  // resolves; the loader is a parser-blocking <head> script, so injecting here
-  // precedes deferred modules.
+  // Inject the stage importmap (swc's baked entries + any data-importmap-extra +
+  // any data-manifest `imports`), UNLESS the page already provides one (then the
+  // app owns resolution — use api.buildImportmap to construct a combined map).
+  // With data-manifest this runs after the manifest fetch (so its imports are
+  // included); otherwise it runs parser-blocking before deferred modules.
   function ensureImportmap() {
     if (api._mapInjected) return;
     api._mapInjected = true;
     if (document.querySelector('script[type="importmap"]')) return; // page owns it
     var stage = (ds.stage || 'local').trim();
     if (!(IMPORTMAPS && IMPORTMAPS[stage])) { console.warn('[sol-loader] unknown stage "' + stage + '" — no importmap injected'); return; }
-    var imports = mergedImports(extraImports());
+    var imports = mergedImports(authorImports());
     var el = document.createElement('script');
     el.type = 'importmap';
     el.textContent = JSON.stringify({ imports: imports });
     (document.head || document.documentElement).appendChild(el);
     api.importmap = imports;
-    if (document.readyState !== 'loading') {
+    // A data-manifest deliberately defers injection past the fetch, so that's not
+    // a misconfiguration; warn only when nothing explains a late injection.
+    if (document.readyState !== 'loading' && !ds.manifest) {
       console.warn('[sol-loader] importmap injected after parsing began; load sol-loader as a classic <script> in <head>.');
     }
   }
@@ -191,9 +206,13 @@
   }
   api.registerCapability = function (name, def) { mergeCapability(name, def); return api; };
 
-  // Fetch + merge any data-manifest JSON (capabilities only) before expanding
-  // data-extend-with. SAME-ORIGIN ONLY: a manifest names modules the loader will
-  // import(), so a cross-origin one is a code-execution surface and is rejected.
+  // Fetch + merge any data-manifest JSON before expanding data-extend-with: its
+  // `capabilities` extend the manifest, and its `imports` ({specifier:url}) get
+  // folded into the importmap — so a consumer references the author's manifest and
+  // names the components, and needs no URLs/import map of their own. SAME-ORIGIN
+  // ONLY: a manifest names modules the loader will import(), so a cross-origin one
+  // is a code-execution surface and is rejected. (The import URLs *inside* it may
+  // point anywhere — the manifest file itself is the same-origin part.)
   function loadManifests() {
     var urls = toList(ds.manifest);
     if (!urls.length) return Promise.resolve();
@@ -210,6 +229,9 @@
         .then(function (m) {
           var caps = (m && m.capabilities) || {};
           for (var name in caps) if (own(caps, name)) mergeCapability(name, caps[name]);
+          var imp = (m && m.imports) || {};
+          // First manifest to name a specifier wins; swc's baked map still wins overall.
+          for (var s in imp) if (own(imp, s) && !own(manifestImports, s)) manifestImports[s] = imp[s];
         })
         .catch(function (e) { console.error('[sol-loader] data-manifest ' + u + ': ' + e.message); });
     }));
@@ -260,9 +282,13 @@
   }
 
   var auto = (ds.bundles || ds.load || '').trim();
-  if (auto || ds.extendWith || ds.stage || ds.manifest) {
-    ensureImportmap();   // inject the map up front (sync); manifest merge is async
-    loadManifests().then(function () { return load(auto, { with: ds.extendWith }); }).then(announce);
+  if (ds.manifest) {
+    // Defer the importmap until the manifest is fetched, so its `imports` are in
+    // the single injected map (the loader's own import()s run after, in load()).
+    loadManifests().then(function () { ensureImportmap(); return load(auto, { with: ds.extendWith }); }).then(announce);
+  } else if (auto || ds.extendWith || ds.stage) {
+    ensureImportmap();   // common path: inject up front, parser-blocking
+    load(auto, { with: ds.extendWith }).then(announce);
   } else {
     ensureImportmap();
     resolveReady(api);
