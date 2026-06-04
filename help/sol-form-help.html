@@ -84,12 +84,15 @@
           <td>Show the form read-only: the current values are visible but can't
               be changed and there's no save bar. Handy for a "look, don't
               touch" view of a configuration.</td></tr>
+      <tr><td><code>save-to</code></td>
+          <td>Write edits to a different place than <code>subject</code> reads
+              from — for example, read a shared template but save to the user's
+              own file. Defaults to writing back to <code>subject</code>.</td></tr>
     </tbody>
   </table>
-  <p>Some attributes here are shared across components — see
-  <a href="common-attributes.html">Common attributes</a>. In particular
-  <code>shape</code> (the field description) and <code>save-to</code> (an
-  alternate place to write edits) are covered there.</p>
+  <p>The other key attribute, <code>shape</code> (the field description), is
+  shared with the other editable components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
 
   <h2>Examples</h2>
   <pre><code>&lt;!-- a normal editable form built from a field description --&gt;
