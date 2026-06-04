@@ -8,6 +8,7 @@
     },
     "sparql": {
       "modules": [
+        "@comunica/query-sparql",
         "sol-query"
       ]
     },

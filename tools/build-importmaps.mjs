@@ -62,7 +62,7 @@ const manifest = {
   name: PKG,
   capabilities: {
     auth:    { modules: ['sol-login'] },
-    sparql:  { modules: ['sol-query'] },
+    sparql:  { modules: ['@comunica/query-sparql', 'sol-query'] },
     rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings'] },
     // NOTE: solidos is PARKED — intentionally not wired here. mashlib's
     // published bundle inlines its own rdflib/solid-ui/solid-logic, so loading
