@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sol-basic components</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body>
+
+  <h1>sol-basic components</h1>
+  <p>The everyday UI components — they work from plain HTML and need no sign-in
+  or data setup. Load them all with one line:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-basic"&gt;&lt;/script&gt;</code></pre>
+  <p>This page is the terse, all-in-one list — each component below has a
+  copy-paste example. For attributes many of them share
+  (<code>source</code>, <code>region</code>, <code>handler</code>,
+  <code>orientation</code>, <code>if-logged-in</code>, …) see
+  <a href="common-attributes.html">Common attributes</a>.</p>
+
+  <h2>sol-button</h2>
+  <p>A button that opens something (page, file, component, website) into a region
+  or a pop-up. The label is the text between the tags.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>source</code></td>
+          <td>What to open — a page, file, or web address.</td></tr>
+      <tr><td><code>region</code></td>
+          <td>Where it opens: a CSS selector, or <code>modal</code> /
+              <code>floating</code> / <code>tab</code> / <code>window</code>.</td></tr>
+      <tr><td><code>handler</code></td>
+          <td>Which component opens the content (usually optional).</td></tr>
+      <tr><td><code>name</code></td>
+          <td>A short label for the content when it opens as a tab.</td></tr>
+      <tr><td><code>replace</code></td>
+          <td>Reload the content fresh on every click.</td></tr>
+      <tr><td><code>inline</code></td>
+          <td>Sit inline (e.g. as a toolbar control) rather than as a block.</td></tr>
+      <tr><td><code>raw</code></td>
+          <td>Show the source's literal text instead of rendering it.</td></tr>
+      <tr><td><code>trusted</code></td>
+          <td>Let same-site HTML render as real HTML.</td></tr>
+    </tbody>
+  </table>
+  <p>One example using each attribute:</p>
+  <pre><code>&lt;sol-button source="settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
+&lt;sol-button source="reports.ttl" region="modal" name="Reports"&gt;Reports&lt;/sol-button&gt;
+&lt;sol-button source="report.html" handler="sol-query" replace&gt;Run query&lt;/sol-button&gt;
+&lt;sol-button source="help.html" inline&gt;?&lt;/sol-button&gt;
+&lt;sol-button source="notes.txt" raw trusted&gt;Notes&lt;/sol-button&gt;</code></pre>
+
+  <h2>sol-dropdown-button</h2>
+  <p>A trigger button that drops a <code>&lt;menu&gt;</code> of choices. Each
+  choice is a <code>&lt;button&gt;</code> (an action) or an
+  <code>&lt;a href&gt;</code> (opens a page or component). Picking an action fires
+  <code>sol-command</code>.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>label</code></td>
+          <td>Text on the trigger button (defaults to <code>⋮</code>).</td></tr>
+      <tr><td><code>handler</code> <span class="muted">(on a choice)</span></td>
+          <td>A plain word makes it an action; a component tag opens that
+              component.</td></tr>
+      <tr><td><code>params</code> <span class="muted">(on a choice)</span></td>
+          <td>Extra data to pass with an action, written as JSON.</td></tr>
+      <tr><td><code>requires-write</code> <span class="muted">(on a choice)</span></td>
+          <td>Marks a choice owner-only, to hide/disable for visitors.</td></tr>
+    </tbody>
+  </table>
+  <p>Write the button with a <code>&lt;menu&gt;</code> of choices inside it:</p>
+  <pre><code>&lt;sol-dropdown-button label="⋮ Actions"&gt;
+  &lt;menu&gt;
+    &lt;button handler="rename"&gt;Rename&lt;/button&gt;
+    &lt;button handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
+    &lt;button handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
+    &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
+  &lt;/menu&gt;
+&lt;/sol-dropdown-button&gt;</code></pre>
+
+  <h2>sol-include</h2>
+  <p>Fetches a file (HTML, Markdown, text) and drops its contents into the page.
+  Markdown is rendered for you.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>source</code></td>
+          <td>The file to fetch and show.</td></tr>
+      <tr><td><code>selector</code></td>
+          <td>Pull in only the part matching this CSS selector.</td></tr>
+      <tr><td><code>raw</code></td>
+          <td>Show the file's text exactly as written.</td></tr>
+      <tr><td><code>trusted</code></td>
+          <td>Let the fetched HTML run as real HTML and activate nested
+              components.</td></tr>
+      <tr><td><code>if-logged-in</code></td>
+          <td>An alternate <code>source</code> to show once signed in.</td></tr>
+    </tbody>
+  </table>
+  <p>One example using each attribute:</p>
+  <pre><code>&lt;sol-include source="header.html" trusted&gt;&lt;/sol-include&gt;
+&lt;sol-include source="blog.html" selector="article:first-of-type"&gt;&lt;/sol-include&gt;
+&lt;sol-include source="script.js" raw&gt;&lt;/sol-include&gt;
+&lt;sol-include source="guest.html" if-logged-in="owner.html"&gt;&lt;/sol-include&gt;</code></pre>
+
+  <h2>sol-menu</h2>
+  <p>A navigation menu with a built-in content panel; the first link opens
+  automatically. List <code>&lt;a href&gt;</code> links, and group them under a
+  <code>&lt;submenu&gt;</code> with a <code>&lt;label&gt;</code> (nestable to any
+  depth).</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>icon</code> <span class="muted">(on a link)</span></td>
+          <td>Show an icon instead of text; the link text becomes its
+              tooltip.</td></tr>
+      <tr><td><code>handler</code> <span class="muted">(on a link)</span></td>
+          <td>Which component opens the link (defaults to showing the
+              page).</td></tr>
+      <tr><td><code>if-logged-in</code> <span class="muted">(on a link)</span></td>
+          <td>Show this link only to signed-in users.</td></tr>
+      <tr><td><code>orientation</code></td>
+          <td><code>horizontal</code> (top bar) or <code>vertical</code>
+              (sidebar).</td></tr>
+      <tr><td><code>from-rdf</code></td>
+          <td>Build the menu items from a Turtle file instead of HTML.</td></tr>
+    </tbody>
+  </table>
+  <p>A horizontal menu whose links show off the per-link attributes:</p>
+  <pre><code>&lt;sol-menu orientation="horizontal"&gt;
+  &lt;a href="home.html" icon="home.svg"&gt;Home&lt;/a&gt;
+  &lt;a href="data.ttl" handler="sol-query"&gt;Data&lt;/a&gt;
+  &lt;a href="private.ttl" if-logged-in&gt;My private data&lt;/a&gt;
+  &lt;submenu&gt;
+    &lt;label&gt;Docs&lt;/label&gt;
+    &lt;a href="quickstart.md"&gt;Quickstart&lt;/a&gt;
+  &lt;/submenu&gt;
+&lt;/sol-menu&gt;</code></pre>
+  <p>Or build the items from a Turtle file instead of writing them out:</p>
+  <pre><code>&lt;sol-menu from-rdf="data/menu.ttl#MainMenu"&gt;&lt;/sol-menu&gt;</code></pre>
+
+  <h2>sol-tabs</h2>
+  <p>A tabbed box; each link becomes a tab and its page loads into the panel
+  below. With one tab the bar hides itself. A non-link child (e.g. a button) is
+  placed on the tab bar as a toolbar control.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>keep-alive</code></td>
+          <td>Keep every tab's panel loaded so scroll and media survive a
+              switch.</td></tr>
+      <tr><td><code>variant</code></td>
+          <td><code>sub</code> for the slimmer styling of nested tabs.</td></tr>
+      <tr><td><code>orientation</code></td>
+          <td><code>horizontal</code> or <code>vertical</code>.</td></tr>
+      <tr><td><code>handler</code></td>
+          <td>Which component opens a tab (defaults to showing the page).</td></tr>
+      <tr><td><code>from-rdf</code></td>
+          <td>Build the tabs from a Turtle file instead of HTML.</td></tr>
+    </tbody>
+  </table>
+  <p>A vertical, kept-alive tab set; a nested set uses <code>variant="sub"</code>:</p>
+  <pre><code>&lt;sol-tabs keep-alive orientation="vertical"&gt;
+  &lt;a href="overview.html"&gt;Overview&lt;/a&gt;
+  &lt;a href="data.ttl" handler="sol-query"&gt;Data&lt;/a&gt;
+  &lt;a href="about.html"&gt;About&lt;/a&gt;
+  &lt;sol-tabs variant="sub"&gt;
+    &lt;a href="a.html"&gt;A&lt;/a&gt;
+    &lt;a href="b.html"&gt;B&lt;/a&gt;
+  &lt;/sol-tabs&gt;
+&lt;/sol-tabs&gt;</code></pre>
+  <p>Or build the tabs from a Turtle file:</p>
+  <pre><code>&lt;sol-tabs from-rdf="data/tabs.ttl#Tabs"&gt;&lt;/sol-tabs&gt;</code></pre>
+
+  <h2>sol-accordion</h2>
+  <p>Collapsible sections, one open at a time, first open by default. Each child
+  <code>&lt;div&gt;</code> holds two inner divs — the first becomes the header,
+  the second the collapsible content.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>start-closed</code></td>
+          <td>Leave every panel collapsed on first render.</td></tr>
+    </tbody>
+  </table>
+  <p>Each section is a <code>&lt;div&gt;</code> wrapping a header div and a content
+  div; <code>start-closed</code> leaves them all collapsed at first:</p>
+  <pre><code>&lt;sol-accordion start-closed&gt;
+  &lt;div&gt;&lt;div&gt;Section 1&lt;/div&gt;&lt;div&gt;Content 1&lt;/div&gt;&lt;/div&gt;
+  &lt;div&gt;&lt;div&gt;Section 2&lt;/div&gt;&lt;div&gt;Content 2&lt;/div&gt;&lt;/div&gt;
+&lt;/sol-accordion&gt;</code></pre>
+
+  <h2>sol-rolodex</h2>
+  <p>A card-by-card browser with previous/next buttons and arrow-key navigation.
+  Each child <code>&lt;div&gt;</code> is a card. It fires <code>sol-select</code>
+  when the card changes, and has no attributes of its own.</p>
+  <p>Each card is a <code>&lt;div&gt;</code>:</p>
+  <pre><code>&lt;sol-rolodex&gt;
+  &lt;div&gt;Card 1 content&lt;/div&gt;
+  &lt;div&gt;Card 2 content&lt;/div&gt;
+&lt;/sol-rolodex&gt;</code></pre>
+
+  <h2>sol-default</h2>
+  <p>An invisible record of shared defaults; place one on the page and other
+  components fall back to its attributes. Changing one fires
+  <code>sol-default-change</code> and updates dependents live.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>proxy</code></td>
+          <td>A CORS-proxy address used as the shared default.</td></tr>
+      <tr><td><code>region</code></td>
+          <td>The default region for launchers that don't set their own.</td></tr>
+    </tbody>
+  </table>
+  <p>Put one on the page; other components fall back to these:</p>
+  <pre><code>&lt;sol-default region="#main" proxy="http://localhost:3002/proxy?uri="&gt;&lt;/sol-default&gt;</code></pre>
+
+  <h2>Pop-up surfaces</h2>
+  <p>The modal dialog and the floating window aren't tags you write yourself.
+  You reach them through a launcher (a <code>sol-button</code>, a menu link, a
+  dropdown choice) by setting its <code>region</code>:</p>
+  <ul>
+    <li><code>region="modal"</code> — a centered dialog with a dimmed backdrop.</li>
+    <li><code>region="floating"</code> — a draggable, resizable window with no
+        backdrop; several can coexist and the page behind stays interactive.</li>
+  </ul>
+  <p>Set the <code>region</code> on the launcher:</p>
+  <pre><code>&lt;sol-button source="reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;
+&lt;sol-button source="notes.html" region="floating"&gt;Notes&lt;/sol-button&gt;</code></pre>
+
+</body>
+</html>
