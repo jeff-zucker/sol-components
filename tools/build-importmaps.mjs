@@ -63,9 +63,12 @@ const manifest = {
   capabilities: {
     auth:    { modules: ['sol-login'] },
     sparql:  { modules: ['sol-query'] },
-    comunica:{ modules: ['sol-query'] },
     rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings'] },
-    solidos: { modules: ['mashlib', 'sol-solidos'] },
+    // NOTE: solidos is PARKED — intentionally not wired here. mashlib's
+    // published bundle inlines its own rdflib/solid-ui/solid-logic, so loading
+    // it through the importmap would create a second rdflib instance and break
+    // single-instance coherence. Re-enabling it needs a from-source mashlib
+    // build (externalising those deps) before sol-solidos can be loader-driven.
   },
 };
 writeFileSync(resolve(outDir, 'swc.manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
