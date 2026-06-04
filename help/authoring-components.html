@@ -32,15 +32,8 @@
   anyone else's), and register it:</p>
   <pre><code>class AcmeMap extends HTMLElement { /* … */ }
 customElements.define('acme-map', AcmeMap);</code></pre>
-  <p>That's the whole of plugging in. <strong>Optionally</strong>, if you want
-  other parts of the page — app code, other components, even across shadow DOM —
-  to react when something happens in yours, announce it with a bubbling, composed
-  event named <code>your-tag-action</code>. Nothing in the loader or the extension
-  mechanism needs this; it's just how components coordinate on a page when they
-  want to:</p>
-  <pre><code>this.dispatchEvent(new CustomEvent('acme-map-select', {
-  bubbles: true, composed: true, detail: { id },
-}));</code></pre>
+  <p>That's all it takes to plug in — a custom element is a first-class citizen of
+  the page.</p>
 
   <h2 id="step2">Step 2 — Create a manifest (so people use it without the details)</h2>
   <p>You know the messy details of your component — where its module lives, what it
@@ -139,7 +132,7 @@ observeExtensionPoint('annotate', (el, spec) =&gt; {
   <table class="attr-table">
     <thead><tr><th>Step</th><th></th></tr></thead>
     <tbody>
-      <tr><td>Hyphenated, prefixed tag; <code>bubbles + composed</code> events named <code>tag-action</code></td><td>plug in</td></tr>
+      <tr><td>Hyphenated, prefixed tag, registered with <code>customElements.define</code></td><td>plug in</td></tr>
       <tr><td>A manifest with your <code>imports</code> (and <code>capabilities</code> if any)</td><td>others use it detail-free</td></tr>
       <tr><td><code>static get extensionPoints()</code> if capabilities should enhance you</td><td>be extended</td></tr>
       <tr><td>A capability module + manifest <code>capabilities</code> block</td><td>extend others</td></tr>
