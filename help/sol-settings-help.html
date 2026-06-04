@@ -11,63 +11,41 @@
 </head>
 <body class="scroll-help">
 
-  <h1>sol-settings component</h1>
-  <p>A zero-config settings page. Drop one <code>&lt;sol-settings&gt;</code> on a
-  page and it discovers every editable <code>sol-*</code> widget already in the
-  DOM and renders one accordion panel to edit each — no wiring, no per-widget
-  configuration.</p>
+  <h1>sol-settings</h1>
+  <p>A one-tag settings page. Drop <code>&lt;sol-settings&gt;</code> on a page and
+  it looks at the other components already there, finds the ones that can be
+  edited, and builds a settings panel for each — one expandable section per
+  component. You don't configure anything; it figures out the panels from
+  what's on the page.</p>
 
-  <h2>Usage</h2>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-with="rdf"&gt;&lt;/script&gt;</code></pre>
+  <p>Then put your components on the page and add one settings tag after them:</p>
   <pre><code>&lt;sol-weather place="Portland, OR"&gt;&lt;/sol-weather&gt;
 &lt;sol-menu from-rdf="data/menu.ttl#MainMenu" region="#main"&gt;&lt;/sol-menu&gt;
 
 &lt;sol-settings&gt;&lt;/sol-settings&gt;</code></pre>
-  <p>On connect, <code>sol-settings</code> walks the document — <b>crossing into
-  every shadow root</b> — for elements whose custom-element class declares an
-  editor. Here it finds the weather card and the menu, and builds a panel for
-  each. It takes <b>no attributes</b>.</p>
+  <p>Here it finds the weather card and the menu and gives you a panel to edit
+  each. <code>sol-settings</code> takes no attributes of its own.</p>
 
-  <h2>How a component becomes editable</h2>
-  <p>A component opts in by declaring, on its class, one of:</p>
-  <table class="attr-table">
-    <thead><tr><th>Declaration</th><th>Editor used</th></tr></thead>
-    <tbody>
-      <tr><td><code>static get shape()</code> → a SHACL URL</td>
-          <td><code>sol-form</code> in shape-driven mode (e.g. sol-weather, sol-time).</td></tr>
-      <tr><td><code>static get editor()</code> → <code>{ tag, subjectAttr, attrs }</code></td>
-          <td>that explicit editor element (e.g. sol-menu → <code>sol-tree-edit</code> over <code>menu.shacl</code>).</td></tr>
-      <tr><td><code>static get editor()</code> → a <code>ui:Form</code> TTL URL</td>
-          <td><code>sol-form</code> in form-driven mode (legacy).</td></tr>
-      <tr><td><code>static get editor()</code> → <code>{ inline: true }</code></td>
-          <td>opts out — not shown in settings.</td></tr>
-    </tbody>
-  </table>
-  <p>Each panel's editor is <b>lazy-mounted on first expand</b>, wired with the
-  host widget's <code>source</code> / <code>from-rdf</code> as the subject being
-  edited. The panel label comes from the widget's <code>label</code> attribute,
-  else its tag name.</p>
+  <h2>How it picks panels</h2>
+  <p>A component shows up in settings if it knows how to edit itself — most of
+  the editable ones (weather, clock, menu, search, and so on) already do. Each
+  panel opens the component's own editor when you expand it, and saving there
+  updates the live component on the page right away. A component that has no
+  editor simply isn't listed.</p>
 
-  <h2>Saving</h2>
-  <p>Edits save through the editor's normal path (sol-form PATCHes via
-  <code>kb.updater</code>). When an embedded editor emits
-  <code>sol-form-save</code>, <code>sol-settings</code> calls
-  <code>reload()</code> on the corresponding live widget so the page reflects
-  the change immediately.</p>
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- a page chrome with several editable widgets and one settings panel --&gt;
+&lt;sol-menu from-rdf="data/menu.ttl#MainMenu" region="#main"&gt;&lt;/sol-menu&gt;
+&lt;sol-weather place="Portland, OR"&gt;&lt;/sol-weather&gt;
+&lt;sol-time&gt;&lt;/sol-time&gt;
 
-  <h2>Discovery timing</h2>
-  <p>Discovery only sees widgets present in the DOM when it runs. Two notes:</p>
-  <ul>
-    <li>Widgets kept in a <b>keep-alive region pane</b> (mounted but hidden) stay
-    discoverable across navigation; widgets torn down on nav-away are not.</li>
-    <li><code>refresh()</code> re-walks and rebuilds if the widget set changed —
-    cheap no-op otherwise. It runs automatically on <code>sol-tab-activate</code>
-    (so navigating to the settings tab picks up newly-mounted widgets); call it
-    yourself after mounting an editable widget late.</li>
-  </ul>
-
-  <p>See it in context in data-kitchen's Settings, which lists every chrome
-  widget (menu, weather, clock, search, proxy defaults, …) from a single
-  <code>&lt;sol-settings&gt;</code>.</p>
+&lt;sol-settings&gt;&lt;/sol-settings&gt;</code></pre>
+  <p>One <code>&lt;sol-settings&gt;</code> gives you a section to edit the menu,
+  the weather card, and the clock — no extra wiring per component.</p>
 
 </body>
 </html>

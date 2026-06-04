@@ -11,383 +11,91 @@
 </head>
 <body class="tabbed-help">
 
-  <h1>sol-feed component</h1>
-  <p class="page-intro">Fetches and displays RSS or Atom feeds. One element, three layouts —
-  pick a layout with the <code>view</code> attribute: a single <i>feed</i>,
-  a <i>topic</i> picker scoped to one topic's subtree, or an <i>all</i> grid
-  that merges and randomizes articles across every source in a topic tree.</p>
+  <h1>sol-feed</h1>
+  <p>Fetches RSS or Atom news feeds and shows the articles on your page.
+  Point it at one feed, or at a list of feeds grouped by topic, and pick how
+  it looks with the <code>view</code> attribute: a single feed, a topic
+  picker, or a grid that mixes articles from every feed in a topic.</p>
 
-  <div class="tabs" id="tabs" role="tablist" aria-label="sol-feed documentation">
-    <button role="tab" aria-selected="true"  aria-controls="tab-feed"    id="tabbtn-feed">Feed</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-topic"   id="tabbtn-topic"   tabindex="-1">Topic</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-all"     id="tabbtn-all"     tabindex="-1">All</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-attr"    id="tabbtn-attr"    tabindex="-1">Attributes</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-sources" id="tabbtn-sources" tabindex="-1">Listing feeds</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-styling" id="tabbtn-styling" tabindex="-1">Styling</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-a11y"    id="tabbtn-a11y"    tabindex="-1">Accessibility</button>
+  <h2>Try it</h2>
+  <div class="demo-area">
+    <sol-feed view="feed"
+              source="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
+              proxy="http://localhost:3002/proxy?uri="></sol-feed>
   </div>
 
-  <!-- ── Demo: feed ─────────────────────────────────────────────────── -->
-  <div class="tab-panel active" id="tab-feed" role="tabpanel" aria-labelledby="tabbtn-feed" tabindex="0">
-    <div class="demo-area">
-      <sol-feed view="feed"
-                source="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
-                proxy="http://localhost:3002/proxy?uri="></sol-feed>
-    </div>
-    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
-        data-stage="local"
-        data-bundles="sol-feed"&gt;&lt;/script&gt;
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the component
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-feed"&gt;&lt;/script&gt;</code></pre>
+  <p>Then drop the tag wherever you want the feed to appear:</p>
+  <pre><code>&lt;sol-feed source="https://example.org/rss.xml"&gt;&lt;/sol-feed&gt;</code></pre>
 
-&lt;sol-feed view="feed"
-          source="https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
-          proxy="http://localhost:3002/proxy?uri="
+  <h2>Options</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>view</code></td>
+          <td>How it looks. <code>feed</code> (the default) shows one feed as a
+              list of article links. <code>topic</code> shows a picker of feed
+              sources for one topic, with the chosen source's articles below it.
+              <code>all</code> shows a grid of article cards mixed from every
+              feed in a topic, with buttons to switch sources.</td></tr>
+      <tr><td><code>default-selected</code></td>
+          <td>For <code>view="all"</code> only. A comma- or pipe-separated list
+              of feed names (or bits of their web address) to tick on the
+              visitor's first visit, e.g. <code>"guardian"</code> matches "The
+              Guardian". After that, the visitor's own choices are remembered.</td></tr>
+    </tbody>
+  </table>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>. For <code>source</code>:
+  with <code>view="feed"</code> it's a feed's web address; with
+  <code>topic</code> and <code>all</code> it points at a settings file plus a
+  <code>#Topic</code> on the end, e.g. <code>data/feeds.ttl#News</code>.
+  Most feeds can't be read directly by a browser, so set <code>proxy</code> to a
+  CORS proxy address that the component reads the feed through.</p>
+
+  <h2>Examples</h2>
+  <p>One feed, shown as a list of links:</p>
+  <pre><code>&lt;sol-feed
+    view="feed"
+    source="https://example.org/rss.xml"
+    proxy="http://localhost:3002/proxy?uri="
 &gt;&lt;/sol-feed&gt;</code></pre>
-  </div>
 
-  <!-- ── Demo: topic ────────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-topic" role="tabpanel" aria-labelledby="tabbtn-topic" tabindex="0">
-    <div class="demo-area">
-      <sol-feed view="topic"
-                source="data/feeds.ttl#News"
-                proxy="http://localhost:3002/proxy?uri="></sol-feed>
-    </div>
-    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
-        data-stage="local"
-        data-bundles="sol-feed"&gt;&lt;/script&gt;
-
-&lt;sol-feed view="topic"
-          source="data/feeds.ttl#News"
-          proxy="http://localhost:3002/proxy?uri="
+  <p>A topic picker — point <code>source</code> at a small settings file and a
+  <code>#Topic</code> inside it:</p>
+  <pre><code>&lt;sol-feed
+    view="topic"
+    source="data/feeds.ttl#News"
+    proxy="http://localhost:3002/proxy?uri="
 &gt;&lt;/sol-feed&gt;</code></pre>
-  </div>
 
-  <!-- ── Demo: all ──────────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-all" role="tabpanel" aria-labelledby="tabbtn-all" tabindex="0">
-    <div class="demo-area">
-      <sol-feed view="all"
-                source="data/feeds.ttl#Feeds"
-                proxy="http://localhost:3002/proxy?uri="></sol-feed>
-    </div>
-  </div>
+  <p>A mixed grid of every feed under a topic:</p>
+  <pre><code>&lt;sol-feed
+    view="all"
+    source="data/feeds.ttl#Feeds"
+    proxy="http://localhost:3002/proxy?uri="
+&gt;&lt;/sol-feed&gt;</code></pre>
 
-  <!-- ── Attributes ─────────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
-    <div class="api-block">
-      <table class="attr-table">
-        <thead><tr><th>Attribute</th><th>Required</th><th>Description</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>view</td>
-            <td>optional</td>
-            <td>Layout: <code>feed</code> (default), <code>topic</code>, or <code>all</code>.</td>
-          </tr>
-          <tr>
-            <td>source</td>
-            <td>required</td>
-            <td>A feed URL (for <code>feed</code>) or <code>&lt;rdfFile&gt;#&lt;Topic&gt;</code> (for <code>topic</code> / <code>all</code>).</td>
-          </tr>
-          <tr>
-            <td>proxy</td>
-            <td>optional</td>
-            <td>A CORS proxy pattern prepended to cross-origin fetches.</td>
-          </tr>
-          <tr>
-            <td>default-selected</td>
-            <td>optional (<code>view="all"</code> only)</td>
-            <td>Comma- or pipe-separated list of feed labels or URL
-                substrings to auto-check on the user's first visit
-                (when nothing is in localStorage). Matching is
-                case-insensitive substring containment against each
-                feed's label OR URL, so <code>"guardian"</code> and
-                <code>"theguardian.com"</code> both pick "The
-                Guardian". Once the user touches the picker, their
-                selection is persisted to localStorage and this
-                attribute is ignored on subsequent visits.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>view="feed"</h3>
-    <p>Renders the one feed named by <code>source</code> as a list of article
-    links. Clicking a link opens the article in the shared reader window.</p>
-    <div class="usage-section">
-      <pre><code>&lt;sol-feed <i>view</i>="feed"
-  source="https://example.org/rss.xml"
-  proxy="http://localhost:3002/proxy?uri="&gt;&lt;/sol-feed&gt;</code></pre>
-    </div>
-
-    <h3>view="topic"</h3>
-    <p>A single column scoped to one <code>bk:Topic</code> and its
-    <code>bk:subTopicOf</code> subtree. The top pane shows ~5 feed sources
-    at a time (scroll for more); below it, the article titles from the
-    currently-selected source. The component fills its container's height
-    and width — the demo here is 420px wide.</p>
-    <div class="usage-section">
-      <pre><code>&lt;sol-feed <i>view</i>="topic"
-  source="data/feeds.ttl<i>#News</i>"
-  proxy="http://localhost:3002/proxy?uri="&gt;&lt;/sol-feed&gt;</code></pre>
-    </div>
-
-    <h3>view="all"</h3>
-    <p>The top row holds one pill button per selected source (flush left)
-    and the gear that reveals the source picker (flush right). Clicking a
-    source button shows that feed's items in reverse chronological order,
-    as a wrapping grid of image-on-left / title-on-right cards. Ticked
-    sources are remembered in <code>localStorage</code>; on first visit
-    the first source is auto-selected.</p>
-    <div class="usage-section">
-      <pre><code>&lt;sol-feed <i>view</i>="all"
-  source="data/feeds.ttl<i>#Feeds</i>"
-  proxy="http://localhost:3002/proxy?uri="&gt;&lt;/sol-feed&gt;</code></pre>
-    </div>
-
-    <h3>source attribute</h3>
-    <p>For <code>view="feed"</code> the <code>source</code> is the feed URL
-    itself. For <code>view="topic"</code> and <code>view="all"</code> it is a
-    URL of the form <code>&lt;rdfFile&gt;#&lt;Topic&gt;</code> — the
-    fragment is required and names the <code>bk:Topic</code> the picker is
-    scoped to. See the <b>Listing feeds</b> tab for the document shape.</p>
-
-    <h3>proxy attribute</h3>
-    <p>Most feeds are not served with permissive CORS headers, so a browser
-    cannot fetch them directly. The <code>proxy</code> attribute is a pattern
-    prepended to every URL the component fetches. If the pattern contains the
-    literal token <code>{url}</code> it is replaced with the encoded URL;
-    otherwise the encoded URL is appended.</p>
-    <div class="usage-section">
-      Append style (the URL is added to the end):
-      <pre><code>proxy="http://localhost:3002/proxy?uri="</code></pre>
-      Token style (the URL is substituted for <code>{url}</code>):
-      <pre><code>proxy="https://proxy.example/fetch?u={url}"</code></pre>
-    </div>
-    <p>Omit <code>proxy</code> to fetch directly — this works only for feeds
-    that already send <code>Access-Control-Allow-Origin</code>.</p>
-  </div>
-
-  <!-- ── Listing feeds ──────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-sources" role="tabpanel" aria-labelledby="tabbtn-sources" tabindex="0">
-    <h2>Listing feeds for topic / all</h2>
-    <p>The <code>topic</code> and <code>all</code> views read their feed list
-    from an RDF/Turtle document. <b>Two encodings are accepted, freely
-    interchangeable</b> — the W3C bookmark ontology (<code>bk:</code> /
-    <code>ui:</code>) and SKOS (<code>skos:</code> / <code>dct:</code>).
-    Point <code>source</code> at the document with a fragment selecting
-    the topic the picker is scoped to:</p>
-    <pre><code>view="topic" source="<i>data/feeds.ttl</i>#<i>News</i>"
-view="all"   source="<i>data/feeds.ttl</i>#<i>Feeds</i>"</code></pre>
-    <p>This path needs <code>rdflib</code> on the page — the loader pulls
-    it in transitively (deduped to one shared instance via the injected
-    importmap). The fragment is required &mdash; without it
-    the component shows a clear error.</p>
-
-    <h3>Bookmark form</h3>
-    <p>Topics nest via <code>bk:subTopicOf</code>; each <code>ui:Link</code>
-    is a feed and is tagged with a <code>bk:hasTopic</code>.</p>
-    <pre><code>@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
+  <p>The settings file lists your feeds, grouped into topics. A small one in
+  Turtle looks like this:</p>
+  <pre><code>@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
 @prefix bk: &lt;http://www.w3.org/2002/01/bookmark#&gt; .
 
-&lt;#Feeds&gt;   a bk:Topic ; ui:label "Feeds" .
-&lt;#News&gt;    a bk:Topic ; ui:label "News" ;     bk:subTopicOf &lt;#Feeds&gt; .
-&lt;#SciTech&gt; a bk:Topic ; ui:label "Sci/Tech" ; bk:subTopicOf &lt;#Feeds&gt; .
+&lt;#Feeds&gt; a bk:Topic ; ui:label "Feeds" .
+&lt;#News&gt;  a bk:Topic ; ui:label "News" ; bk:subTopicOf &lt;#Feeds&gt; .
 
 :00012 a ui:Link ;
   ui:label    "NY Times" ;
   bk:recalls  &lt;https://rss.nytimes.com/services/xml/rss/nyt/World.xml&gt; ;
   bk:hasTopic &lt;#News&gt; .</code></pre>
-
-    <h3>SKOS form</h3>
-    <p>The root is a <code>skos:ConceptScheme</code>; its top concepts
-    link back via <code>skos:topConceptOf</code> (or the inverse
-    <code>skos:hasTopConcept</code>); the rest of the hierarchy uses
-    <code>skos:broader</code> (or its inverse <code>skos:narrower</code>).
-    Feeds are subjects identified by their URL, declared as
-    <code>rss:channel</code>, labelled with <code>dct:title</code>, and
-    tagged with <code>dct:subject</code>.</p>
-    <pre><code>@prefix skos: &lt;http://www.w3.org/2004/02/skos/core#&gt; .
-@prefix dct:  &lt;http://purl.org/dc/terms/&gt; .
-@prefix rss:  &lt;http://purl.org/rss/1.0/&gt; .
-
-&lt;#Feeds&gt;   a skos:ConceptScheme ; skos:prefLabel "Feeds" .
-&lt;#News&gt;    a skos:Concept ; skos:prefLabel "News"     ; skos:topConceptOf &lt;#Feeds&gt; .
-&lt;#SciTech&gt; a skos:Concept ; skos:prefLabel "Sci/Tech" ; skos:topConceptOf &lt;#Feeds&gt; .
-
-&lt;https://rss.nytimes.com/services/xml/rss/nyt/World.xml&gt;
-  a           rss:channel ;
-  dct:title   "NY Times" ;
-  dct:subject &lt;#News&gt; .</code></pre>
-    <p>A SKOS twin of <code>data/feeds.ttl</code> lives at
-    <code>data/feeds-skos.ttl</code>; the bookmark file also declares
-    each <code>bk:recalls</code> URL as <code>a rss:channel</code> for
-    consumers that want that typing directly.</p>
-
-    <h3>Subtree scoping</h3>
-    <p>The picker walks down from the focus topic in the fragment using
-    every hierarchy predicate from either ontology, in either direction:
-    <code>bk:subTopicOf</code>, <code>skos:broader</code> /
-    <code>skos:narrower</code>, <code>skos:topConceptOf</code> /
-    <code>skos:hasTopConcept</code>. So
-    <code>source="…#News"</code> shows feeds tagged with News (and
-    anything broader-than/narrower-than News), while
-    <code>source="…#Feeds"</code> reaches every feed under that root.</p>
-
-    <h3>Out-of-subtree links</h3>
-    <p>Any feed whose topic is outside the focus subtree (or points at a
-    URI that isn't declared as a topic) is silently dropped — only feeds
-    whose topic is in the focus subtree appear in the picker.</p>
-  </div>
-
-  <!-- ── Styling: shadow parts + theme tokens ───────────────────────── -->
-  <div class="tab-panel" id="tab-styling" role="tabpanel" aria-labelledby="tabbtn-styling" tabindex="0">
-    <h2>Styling</h2>
-    <p><code>sol-feed</code> uses Shadow DOM, so its internals aren't
-    reachable with a normal selector. Two ways in: <b>shadow parts</b>
-    for elements the component exposes, and <b>CSS custom properties</b>
-    that cascade through the shadow boundary.</p>
-
-    <h3>Shadow parts (<code>view="all"</code>)</h3>
-    <table class="attr-table">
-      <thead><tr><th>Part</th><th>Element</th></tr></thead>
-      <tbody>
-        <tr><td><code>top-bar</code></td>
-            <td>The source-pill buttons strip + gear toggle row above
-                the articles grid.</td></tr>
-        <tr><td><code>articles</code></td>
-            <td>The article-cards grid container itself (scrollable
-                region).</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Default look — and how to retint</h3>
-    <p>Out of the box, <code>view="all"</code> paints a two-tone panel:
-    a darker strip behind the top-bar (controls) and a lighter strip
-    behind the articles grid, both relative to the page background via
-    <code>color-mix</code>. The two strips sit flush and the outer
-    corners are rounded so the pair reads as one continuous panel.</p>
-
-    <p>The simplest way to restyle is to set the two backdrop tokens
-    on the host element (or globally on <code>:root</code>):</p>
-    <pre><code>sol-feed {
-  --feed-top-bar-bg:   #2c3e50;          /* solid dark control strip */
-  --feed-articles-bg:  #ecf0f1;          /* solid pale article area */
-}</code></pre>
-
-    <p>For full control of the strips' padding / radius / border etc.,
-    drop down to <code>::part(top-bar)</code> and
-    <code>::part(articles)</code>:</p>
-    <pre><code>sol-feed::part(top-bar)   { padding: 1rem; border-radius: 0; }
-sol-feed::part(articles)  { padding: 2rem; border-radius: 0; }</code></pre>
-
-    <p>To kill both backdrops entirely (flat, no panel look):</p>
-    <pre><code>sol-feed {
-  --feed-top-bar-bg:  transparent;
-  --feed-articles-bg: transparent;
-}
-sol-feed::part(top-bar),
-sol-feed::part(articles) { border-radius: 0; padding: 0; }</code></pre>
-
-    <h3>CSS custom properties</h3>
-    <p>The component reads from the shared design tokens in
-    <code>web/styles/root.css</code>. Override on
-    <code>:root</code> (global) or on the host element (scoped):</p>
-    <table class="attr-table">
-      <thead><tr><th>Token</th><th>Used for</th></tr></thead>
-      <tbody>
-        <tr><td><code>--bg</code></td>
-            <td>page background &mdash; inherited; the feed's outer host has no own bg.</td></tr>
-        <tr><td><code>--surface</code></td>
-            <td>card backgrounds (article cards, picker fieldsets).</td></tr>
-        <tr><td><code>--border</code></td>
-            <td>card borders, source-pill borders, list separators.</td></tr>
-        <tr><td><code>--text</code>, <code>--text-muted</code></td>
-            <td>article body text and metadata.</td></tr>
-        <tr><td><code>--accent</code>, <code>--accent-dark</code></td>
-            <td>selected pill background, focus rings, hover bg.</td></tr>
-        <tr><td><code>--link</code></td>
-            <td><b>Article and source link colour</b> &mdash; both
-                <code>.feed-link</code> (link list) and
-                <code>.feed-card-title</code> (image-card grid).
-                Falls back to <code>--accent</code> when unset.</td></tr>
-        <tr><td><code>--hover</code>, <code>--focus-bg</code></td>
-            <td>list-row hover and selected highlights.</td></tr>
-        <tr><td><code>--font-ui</code>, <code>--font-size</code></td>
-            <td>typography on the host.</td></tr>
-        <tr><td><code>--feed-top-bar-bg</code></td>
-            <td>backdrop behind the top-bar (controls strip).
-                Default: <code>color-mix(in srgb, var(--bg) 75%, #000)</code>.</td></tr>
-        <tr><td><code>--feed-articles-bg</code></td>
-            <td>backdrop behind the articles grid.
-                Default: <code>color-mix(in srgb, var(--bg) 88%, #000)</code>.</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Note: <code>--divider-line</code></h3>
-    <p>Earlier versions painted divider lines at the top of the host
-    and between the top-bar and the articles grid using the project-
-    wide <code>--divider-line</code> token. Those internal dividers
-    were removed so the dashboard's two-tone tint (above) reads as one
-    continuous panel. The <code>--divider-line</code> token still
-    exists in <code>root.css</code> and is consumed by the dashboard's
-    own header strip and other components that opt in.</p>
-  </div>
-
-  <!-- ── Accessibility ──────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-a11y" role="tabpanel" aria-labelledby="tabbtn-a11y" tabindex="0">
-    <h2>Accessibility</h2>
-    <p>The component is keyboard and screen-reader friendly:</p>
-    <ul>
-      <li>Article and source links are real <code>&lt;a&gt;</code> elements
-      and open in a new tab with <code>rel="noopener noreferrer"</code>.</li>
-      <li>The news picker uses real <code>&lt;input type="checkbox"&gt;</code>
-      controls inside a labelled <code>&lt;fieldset&gt;</code>.</li>
-      <li>The source list in <code>view="topic"</code> is a navigation
-      landmark; the selected source carries <code>aria-current</code>.</li>
-      <li>Loading and error messages are announced through a polite
-      <code>aria-live</code> region.</li>
-      <li>News-card descriptions reveal on keyboard focus as well as hover,
-      so the overlay text is never mouse-only.</li>
-      <li>All colours come from the shared theme tokens, so the component
-      follows the page's light / dark setting.</li>
-    </ul>
-  </div>
-
-<script>
-  // Tab switching — click + arrow-key roving focus.
-  (function () {
-    var tablist = document.getElementById('tabs');
-    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
-
-    function select(tab) {
-      tabs.forEach(function (t) {
-        var on = t === tab;
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-        t.tabIndex = on ? 0 : -1;
-        document.getElementById(t.getAttribute('aria-controls'))
-                .classList.toggle('active', on);
-      });
-    }
-
-    tablist.addEventListener('click', function (e) {
-      var tab = e.target.closest('[role="tab"]');
-      if (tab) select(tab);
-    });
-
-    tablist.addEventListener('keydown', function (e) {
-      var i = tabs.indexOf(document.activeElement);
-      if (i < 0) return;
-      var next;
-      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
-      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
-      else if (e.key === 'Home') next = tabs[0];
-      else if (e.key === 'End') next = tabs[tabs.length - 1];
-      if (next) { e.preventDefault(); select(next); next.focus(); }
-    });
-  })();
-</script>
+  <p>The <code>#News</code> on the end of <code>source</code> picks which topic
+  to show. The same list can also be written in SKOS — a ready-made twin lives
+  at <code>data/feeds-skos.ttl</code>.</p>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- The loader injects the importmap and import()s sol-feed (rdflib,
-       dompurify, marked ride in transitively). -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-feed"></script>

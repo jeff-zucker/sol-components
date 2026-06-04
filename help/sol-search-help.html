@@ -11,211 +11,80 @@
 </head>
 <body class="tabbed-help help-sol-search">
 
-  <h1>sol-search component</h1>
-  <p class="page-intro">A multi-engine search field with two layouts:
-  an icon-trigger that pops up a panel
-  (<code>view="button"</code>), or an inline strip with the input
-  and engine radios always visible (<code>view="inline"</code>).
-  Engines come from a default list, a JSON attribute, or an RDF
-  source &mdash; the same bookmark vocabulary
-  <code>&lt;sol-feed&gt;</code> uses. Submitting opens the result in
-  a shared reader window so repeat searches don't spawn new tabs.</p>
+  <h1>sol-search</h1>
+  <p>A search box that can use several search engines. The visitor types a
+  query, picks an engine, and the results open in a reader window. You can show
+  it as a small icon that pops open a panel, or as an always-visible strip.</p>
 
-  <div class="tabs" id="tabs" role="tablist" aria-label="sol-search documentation">
-    <button role="tab" aria-selected="true"  aria-controls="tab-button"  id="tabbtn-button">Button (popup)</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-inline"  id="tabbtn-inline"  tabindex="-1">Inline</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-attr"    id="tabbtn-attr"    tabindex="-1">Attributes</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-engines" id="tabbtn-engines" tabindex="-1">Engine sources</button>
-    <button role="tab" aria-selected="false" aria-controls="tab-a11y"    id="tabbtn-a11y"    tabindex="-1">Accessibility</button>
+  <h2>Try it</h2>
+  <div class="demo-area">
+    <sol-search default-engine="ddg"></sol-search>
+  </div>
+  <div class="demo-area">
+    <sol-search view="inline"
+                default-engine="ddg"></sol-search>
   </div>
 
-  <!-- ── Demo: button (popup) ───────────────────────────────────────── -->
-  <div class="tab-panel active" id="tab-button" role="tabpanel" aria-labelledby="tabbtn-button" tabindex="0">
-    <div class="demo-area">
-      <sol-search default-engine="ddg"></sol-search>
-    </div>
-    <pre class="demo-code"><code>&lt;script src="dist/sol-loader.min.js"
-        data-stage="local"
-        data-bundles="sol-search"&gt;&lt;/script&gt;
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the component
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-search"&gt;&lt;/script&gt;</code></pre>
+  <p>Then drop the tag wherever you want the search box:</p>
+  <pre><code>&lt;sol-search default-engine="ddg"&gt;&lt;/sol-search&gt;</code></pre>
 
-&lt;sol-search <i>default-engine</i>="ddg"&gt;&lt;/sol-search&gt;</code></pre>
-  </div>
+  <h2>Options</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>view</code></td>
+          <td><code>button</code> (the default) shows a small icon that opens a
+              search panel when clicked — handy in a tight header.
+              <code>inline</code> shows the input, Go button, and engine choices
+              all the time — handy for a dedicated search strip.</td></tr>
+      <tr><td><code>engines</code></td>
+          <td>A JSON list of engines, each <code>{ id, label, url }</code>. The
+              visitor's query is added to the end of <code>url</code>. Use this
+              to set your own engine list right on the tag.</td></tr>
+      <tr><td><code>default-engine</code></td>
+          <td>Which engine starts selected — give its <code>id</code> (or full
+              web address). If left off, the first engine is used.</td></tr>
+      <tr><td><code>placeholder</code></td>
+          <td>The greyed-out hint text in the input box (default
+              <code>Search…</code>).</td></tr>
+    </tbody>
+  </table>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>. In particular,
+  <code>source</code> can point at a small settings file listing your engines
+  instead of using the <code>engines</code> attribute.</p>
+  <p>If you give neither <code>source</code> nor <code>engines</code>,
+  sol-search uses a built-in set: DuckDuckGo, Google, Wikipedia, prefix.cc,
+  LOV, Etymology, YouTube, and Wayback.</p>
 
-  <!-- ── Demo: inline ──────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-inline" role="tabpanel" aria-labelledby="tabbtn-inline" tabindex="0">
-    <div class="demo-area">
-      <sol-search view="inline"
-                  default-engine="ddg"></sol-search>
-    </div>
-    <pre class="demo-code"><code>&lt;sol-search
-  <i>view</i>="inline"
-  <i>default-engine</i>="ddg"
-&gt;&lt;/sol-search&gt;</code></pre>
-  </div>
-
-  <!-- ── Attributes ─────────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
-    <div class="api-block">
-      <table class="attr-table">
-        <thead><tr><th>Attribute</th><th>Required</th><th>Description</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>view</td>
-            <td>optional</td>
-            <td><code>button</code> (default) renders an icon trigger
-                that opens a panel on click;
-                <code>inline</code> renders the field, Go button, and
-                engines row directly with no toggle. Best inline use:
-                a dedicated search strip; best popup use: a header
-                where space is tight.</td>
-          </tr>
-          <tr>
-            <td>source</td>
-            <td>optional</td>
-            <td><code>file.ttl#TopicName</code> &mdash; an RDF engine
-                list (bookmark or SKOS vocabulary). See <b>Engine
-                sources</b>.</td>
-          </tr>
-          <tr>
-            <td>engines</td>
-            <td>optional</td>
-            <td>JSON array of <code>{id, label, url}</code> &mdash;
-                <code>url</code> is the search-URL prefix that
-                receives the query as its query-string tail.</td>
-          </tr>
-          <tr>
-            <td>default-engine</td>
-            <td>optional</td>
-            <td>The <code>id</code> (or full URL) of the engine that
-                starts selected. Falls back to the first engine.</td>
-          </tr>
-          <tr>
-            <td>placeholder</td>
-            <td>optional</td>
-            <td>Input placeholder text (default <code>Search…</code>).</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Theming via CSS parts</h3>
-    <p>Form, input, button, panel, and trigger are exposed as shadow
-    parts: <code>form</code>, <code>input</code>,
-    <code>submit</code>, <code>trigger</code>, <code>panel</code>.</p>
-    <pre><code>sol-search::part(input)  { padding: .6rem .9rem; }
-sol-search::part(submit) { background: var(--accent); }</code></pre>
-  </div>
-
-  <!-- ── Engine sources ─────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-engines" role="tabpanel" aria-labelledby="tabbtn-engines" tabindex="0">
-    <h2>Where the engine list comes from</h2>
-    <p>Sources are checked in order &mdash; the first that yields a
-    non-empty list wins:</p>
-
-    <h3>1. <code>source</code> (RDF)</h3>
-    <p>A Turtle file with a topic and a set of <code>ui:Link</code>
-    entries. The bookmark vocabulary is the simplest:</p>
-    <pre><code>@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
-@prefix bk: &lt;http://www.w3.org/2002/01/bookmark#&gt; .
-
-&lt;#SearchEngines&gt; a bk:Topic ; ui:label "Search engines" .
-
-:ddg  a ui:Link ; ui:label "DuckDuckGo" ;
-      bk:recalls &lt;https://duckduckgo.com/?q=&gt; ;
-      bk:hasTopic &lt;#SearchEngines&gt; .
-:wp   a ui:Link ; ui:label "Wikipedia"  ;
-      bk:recalls &lt;https://en.wikipedia.org/w/index.php?search=&gt; ;
-      bk:hasTopic &lt;#SearchEngines&gt; .</code></pre>
-    <p>Then point at the fragment:</p>
-    <pre><code>&lt;sol-search source="data/search-engines.ttl#SearchEngines"&gt;&lt;/sol-search&gt;</code></pre>
-    <p>SKOS works just as well (see
-    <a href="sol-feed-help.html">sol-feed help</a> &mdash; sol-search
-    shares the same source-list parser).</p>
-
-    <h3>2. <code>engines</code> (JSON attribute)</h3>
-    <p>One-off override without RDF. Each item is
-    <code>{ id, label, url }</code>; the user's query is appended to
-    <code>url</code>:</p>
-    <pre><code>&lt;sol-search view="inline" engines='[
+  <h2>Examples</h2>
+  <p>An always-visible strip with your own engine list:</p>
+  <pre><code>&lt;sol-search view="inline" engines='[
   { "id":"ddg", "label":"DuckDuckGo", "url":"https://duckduckgo.com/?q=" },
   { "id":"g",   "label":"Google",     "url":"https://www.google.com/search?q=" }
 ]'&gt;&lt;/sol-search&gt;</code></pre>
 
-    <h3>3. Built-in defaults</h3>
-    <p>If neither <code>source</code> nor <code>engines</code> is
-    given (or both fail), sol-search falls back to:
-    DuckDuckGo, Google, Wikipedia, prefix.cc, LOV, Etymology,
-    YouTube, Wayback. Set <code>default-engine</code> to one of those
-    <code>id</code>s to pre-select it.</p>
+  <p>Or point <code>source</code> at a small settings file that lists the
+  engines. In Turtle it looks like this:</p>
+  <pre><code>@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
+@prefix bk: &lt;http://www.w3.org/2002/01/bookmark#&gt; .
 
-    <h3>Layout: engines wrap to multiple rows</h3>
-    <p>When the engine list is too wide for the container, the radios
-    wrap onto a second (or third) row beneath the input/Go row.
-    There's no carousel &mdash; just normal flex-wrap; centred via
-    <code>justify-content: center</code> so each row reads as a
-    centred cluster.</p>
-  </div>
+&lt;#SearchEngines&gt; a bk:Topic ; ui:label "Search engines" .
 
-  <!-- ── Accessibility ──────────────────────────────────────────────── -->
-  <div class="tab-panel" id="tab-a11y" role="tabpanel" aria-labelledby="tabbtn-a11y" tabindex="0">
-    <h2>Accessibility</h2>
-    <ul>
-      <li>The input is a real <code>&lt;input type="search"&gt;</code>;
-          the Go button is a real <code>&lt;button type="submit"&gt;</code>.
-          Pressing Enter in the field submits the form &mdash; same
-          as clicking Go.</li>
-      <li><code>view="button"</code>: the trigger is a labelled
-          button with <code>aria-haspopup="dialog"</code> and
-          <code>aria-expanded</code>. The panel is a
-          <code>role="dialog"</code>; Escape closes it, and an
-          outside-click closes it via document-level pointer-down
-          listener (cleaned up on disconnect).</li>
-      <li>Engines are real <code>&lt;input type="radio"&gt;</code>
-          controls inside <code>&lt;label&gt;</code> elements &mdash;
-          tab into the group, arrow-keys to switch.</li>
-      <li>The first engine in the list is auto-selected on render so
-          screen readers can announce a default choice.</li>
-      <li>All colours come from shared theme tokens, so the widget
-          follows the page's light / dark setting.</li>
-    </ul>
-  </div>
-
-<script>
-  (function () {
-    var tablist = document.getElementById('tabs');
-    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
-
-    function select(tab) {
-      tabs.forEach(function (t) {
-        var on = t === tab;
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-        t.tabIndex = on ? 0 : -1;
-        document.getElementById(t.getAttribute('aria-controls'))
-                .classList.toggle('active', on);
-      });
-    }
-
-    tablist.addEventListener('click', function (e) {
-      var tab = e.target.closest('[role="tab"]');
-      if (tab) select(tab);
-    });
-
-    tablist.addEventListener('keydown', function (e) {
-      var i = tabs.indexOf(document.activeElement);
-      if (i < 0) return;
-      var next;
-      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
-      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
-      else if (e.key === 'Home') next = tabs[0];
-      else if (e.key === 'End') next = tabs[tabs.length - 1];
-      if (next) { e.preventDefault(); select(next); next.focus(); }
-    });
-  })();
-</script>
+:ddg a ui:Link ; ui:label "DuckDuckGo" ;
+     bk:recalls  &lt;https://duckduckgo.com/?q=&gt; ;
+     bk:hasTopic &lt;#SearchEngines&gt; .
+:wp  a ui:Link ; ui:label "Wikipedia" ;
+     bk:recalls  &lt;https://en.wikipedia.org/w/index.php?search=&gt; ;
+     bk:hasTopic &lt;#SearchEngines&gt; .</code></pre>
+  <p>Then point at it with the <code>#Topic</code> on the end:</p>
+  <pre><code>&lt;sol-search source="data/search-engines.ttl#SearchEngines"&gt;&lt;/sol-search&gt;</code></pre>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- The loader injects the importmap and import()s sol-search (rdflib,
-       dompurify, marked ride in transitively). -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-search"></script>

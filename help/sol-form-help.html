@@ -9,273 +9,104 @@
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
 
-  <!-- The loader injects the importmap and loads the ordered editing stack
-       (solid-logic → solid-ui → sol-tree-edit → sol-form → sol-settings) for
-       data-with="rdf", plus the sol-basic family for the demo tags. solid-logic
-       self-registers its singleton store (the one solid-ui's enumerators walk)
-       before solid-ui sets window.UI (fieldFunction) that sol-form renders
-       through — the loader does that ordering for you. Paths are relative to
-       this file (help/ is one level below project root). -->
+  <!-- Loads the components so the live demo on this page works. -->
+
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-basic"
-          data-with="rdf"></script>
+          data-with="rdf"
+  ></script>
+
   <script type="module">
-    // Expose solid-logic for the demo once the stack is ready. The loader's
-    // injected importmap makes the bare 'solid-logic' specifier resolvable, and
-    // SolidWebComponents.ready guarantees the singleton store is registered.
     await SolidWebComponents.ready;
     const solidLogic = await import('solid-logic');
     if (typeof window !== 'undefined') window.solidLogic = solidLogic;
   </script>
 
 </head>
-<body class="tabbed-help">
-  <!-- ──────────────────────────────  Demo  ────────────────────────── -->
-  <div class="tab-panel active" id="tab-demo" role="tabpanel" aria-labelledby="tabbtn-demo" tabindex="0">
-    <div class="demo-grid">
-      <section class="panel">
-        <header class="panel-head">
-          <span class="label">shapes/weather-settings.shacl</span>
-          <span class="hint">read-only</span>
-        </header>
-        <sol-include class="shacl" source="../shapes/weather-settings.shacl" raw></sol-include>
-      </section>
+<body class="scroll-help">
 
-      <section class="panel">
-        <header class="panel-head">
-          <span class="label">Generated form &mdash; sol-weather settings</span>
-          <span class="hint">no-edit</span>
-        </header>
-        <div class="panel-body">
-          <sol-form id="form-host"
-                    subject="data/weather-demo.ttl#Settings"
-                    shape="../shapes/weather-settings.shacl"
-                    no-edit></sol-form>
-        </div>
-      </section>
-    </div>
+  <h1>sol-form</h1>
+  <p>Turns a description of some data into a ready-made edit form. You give it a
+  small file listing the fields you want (their names and types) and the data
+  file to edit, and it builds the inputs, fills them in, and saves changes back
+  for you. Use it whenever you need a form over a Solid data file without
+  hand-writing the HTML for every field.</p>
+
+  <h2>Try it</h2>
+  <div class="demo-grid">
+    <section class="panel">
+      <header class="panel-head">
+        <span class="label">shapes/weather-settings.shacl</span>
+        <span class="hint">read-only</span>
+      </header>
+      <sol-include class="shacl" source="../shapes/weather-settings.shacl" raw></sol-include>
+    </section>
+
+    <section class="panel">
+      <header class="panel-head">
+        <span class="label">Generated form &mdash; sol-weather settings</span>
+        <span class="hint">no-edit</span>
+      </header>
+      <div class="panel-body">
+        <sol-form id="form-host"
+                  subject="data/weather-demo.ttl#Settings"
+                  shape="../shapes/weather-settings.shacl"
+                  no-edit></sol-form>
+      </div>
+    </section>
   </div>
+  <p>On the left is the field description (a SHACL file). On the right is the
+  form <code>sol-form</code> built from it. This demo is read-only.</p>
 
-  <!-- ────────────────────────────  Attributes  ────────────────────── -->
-  <div class="tab-panel" id="tab-attr" role="tabpanel" aria-labelledby="tabbtn-attr" tabindex="0">
-    <h2>Attributes</h2>
-    <table class="mapping">
-      <thead>
-        <tr><th>Attribute</th><th>Type</th><th>Purpose</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>shape</td>
-          <td>URI</td>
-          <td>SHACL shape file URL. When present (and no <code>source</code>) sol-form runs in shape-driven mode: parses the shape and generates inputs from it. The shape's targeting rules find the editable subject in the data document.</td>
-        </tr>
-        <tr>
-          <td>source</td>
-          <td>URI</td>
-          <td>A hand-authored <code>ui:Form</code> TTL describing the field layout. Triggers form-driven mode: solid-ui renders the form definition. Legacy path; new components use <code>shape</code> instead.</td>
-        </tr>
-        <tr>
-          <td>subject</td>
-          <td>URI with optional #fragment</td>
-          <td>The RDF resource being edited. Fragment pins one specific subject; without a fragment, all subjects matching the shape's targets are in scope (multi-subject view modes to come). Data document URL is the part before the <code>#</code>.</td>
-        </tr>
-        <tr>
-          <td>save-to</td>
-          <td>URI</td>
-          <td>Override for the PUT destination. Defaults to <code>subject</code>'s document URL. Useful when reading from one location and saving to another (e.g. read a template, save to a user's pod).</td>
-        </tr>
-        <tr>
-          <td>no-edit</td>
-          <td>boolean (presence)</td>
-          <td>Render the form as a read-only view: inputs show current values but can't be changed (text/number/url get HTML <code>readonly</code>; selects and checkboxes get <code>disabled</code>); no <code>+ Add</code> / <code>−</code> chrome; save bar hidden. The Demo tab above uses this. Useful for documentation surfaces, sharing a deep-link to "look at this configuration," or anywhere the same shape needs both an editor and a viewer.</td>
-        </tr>
-      </tbody>
-    </table>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-with="rdf"&gt;&lt;/script&gt;</code></pre>
+  <p>Then point a form at a field description and the data file to edit:</p>
+  <pre><code>&lt;sol-form
+    shape="shapes/weather-settings.shacl"
+    subject="data/weather-settings.ttl#Settings"
+&gt;&lt;/sol-form&gt;</code></pre>
+  <p>That reads the data, shows one input per field, and saves your edits back
+  to the data file automatically.</p>
 
-    <h2 style="margin-top:1.5rem">Events</h2>
-    <table class="mapping">
-      <thead><tr><th>Event</th><th>Detail</th><th>When</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>sol-form-change</td>
-          <td><code>{ subject, ok, message }</code></td>
-          <td>After every field commit (typing, picking from a select, etc.). Fires before the debounced auto-save.</td>
-        </tr>
-        <tr>
-          <td>sol-form-save</td>
-          <td><code>{ subject, turtle, target }</code></td>
-          <td>After a successful PUT. <code>turtle</code> is the serialized document; <code>target</code> is the URL it was written to.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <h2>Options</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>subject</code></td>
+          <td>The data being edited — the data file, with an optional
+              <code>#Name</code> on the end to pick one entry inside it (e.g.
+              <code>data/weather.ttl#Settings</code>). The form reads from here
+              and, unless you set <code>save-to</code>, writes back here too.</td></tr>
+      <tr><td><code>no-edit</code></td>
+          <td>Show the form read-only: the current values are visible but can't
+              be changed and there's no save bar. Handy for a "look, don't
+              touch" view of a configuration.</td></tr>
+    </tbody>
+  </table>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>. In particular
+  <code>shape</code> (the field description) and <code>save-to</code> (an
+  alternate place to write edits) are covered there.</p>
 
-  <!-- ────────────────────────────  Modes  ─────────────────────────── -->
-  <div class="tab-panel" id="tab-modes" role="tabpanel" aria-labelledby="tabbtn-modes" tabindex="0">
-    <h2>Shape-driven vs form-driven</h2>
-    <p>sol-form has two rendering paths. The choice depends on whether you have a SHACL shape (use shape-driven) or a hand-authored <code>ui:Form</code> TTL (form-driven). They produce identical edits to the data file.</p>
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- a normal editable form built from a field description --&gt;
+&lt;sol-form shape="shapes/profile.shacl" subject="profile/card.ttl#me"&gt;&lt;/sol-form&gt;
 
-    <h2 style="margin-top:1rem">Shape-driven (recommended for new components)</h2>
-    <pre>&lt;sol-form
-  shape="shapes/weather-settings.shacl"
-  subject="data/weather-settings.ttl#Settings"&gt;
-&lt;/sol-form&gt;</pre>
-    <p>sol-form fetches the SHACL shape, calls <code>parseShape()</code> in <code>core/shape-to-form.js</code> to extract a normalized property descriptor list, and renders one input per property. Cardinality, datatype, enum, and nodeKind constraints all come from the shape — no separate form file needed.</p>
-    <p>The SHACL shape is also handed to <code>rdf-validate-shacl</code> before every save. Edits that violate the shape surface as validation errors and the PUT is skipped.</p>
+&lt;!-- read-only: show the values without letting anyone change them --&gt;
+&lt;sol-form shape="shapes/profile.shacl" subject="profile/card.ttl#me" no-edit&gt;&lt;/sol-form&gt;
 
-    <h2 style="margin-top:1rem">Form-driven (legacy)</h2>
-    <pre>&lt;sol-form
-  source="data/menu-form.ttl"
-  subject="data/menu.ttl#MainMenu"&gt;
-&lt;/sol-form&gt;</pre>
-    <p>sol-form fetches the <code>ui:Form</code> definition and hands it to solid-ui's form widgets. The form file is hand-authored TTL using the <code>http://www.w3.org/ns/ui#</code> vocabulary (<code>ui:SingleLineTextField</code>, <code>ui:Multiple</code>, <code>ui:Choice</code> + <code>ui:from</code>, etc.). Still used by sol-tabs's editor (sol-menu's editor moved to the shape-driven <code>sol-tree-edit</code> over <code>menu.shacl</code>).</p>
-
-    <h2 style="margin-top:1rem">Where the form definition lives</h2>
-    <table class="mapping">
-      <thead><tr><th>Mode</th><th>Shape</th><th>Data</th><th>Form</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>Form-driven</td>
-          <td>Optional (validation only)</td>
-          <td>TTL on disk; read &amp; auto-saved</td>
-          <td>TTL on disk; read-only</td>
-        </tr>
-        <tr>
-          <td>Shape-driven</td>
-          <td>TTL on disk; read-only</td>
-          <td>TTL on disk; read &amp; auto-saved</td>
-          <td><i>Doesn't exist as an artifact</i> — runtime DOM only, computed from the shape</td>
-        </tr>
-      </tbody>
-    </table>
-    <p style="margin-top:.8rem">If you need a persistent form-as-an-artifact in shape-driven mode (for docs, code review, or non-solid-ui tooling), use the <a href="#tab-script">CLI</a> to materialise one from any shape file.</p>
-  </div>
-
-  <!-- ──────────────────────────  SHACL mapping  ──────────────────── -->
-  <div class="tab-panel" id="tab-mapping" role="tabpanel" aria-labelledby="tabbtn-mapping" tabindex="0">
-    <h2>SHACL constructs shape2form recognises</h2>
-    <p>The list below covers the shape-driven path. The runtime renderer in <code>core/shape-to-form.js</code> walks each <code>sh:property</code> entry on the <code>NodeShape</code> and matches against this table.</p>
-
-    <table class="mapping">
-      <thead>
-        <tr><th>SHACL</th><th>Renders as</th><th>Notes</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>sh:targetSubjectsOf</td><td>&mdash;</td><td>Finds the subject(s) to edit by structural match. <code>sh:targetNode &lt;#X&gt;</code> resolves relative URIs against the shape's URL (not the data's), so it almost never matches what you mean — use <code>sh:targetSubjectsOf</code> instead.</td></tr>
-        <tr><td>sh:property + sh:path</td><td>One row in the form</td><td>Each <code>sh:property</code> describes one editable predicate. The <code>sh:path</code> is the real RDF predicate the input binds to (e.g. <code>geo:lat</code>, <code>schema:timezone</code>, <code>dct:source</code>).</td></tr>
-        <tr><td>sh:datatype xsd:string</td><td>text input</td><td>Single-line text input.</td></tr>
-        <tr><td>sh:datatype xsd:integer</td><td>number input</td><td>Whole-number input.</td></tr>
-        <tr><td>sh:datatype xsd:decimal</td><td>number input</td><td>With <code>step="any"</code> for fractional values.</td></tr>
-        <tr><td>sh:datatype xsd:boolean</td><td>checkbox</td><td>Stored as <code>"true"</code>/<code>"false"</code> typed literal.</td></tr>
-        <tr><td>sh:datatype xsd:anyURI</td><td>url input</td><td>Stored as typed literal. Use <code>sh:nodeKind sh:IRI</code> instead to store as a NamedNode.</td></tr>
-        <tr><td>sh:in (literals)</td><td><code>&lt;select&gt;</code> dropdown</td><td>Enumerated allowed values; the shape's list becomes the options.</td></tr>
-        <tr><td>sh:in (IRIs)</td><td><code>&lt;select&gt;</code> dropdown</td><td>For NamedNode enums (e.g. <code>qudt:SI</code>), the select stores the URI but displays an <code>rdfs:label</code> from the shape — author labels next to the URIs (see <code>shapes/weather-settings.shacl</code> for the pattern).</td></tr>
-        <tr><td>sh:nodeKind sh:IRI</td><td>url input</td><td>Value stored as a NamedNode (<code>&lt;url&gt;</code> in turtle), not a literal.</td></tr>
-        <tr><td>sh:minCount 1</td><td>Required (placeholder seeded)</td><td>If the data has no value for the predicate, a blank one is added on render so the user has somewhere to type.</td></tr>
-        <tr><td>sh:maxCount &gt; 1 or absent</td><td>Repeat controls</td><td>The field renders with <code>+ Add another</code> and <code>−</code> buttons for each value.</td></tr>
-        <tr><td>sh:name</td><td>Label text</td><td>Displayed next to the input.</td></tr>
-        <tr><td>sh:description</td><td>Tooltip</td><td>Set as the label's <code>title</code> attribute.</td></tr>
-      </tbody>
-    </table>
-
-    <p style="margin-top:1rem">Constructs <i>not</i> currently recognised (treated as plain text inputs): <code>sh:pattern</code>, <code>sh:minInclusive</code>, <code>sh:maxInclusive</code>, <code>sh:minLength</code>, <code>sh:maxLength</code>. <code>sh:or</code> and <code>sh:and</code> are in the next batch — see <code>claude/plans/PLAN-shape2form-or-and.md</code>. Adding more is additive: new branches in <code>core/shape-to-form.js</code>'s <code>readShapeProperty</code> and <code>buildShapeInput</code>.</p>
-
-    <h2 style="margin-top:1.5rem">Previously: PropertyValue indirection (now removed)</h2>
-    <p>Earlier versions of shape2form recognised the <code>schema:additionalProperty</code> + <code>sh:qualifiedValueShape</code> pattern (every setting reified as a <code>schema:PropertyValue</code> with <code>schema:name</code> + <code>schema:value</code>). That pattern was migrated out in favour of direct predicates — see <code>claude/plans/PLAN-vocab-migration.md</code>. Component settings now bind to standard W3C / Schema.org / Dublin Core / QUDT / OWL-Time predicates directly.</p>
-    <p>The one remaining use of PropertyValue indirection in the codebase is <code>menu items'</code> <code>ui:attribute</code> Multiple — that's deliberate, because menu Component items carry HTML attributes whose names depend on the element being instantiated (an open schema, where indirection is the right tool).</p>
-  </div>
-
-  <!-- ────────────────────────────  CLI  ───────────────────────────── -->
-  <div class="tab-panel" id="tab-script" role="tabpanel" aria-labelledby="tabbtn-script" tabindex="0">
-    <h2>shape2form CLI</h2>
-    <p>A Node script that emits a static <code>ui:Form</code> TTL from a SHACL shape — the persistent "third artifact" mentioned in the <a href="#tab-modes">Modes</a> tab. Useful for documentation, code review, and consumption by tooling that expects a <code>ui:Form</code> file (other than solid-ui's vanilla renderer — see caveat below).</p>
-
-    <h2 style="margin-top:1rem">Usage</h2>
-    <pre>node scripts/shape2form.mjs &lt;input.shacl&gt; [--out &lt;output.ttl&gt;]
-node scripts/shape2form.mjs &lt;input.shacl&gt; --stdout
-node scripts/shape2form.mjs &lt;input.shacl&gt; --name MyForm</pre>
-
-    <h2 style="margin-top:1rem">Example</h2>
-    <p>Running it on the weather shape:</p>
-    <pre>$ node scripts/shape2form.mjs shapes/weather-settings.shacl --stdout
-
-# Generated by scripts/shape2form.mjs from weather-settings.shacl.
-@prefix ui: &lt;http://www.w3.org/ns/ui#&gt; .
-@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
-@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
-@prefix dct: &lt;http://purl.org/dc/terms/&gt; .
-@prefix geo: &lt;http://www.w3.org/2003/01/geo/wgs84_pos#&gt; .
-@prefix schema: &lt;http://schema.org/&gt; .
-@prefix time: &lt;http://www.w3.org/2006/time#&gt; .
-
-:WeatherForm a ui:Form ;
-  ui:label "Weather" ;
-  ui:parts ( :lat :long :addressLocality :conformsToMultiple :hours ) .
-
-:conformsToMultiple a ui:Multiple ;
-  ui:property dct:conformsTo ;
-  ui:label "Unit system(s)s" ;
-  ui:part :conformsTo .
-
-:lat a ui:DecimalField ;
-  ui:property geo:lat ;
-  ui:label "Latitude" ;
-  ui:required true ;
-  rdfs:comment "Decimal latitude (-90 to 90)" .
-
-# … one block per shape property …
-
-:ConformsToType a rdfs:Class .
-:ConformsToType-metric a :ConformsToType ;
-  rdfs:label "metric" ; owl:sameAs &lt;http://qudt.org/vocab/sou/SI&gt; .
-:ConformsToType-imperial a :ConformsToType ;
-  rdfs:label "imperial" ; owl:sameAs &lt;http://qudt.org/vocab/sou/USCustomaryUnits&gt; .</pre>
-
-    <h2 style="margin-top:1rem">SHACL → ui:* mapping</h2>
-    <table class="mapping">
-      <thead><tr><th>SHACL</th><th>ui:* field type</th></tr></thead>
-      <tbody>
-        <tr><td>sh:datatype xsd:string</td><td>ui:SingleLineTextField</td></tr>
-        <tr><td>sh:datatype xsd:integer</td><td>ui:IntegerField</td></tr>
-        <tr><td>sh:datatype xsd:decimal</td><td>ui:DecimalField</td></tr>
-        <tr><td>sh:datatype xsd:boolean</td><td>ui:BooleanField</td></tr>
-        <tr><td>sh:datatype xsd:anyURI</td><td>ui:NamedNodeURIField</td></tr>
-        <tr><td>sh:datatype xsd:date</td><td>ui:DateField</td></tr>
-        <tr><td>sh:datatype xsd:dateTime</td><td>ui:DateTimeField</td></tr>
-        <tr><td>sh:nodeKind sh:IRI</td><td>ui:NamedNodeURIField</td></tr>
-        <tr><td>sh:in (literals)</td><td>ui:Choice + auto-generated rdfs:Class with instances</td></tr>
-        <tr><td>sh:in (IRIs)</td><td>ui:Choice + class whose instances are <code>owl:sameAs</code>-linked to the original URIs (labels copied from the shape's <code>rdfs:label</code> declarations)</td></tr>
-        <tr><td>sh:maxCount &gt; 1 or absent</td><td>wrapped in ui:Multiple</td></tr>
-      </tbody>
-    </table>
-
-    <h2 style="margin-top:1rem">After the direct-predicate migration</h2>
-    <p>After the vocab migration (see <code>claude/plans/PLAN-vocab-migration.md</code>), the generated forms point <code>ui:property</code> at the actual editable predicate — <code>geo:lat</code>, <code>dct:source</code>, <code>schema:timezone</code>, etc. — instead of the old <code>schema:additionalProperty</code> placeholder. <b>The generated forms are now solid-ui-renderable</b> for the first time: drop one into <code>&lt;sol-form source="…this-file.ttl" subject="…data.ttl#X"&gt;</code> for the legacy form-driven path, or use <code>&lt;sol-form shape="…" subject="…"&gt;</code> for the same fields rendered via shape-to-form's runtime.</p>
-  </div>
-
-  <script>
-    // Tab switching — same pattern as the other component help pages.
-    (function () {
-      const tabs = document.querySelectorAll('#tabs [role="tab"]');
-      const panels = document.querySelectorAll('.tab-panel');
-      function select(id) {
-        tabs.forEach(t => {
-          const sel = t.getAttribute('aria-controls') === id;
-          t.setAttribute('aria-selected', sel ? 'true' : 'false');
-          t.tabIndex = sel ? 0 : -1;
-        });
-        panels.forEach(p => p.classList.toggle('active', p.id === id));
-      }
-      tabs.forEach(t => {
-        t.addEventListener('click', () => select(t.getAttribute('aria-controls')));
-      });
-      // Deep-link via hash: #tab-mapping etc. (matches the rest of the help system).
-      if (location.hash && /^#tab-[a-z-]+$/.test(location.hash)) {
-        select(location.hash.slice(1));
-      }
-    })();
-  </script>
+&lt;!-- read from one file, save edits to another --&gt;
+&lt;sol-form
+    shape="shapes/profile.shacl"
+    subject="templates/profile.ttl#me"
+    save-to="https://me.example/profile/card.ttl#me"
+&gt;&lt;/sol-form&gt;</code></pre>
+  <p>The field description (the <code>shape</code> file) decides which inputs
+  appear and what kind each is — a text box, a number, a checkbox, a dropdown,
+  and so on. Add a field there and it shows up in the form automatically.</p>
 
 </body>
 </html>

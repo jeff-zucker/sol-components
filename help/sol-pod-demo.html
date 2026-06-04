@@ -8,43 +8,77 @@
 </head><body class="pod-demo">
 
 <div class="container">
-  <h1> sol-pod component </h1>
+  <h1>sol-pod</h1>
+  <p>A file browser for a user's Solid pod (their personal online storage). It
+  shows a pod's folders and files, lets the user switch between pods, and tells
+  your page which item they clicked so you can react to it.</p>
 
-  <!-- No `source` — sol-pod discovers pods from the current origin
-       (and again on login). Discovery only finds pods when this page is
-       served from a Solid origin.
-       `gear-icon` swaps the default ⚙ for an image; here we use this
-       project's Solid logo. If you omit the attribute you get the ⚙.
-       If you give it a short string (like a single emoji) it's used
-       as text. If it contains a slash or ends in svg/png/jpg/gif/webp
-       it's rendered as <img>. -->
+  <h2>Try it</h2>
   <sol-pod gear-icon="../web/styles/solid-logo.svg"></sol-pod>
   <div id="results"></div>
 
-  <h3>Attributes</h3>
-  <ul>
-    <li><code>source</code> — pod storage URL or comma/space-separated list. Omit to auto-discover from the current origin / WebID.</li>
-    <li><code>login</code> — CSS selector for an external <code>&lt;sol-login&gt;</code>. Omit to use the built-in one in the header.</li>
-    <li><code>login-mode</code>, <code>login-callback</code>, <code>issuers</code>, <code>side</code> — forwarded to the built-in <code>&lt;sol-login&gt;</code>.</li>
-    <li><code>pod-click-action</code> — function (assigned via JS property) or named handler. Receives <code>(item, podEl)</code> when the user clicks the per-item icon, presses Enter, or double-clicks. Item carries <code>{ url, name, displayName, isContainer, contentType }</code>.</li>
-    <li><code>handler</code> — alias for <code>pod-click-action</code>.</li>
-    <li><code>gear-icon</code> — replaces the default <code>⚙</code> per-item button. URL (contains <code>/</code> or ends in svg/png/jpg/gif/webp) → renders as <code>&lt;img&gt;</code>; otherwise used as text.</li>
-    <li><code>pods-group</code> — shared pod-list scope across multiple <code>&lt;sol-pod&gt;</code>s on the page. Absent = default shared group; <code>'none'</code> = standalone registry.</li>
-  </ul>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-pod"&gt;&lt;/script&gt;</code></pre>
+  <p>Then drop the tag in. With no <code>source</code> it finds the pods for the
+  signed-in user on its own:</p>
+  <pre><code>&lt;sol-pod&gt;&lt;/sol-pod&gt;</code></pre>
 
-  <h3>Pod selector display</h3>
-  <p>The pod dropdown strips the <code>http://</code> / <code>https://</code> prefix from each option for compactness — <code>https://alice.solidcommunity.net/</code> shows as <code>alice.solidcommunity.net/</code>. The option's <code>value</code> stays the full URL so selection / fetch are unchanged.</p>
-  <p>The selector also has <code>min-width: 0</code> in flex layouts so the login + settings buttons stay visible even in narrow sidebars; long URLs ellipsis-truncate inside the select.</p>
+  <h2>Options</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>source</code></td>
+          <td>The pod address to show, or a comma- or space-separated list of
+              several. Leave it off to find the signed-in user's pods
+              automatically.</td></tr>
+      <tr><td><code>gear-icon</code></td>
+          <td>Replaces the default <code>⚙</code> button next to each item. Give
+              it a short bit of text (like a single emoji) to use as text, or an
+              image address (one containing a <code>/</code> or ending in
+              <code>.svg</code>/<code>.png</code>/<code>.jpg</code>/<code>.gif</code>/<code>.webp</code>)
+              to show a picture.</td></tr>
+      <tr><td><code>pod-click-action</code></td>
+          <td>What happens when the user picks an item (clicks its icon, presses
+              Enter, or double-clicks). Set it in JavaScript to a function; it
+              receives the item, including its <code>url</code>, <code>name</code>,
+              <code>displayName</code>, whether it's a folder, and its content
+              type. <code>handler</code> is another name for the same thing.</td></tr>
+      <tr><td><code>login-mode</code>, <code>login-callback</code>,
+              <code>issuers</code>, <code>side</code></td>
+          <td>Passed straight through to the built-in sign-in box, to control how
+              and where signing in happens.</td></tr>
+      <tr><td><code>pods-group</code></td>
+          <td>Lets several <code>&lt;sol-pod&gt;</code> tags on one page share the
+              same pod list. Leave it off to share by default, or set it to
+              <code>none</code> to keep a tag on its own.</td></tr>
+    </tbody>
+  </table>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
 
-  <h3>Breadcrumb gear (current-container ops)</h3>
-  <p>The breadcrumb row has a ⚙ pushed to the right edge that opens the <code>&lt;sol-pod-ops&gt;</code> modal scoped to whatever container the pod is currently showing — including the root / home view. Same modal you get for per-item clicks; just operates on "this folder" instead of a specific file.</p>
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- find the signed-in user's pods automatically --&gt;
+&lt;sol-pod&gt;&lt;/sol-pod&gt;
 
-  <h3>Pod discovery</h3>
-  <p>With no <code>source</code> attribute, <code>sol-pod.discover()</code> reads <code>/.meta</code>, <code>/.well-known/solid</code>, and <code>/.acl</code> at the current origin for owner WebIDs, then loads each WebID's profile and harvests <code>pim:storage</code> triples. It also walks <code>owl:sameAs</code> <b>in both directions</b> — a profile that asserts <code>&lt;remote&gt; owl:sameAs &lt;local&gt;</code> chains the same as one that asserts the inverse, so authoring direction doesn't matter. Logs each step at <code>console.info('[pod-ops] …')</code>.</p>
-  <p>Discovery only fires when the shared pod registry is empty. A host that seeded the registry (e.g. podz restoring the previous session's pod list) is authoritative — sol-pod treats the seed as the dropdown's contents and skips discovery. Clear the seed to force re-discovery.</p>
+&lt;!-- show one specific pod --&gt;
+&lt;sol-pod source="https://alice.solidcommunity.net/"&gt;&lt;/sol-pod&gt;
 
-  <!-- The loader registers sol-pod and injects the importmap; its deps
-       (rdflib + dompurify) ride in transitively, deduped to one instance. -->
+&lt;!-- use a different icon next to each item --&gt;
+&lt;sol-pod gear-icon="📁"&gt;&lt;/sol-pod&gt;</code></pre>
+  <p>To react when the user picks a file, set <code>podClickAction</code> in
+  JavaScript — that's what the live demo above does, showing the item's details
+  in the box under the browser:</p>
+  <pre><code>&lt;script type="module"&gt;
+  await SolidWebComponents.ready;
+  const pod = document.querySelector('sol-pod');
+  pod.podClickAction = (item) =&gt; {
+    console.log('picked', item.name, item.url);
+  };
+&lt;/script&gt;</code></pre>
+
+  <!-- Loads the components so the live demo on this page works. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-pod"></script>

@@ -8,82 +8,81 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- The loader registers sol-button + its display surfaces (sol-include /
-       sol-modal / sol-window are part of sol-basic). dompurify + marked ride in
-       transitively (sol-include's sanitizer / Markdown). No rdflib needed —
-       sol-basic is the no-RDF tier. -->
+
+  <!-- Loads the components so the live demo on this page works. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-bundles="sol-basic"></script>
+          data-bundles="sol-basic"
+  ></script>
+
 </head>
 <body class="scroll-help">
 
-  <h1>sol-button component</h1>
-  <p>A declarative launcher: a trigger button that, on click, renders content
-  into a <b>region</b>. What renders is the <code>handler</code> (a component,
-  defaulting to <code>sol-include</code>); where it lands is <code>region</code>
-  — a CSS selector (a pane on the page) or a keyword that conjures an ephemeral
-  surface (<code>modal</code> / <code>floating</code> / <code>tab</code> /
-  <code>window</code>) with no host element to author.</p>
+  <h1>sol-button</h1>
+  <p>A button that opens something when you click it — a page, a file, another
+  component, or an outside website. You choose <strong>what</strong> it opens and
+  <strong>where</strong> it appears: in an area of your page, or in a pop-up.
+  Think of it as a link you can point anywhere.</p>
 
-  <h2>Live demo</h2>
+  <h2>Try it</h2>
   <div class="demo-area" style="display:flex; gap:1rem; align-items:flex-start;">
-    <sol-button source="../shapes/menu-terms.md" raw region="modal" name="Menu terms">Open in a modal →</sol-button>
-    <sol-button source="../shapes/menu-terms.md" raw region="#bt-pane" name="terms">Load into the pane →</sol-button>
+    <sol-button source="../shapes/menu-terms.md" raw region="modal" name="Menu terms">Open in a pop-up →</sol-button>
+    <sol-button source="../shapes/menu-terms.md" raw region="#bt-pane" name="terms">Open in the box below →</sol-button>
   </div>
   <div id="bt-pane" style="margin-top:.5rem; border:1px solid var(--border,#ccc); min-height:3rem; padding:.5rem;"></div>
 
-  <h2>Attributes</h2>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-basic"&gt;&lt;/script&gt;</code></pre>
+  <p>Then use the tag anywhere you like. The words between the tags are the
+  button's label:</p>
+  <pre><code>&lt;sol-button source="welcome.html" region="#main"&gt;Welcome&lt;/sol-button&gt;</code></pre>
+  <p>That makes a button labelled <em>Welcome</em>; clicking it loads
+  <code>welcome.html</code> into the element on your page with
+  <code>id="main"</code>.</p>
+
+  <h2>Options</h2>
   <table class="attr-table">
-    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td><code>handler</code></td>
-          <td>Tag of the component to mount. Optional — when omitted it's inferred
-              from <code>source</code>: same-origin → trusted <code>sol-include</code>,
-              external URL → <code>iframe</code>.</td></tr>
-      <tr><td><code>region</code></td>
-          <td>Where the result surfaces. A <b>CSS selector</b> → render into that
-              pane (a keep-alive tab). Or a <b>keyword</b> — <code>modal</code>,
-              <code>floating</code>, <code>tab</code>, <code>window</code> — conjured
-              on click, no host element needed. Resolved by cascade: this attribute
-              → a parent <code>[region]</code> container → an enclosing
-              <code>&lt;sol-menu&gt;</code> → <code>&lt;sol-default region&gt;</code>.</td></tr>
       <tr><td><code>source</code></td>
-          <td>Forwarded to the handler (e.g. <code>sol-include</code>'s <code>source</code>).</td></tr>
+          <td>What to open — a page, a file, or a web address.</td></tr>
+      <tr><td><code>region</code></td>
+          <td>Where it opens. Either a CSS selector for an area of your page (for
+              example <code>#main</code>), or one of the pop-up keywords
+              <code>modal</code> (a centered dialog) or <code>floating</code> (a
+              draggable window).</td></tr>
+      <tr><td><code>handler</code></td>
+          <td>Which component opens the content. You can usually leave this off —
+              same-site pages open inline, outside websites open in a frame. Set
+              it (e.g. <code>sol-query</code>) only when you want a specific one.</td></tr>
       <tr><td><code>name</code></td>
-          <td>Wrapper id (<code>data-menu-item</code>) for the pane tab; defaults to
-              the element's <code>id</code>, else a slug of <code>source</code>.</td></tr>
+          <td>A short label for the content, used when it opens as a tab.</td></tr>
       <tr><td><code>replace</code></td>
-          <td>Rebuild a pane wrapper's contents on every click instead of reusing
-              (keep-alive) them.</td></tr>
+          <td>Reload the content fresh on every click. By default it's kept
+              between clicks so it opens instantly the second time.</td></tr>
     </tbody>
   </table>
-  <p>Every <i>other</i> attribute is forwarded to the handler element, so authoring
-  a launcher is like inlining the handler. The trigger is exposed as
-  <code>::part(trigger)</code>. On activation it fires <code>sol-button-activate</code>
-  (detail: <code>{ name, handler, wrapper }</code>).</p>
 
   <h2>Examples</h2>
-  <pre><code>&lt;!-- same-origin page into a pane (trusted sol-include) --&gt;
+  <pre><code>&lt;!-- open a page in the #main area --&gt;
 &lt;sol-button source="pages/settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
 
-&lt;!-- pop a component in a modal, no host element --&gt;
-&lt;sol-button handler="sol-query" source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;
+&lt;!-- pop up a dialog --&gt;
+&lt;sol-button source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;
 
-&lt;!-- external site → iframe inferred --&gt;
+&lt;!-- open an outside website (shows up in a frame automatically) --&gt;
 &lt;sol-button source="https://solidproject.org" region="#main"&gt;Website&lt;/sol-button&gt;
 
-&lt;!-- a group of buttons sharing one region, declared once --&gt;
+&lt;!-- several buttons that all open into the same area --&gt;
 &lt;div data-region="#aux"&gt;
   &lt;sol-button source="a.html"&gt;A&lt;/sol-button&gt;
   &lt;sol-button source="b.html"&gt;B&lt;/sol-button&gt;
 &lt;/div&gt;</code></pre>
-
-  <p>A pane region is an element the page declares (<code>&lt;main id="main"&gt;</code>);
-  the keyword surfaces (<code>modal</code>/<code>floating</code>) are the
-  <code>&lt;sol-modal&gt;</code> / <code>&lt;sol-window&gt;</code> hosts, conjured per
-  click. Style a pane's contents directly with ordinary CSS — the mounted result
-  is light DOM.</p>
+  <p>Tip: instead of repeating <code>region</code> on every button, put it once on
+  a wrapping element with <code>data-region="…"</code> and the buttons inside will
+  use it.</p>
 
 </body>
 </html>

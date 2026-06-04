@@ -11,97 +11,91 @@
 </head>
 <body class="scroll-help help-sol-calendar">
 
-  <h1>sol-calendar component</h1>
-  <p>An inline agenda. Point it at one or more public iCalendar (ICS)
-  feeds &mdash; Google, Apple, Outlook, Proton, or a Solid pod &mdash;
-  and it renders upcoming events as a merged, sorted list.</p>
+  <h1>sol-calendar</h1>
+  <p>Shows an agenda of upcoming events on your page. Point it at one or more
+  public calendar (ICS) feeds — Google, Apple, Outlook, Proton, or a Solid pod —
+  and it merges them into a single, sorted list.</p>
 
-  <h2>Live demo</h2>
+  <h2>Try it</h2>
   <div class="demo-area">
     <sol-calendar source="data/calendar-settings.ttl#All"
                   proxy="http://localhost:3002/proxy?uri="></sol-calendar>
   </div>
 
-  <h2>Configure from RDF</h2>
-  <p>Point <code>source</code> at a Turtle file and select a settings
-  record with a <code>#fragment</code>. Each record carries its feed
-  list and display options as direct predicates &mdash; one or more
-  <code>dct:source</code> IRIs give the ICS feeds; multiple values in
-  one record are fetched in parallel and merged into a single agenda.</p>
-  <pre><code>&lt;sol-calendar source="<i>data/calendar-settings.ttl#All</i>"&gt;&lt;/sol-calendar&gt;</code></pre>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the component
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-include sol-calendar"&gt;&lt;/script&gt;</code></pre>
+  <p>Then point the tag at a small settings file (more on that below) with a
+  <code>#fragment</code> picking which record to use:</p>
+  <pre><code>&lt;sol-calendar source="data/calendar-settings.ttl#All"&gt;&lt;/sol-calendar&gt;</code></pre>
+
+  <h2>Options</h2>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>. The two that matter
+  most: <code>source</code> points at the settings file (with a
+  <code>#fragment</code>), and <code>proxy</code> is a CORS proxy address the
+  feeds are read through. Most providers can't be read directly by a browser,
+  so you'll usually need <code>proxy</code> — leave it off only for a feed that
+  a browser is already allowed to read, like a Solid pod or a self-hosted file.
+  An HTML attribute of the same name always overrides the value in the settings
+  file.</p>
+
+  <h2>Examples</h2>
+  <p>Point <code>source</code> at a small settings file. Each record lists its
+  calendar feeds and a few display choices. Here's the file the demo above uses:</p>
+  <pre><code>&lt;sol-calendar source="data/calendar-settings.ttl#All"&gt;&lt;/sol-calendar&gt;</code></pre>
   <p><code>data/calendar-settings.ttl</code>:</p>
   <sol-include source="data/calendar-settings.ttl" raw></sol-include>
 
-  <h2>Settings</h2>
+  <p>The settings a record can carry:</p>
   <table class="attr-table">
-    <thead><tr><th>Predicate</th><th>Type</th><th>Meaning</th></tr></thead>
+    <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td><code>dct:source</code></td><td>IRI (repeatable)</td>
-          <td>ICS feed URL. Repeat for a merged multi-source agenda.</td></tr>
-      <tr><td><code>dct:format</code></td><td>string</td>
-          <td><code>"ics"</code> or <code>"google"</code> &mdash; selects the parser.</td></tr>
-      <tr><td><code>ui:view</code></td><td>string</td>
-          <td><code>"agenda"</code> (v1) &middot; month / week / day planned.</td></tr>
-      <tr><td><code>time:days</code></td><td>integer</td>
-          <td>Lookahead window, in days.</td></tr>
-      <tr><td><code>schema:numberOfItems</code></td><td>integer</td>
-          <td>Optional cap on rendered events.</td></tr>
+      <tr><td><code>dct:source</code></td>
+          <td>A calendar feed's web address. Repeat it to merge several feeds
+              into one agenda.</td></tr>
+      <tr><td><code>dct:format</code></td>
+          <td><code>"ics"</code> or <code>"google"</code> — which kind of feed
+              it is.</td></tr>
+      <tr><td><code>ui:view</code></td>
+          <td><code>"agenda"</code> — the list layout (month / week / day are
+              planned).</td></tr>
+      <tr><td><code>time:days</code></td>
+          <td>How many days ahead to look.</td></tr>
+      <tr><td><code>schema:numberOfItems</code></td>
+          <td>An optional cap on how many events to show. (The schema.org
+              namespace is always <code>http://schema.org/</code>, never the
+              HTTPS form.)</td></tr>
     </tbody>
   </table>
-  <p>An HTML attribute of the same name always overrides the value from
-  the TTL. Reading the file needs <code>rdflib</code> on the page — the
-  loader pulls it in transitively (deduped to one shared instance via the
-  injected importmap). The schema.org namespace is
-  always <code>http://schema.org/</code>, never the HTTPS form.</p>
 
-  <h2>proxy</h2>
-  <p>Most providers don't serve their ICS endpoints with permissive
-  CORS, so the browser can't fetch them directly. <code>proxy</code> is
-  <b>not</b> a settings-file predicate &mdash; it is a shared default
-  read from the <code>&lt;sol-default&gt;</code> singleton, or set as an
-  HTML attribute on the element. If the pattern contains the token
-  <code>{url}</code> it is substituted; otherwise the encoded URL is
-  appended.</p>
-  <pre><code>&lt;sol-calendar source="data/calendar-settings.ttl#All"
-              proxy="http://localhost:3002/proxy?uri="&gt;&lt;/sol-calendar&gt;</code></pre>
-  <p>Omit <code>proxy</code> only for feeds that already send
-  <code>Access-Control-Allow-Origin</code> (a Solid pod, a self-hosted
-  ICS file).</p>
-
-  <h2>Finding the ICS feed URL</h2>
-  <p><code>dct:source</code> must be an iCalendar export URL (returns
-  <code>text/calendar</code>, starts with <code>BEGIN:VCALENDAR</code>)
-  &mdash; <b>not</b> the URL of the calendar page in your browser, which
-  returns HTML and fails with "non-ICS body". <code>curl &lt;url&gt;</code>
-  should print <code>BEGIN:VCALENDAR</code>.</p>
+  <h2>Finding a calendar feed address</h2>
+  <p>The feed address must be a calendar export (it returns
+  <code>text/calendar</code> and starts with <code>BEGIN:VCALENDAR</code>) —
+  not the address of the calendar page you see in your browser, which returns a
+  web page and fails. Where to find the export link:</p>
   <ul>
-    <li><b>Google</b> &mdash; Settings and sharing &rarr; "Integrate
-        calendar". The <i>secret address in iCal format</i> works for
-        any calendar (the token <i>is</i> the credential &mdash; treat
-        it like a password). The <i>public address</i> works once the
-        calendar is made public.</li>
-    <li><b>Apple iCloud</b> &mdash; right-click the calendar &rarr;
-        Share &rarr; Public Calendar; swap <code>webcal://</code> for
-        <code>https://</code>.</li>
-    <li><b>Outlook</b> &mdash; Settings &rarr; Calendar &rarr; Shared
-        calendars &rarr; Publish a calendar; copy the ICS link.</li>
-    <li><b>Proton</b> &mdash; calendar settings &rarr; Share publicly
-        &rarr; "Subscribe with calendar app".</li>
-    <li><b>Self-hosted / Solid pod</b> &mdash; any URL returning
+    <li><b>Google</b> — Settings and sharing → "Integrate calendar". The
+        <i>secret address in iCal format</i> works for any calendar (treat that
+        link like a password). The <i>public address</i> works once the calendar
+        is made public.</li>
+    <li><b>Apple iCloud</b> — right-click the calendar → Share → Public Calendar;
+        swap <code>webcal://</code> for <code>https://</code>.</li>
+    <li><b>Outlook</b> — Settings → Calendar → Shared calendars → Publish a
+        calendar; copy the ICS link.</li>
+    <li><b>Proton</b> — calendar settings → Share publicly → "Subscribe with
+        calendar app".</li>
+    <li><b>Self-hosted / Solid pod</b> — any address that returns
         <code>text/calendar</code>.</li>
   </ul>
 
   <h2>Meeting links</h2>
-  <p>When a video-meeting URL is found it becomes the event title's
-  <code>href</code>. Lookup order: the ICS <code>URL:</code> property;
-  a <code>LOCATION:</code> that is wholly a URL; the first known
-  meeting host in <code>DESCRIPTION:</code> (Jitsi, Zoom, Google Meet,
-  Teams, Whereby); then any URL in the description.</p>
+  <p>When an event has a video-meeting link (Jitsi, Zoom, Google Meet, Teams,
+  Whereby), the event title becomes a link to it, so the agenda doubles as a
+  one-click way to join.</p>
 
 <!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- The loader injects the importmap and import()s the modules (rdflib,
-       dompurify, marked, ical.js ride in transitively). sol-include renders
-       the data/calendar-settings.ttl listing on this page. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-include sol-calendar"></script>

@@ -8,12 +8,13 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <!-- The loader registers sol-login. data-with="auth" pulls in its deps
-       (rdflib + @inrupt/solid-client-authn-browser, plus dompurify/marked)
-       transitively via the injected importmap — you never load them yourself. -->
+
+  <!-- Loads the components so the live demo on this page works. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-with="auth"></script>
+          data-with="auth"
+  ></script>
+
   <style>
     body { padding-top: 8px; }
     b { color: orange; }
@@ -21,8 +22,13 @@
 </head>
 <body class="login-help">
 
-  <h1>sol-login component</h1>
+  <h1>sol-login</h1>
+  <p>A sign-in / sign-out button for Solid pods. Drop one on your page and it
+  gives the user a way to log in — and once they have, the other
+  <code>sol-*</code> components on the page can read and write that user's
+  private data. You usually need just one per page.</p>
 
+  <h2>Try it</h2>
   <div class="demo-strip">
     <span class="demo-strip-label">Live demo:</span>
     <sol-login visible
@@ -39,174 +45,70 @@
       document.addEventListener('sol-logout', (e) => { log.textContent = `sol-logout: side=${e.detail.side || 'default'}`; });
     })();
   </script>
-  <p>Login/logout UI plus the page-wide authenticated-fetch plumbing.
-    A single <code>&lt;sol-login&gt;</code> on the page does three jobs:
-    (1) lets the user log into one or more Solid pods,
-    (2) provides authenticated <code>fetch</code> to every other
-    <code>sol-*</code> component via the shared
-    <code>AuthManager</code>, and
-    (3) listens for the <code>sol-auth-needed</code> event so any
-    fetch that returns 401 (or 403 with no active session) triggers
-    the login flow automatically — the calling widget never has to
-    know auth exists.</p>
 
-  <h2>Prerequisites</h2>
-  <p>To use Solid login and authenticated fetch, the page needs the Inrupt
-    authentication library. You never load it directly: the loader's
-    <code>data-with="auth"</code> capability pulls it in (along with rdflib)
-    through the injected importmap, deduped to one shared instance:</p>
-  <pre style="margin:.5rem 0"><code>&lt;script src="../dist/sol-loader.min.js"
-        data-stage="local"
-        data-with="auth"&gt;&lt;/script&gt;</code></pre>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page. The
+  <code>data-with="auth"</code> part is what turns on logging in:</p>
 
-  <h2>Usage</h2>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-with="auth"&gt;&lt;/script&gt;</code></pre>
 
-  <div id="section-1" class="usage-section">
-    <h3>Basic Usage</h3>
-    <p>With no attributes, the tag prompts the user for an issuer, then
-      logs in via a full-page redirect.</p>
-    <pre><code>&lt;sol-login&gt;&lt;/sol-login&gt;</code></pre>
-  </div>
+  <p>Then drop the tag wherever you want the sign-in button to appear:</p>
+  <pre><code>&lt;sol-login&gt;&lt;/sol-login&gt;</code></pre>
 
-  <div id="section-2" class="usage-section">
-    <h3>Pre-configured Issuers</h3>
-    <p>The <code>issuers</code> attribute provides quick-select buttons
-      in the login dropdown.</p>
-    <pre><code>&lt;sol-login <b>issuers</b>="https://solidcommunity.net, https://login.inrupt.com"&gt;&lt;/sol-login&gt;</code></pre>
-  </div>
+  <h2>Options</h2>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>issuers</code></td>
+          <td>A comma-separated list of sign-in providers to offer as
+              quick-pick buttons (for example
+              <code>https://solidcommunity.net</code>). Without it the user is
+              asked to type one in.</td></tr>
+      <tr><td><code>mode</code></td>
+          <td>How the sign-in happens. <code>redirect</code> (the default) takes
+              the whole page to the provider and back. <code>popup</code> opens
+              a small window instead, so your page never reloads and anything the
+              user had on screen stays put.</td></tr>
+      <tr><td><code>popup-callback</code></td>
+          <td>The address of the little page the popup returns to after signing
+              in. Only needed with <code>mode="popup"</code>.</td></tr>
+      <tr><td><code>visible</code></td>
+          <td>Keep the button on screen at all times. Without it the component
+              stays hidden and only appears when a sign-in is needed.</td></tr>
+      <tr><td><code>side</code></td>
+          <td>A name for this login. Give two <code>&lt;sol-login&gt;</code> tags
+              different <code>side</code> values (in popup mode) to be signed
+              into two different pods at the same time — for example a left pod
+              and a right pod.</td></tr>
+    </tbody>
+  </table>
 
-  <div id="section-3" class="usage-section">
-    <h3>Modes: redirect vs popup</h3>
-    <p>The <code>mode</code> attribute picks the OIDC flow:</p>
-    <ul>
-      <li><b>redirect</b> (default) — classic full-page OIDC redirect.
-        One session per page. State on the page is lost during the
-        redirect. Fine for a dedicated login page; <em>not</em>
-        recommended when auth might be triggered mid-flow by an
-        auto-save.</li>
-      <li><b>popup</b> — login happens in a small popup window that
-        holds the real session; the parent talks to it through a
-        <code>PopupProxySession</code>. The calling page never reloads,
-        so an interrupted save can resume on retry. Multiple
-        <code>&lt;sol-login side="…"&gt;</code> elements can hold
-        independent sessions in the same tab.</li>
-    </ul>
-    <pre><code>&lt;sol-login <b>mode</b>="popup"
-           <b>popup-callback</b>="popup-auth-callback.html"
-           issuers="https://solidcommunity.net,https://login.inrupt.com"&gt;
-&lt;/sol-login&gt;</code></pre>
-  </div>
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- the simplest version: asks the user which provider to use --&gt;
+&lt;sol-login&gt;&lt;/sol-login&gt;</code></pre>
 
-  <div id="section-4" class="usage-section">
-    <h3>Tagged sessions (<code>side</code>)</h3>
-    <p>Each <code>&lt;sol-login&gt;</code> instance is keyed by its
-      <code>side</code> attribute (default: <code>"default"</code>).
-      In popup mode, two elements with different <code>side</code>
-      values can be logged in simultaneously (e.g. podz left/right
-      pods each holding their own session).</p>
-    <pre><code>&lt;sol-login mode="popup" <b>side</b>="left"  issuers="…"&gt;&lt;/sol-login&gt;
-&lt;sol-login mode="popup" <b>side</b>="right" issuers="…"&gt;&lt;/sol-login&gt;</code></pre>
-  </div>
+  <pre><code>&lt;!-- offer ready-made sign-in buttons --&gt;
+&lt;sol-login issuers="https://solidcommunity.net, https://login.inrupt.com"&gt;&lt;/sol-login&gt;</code></pre>
 
-  <div id="section-5" class="usage-section">
-    <h3>Event Handling</h3>
-    <p>Listen for <code>sol-login</code> / <code>sol-logout</code>
-      to trigger app-specific actions. Both events bubble and are
-      composed, so listening at <code>document</code> level catches
-      them from any <code>sol-login</code> on the page including
-      ones inside shadow roots (e.g. inside <code>sol-pod</code>).</p>
-    <pre><code>document.addEventListener('sol-login',  (e) =&gt; console.log('Logged in as', e.detail.webId, 'via', e.detail.issuer));
-document.addEventListener('sol-logout', (e) =&gt; console.log('Logged out:', e.detail.side));</code></pre>
-  </div>
+  <pre><code>&lt;!-- sign in via a popup, so the page doesn't reload --&gt;
+&lt;sol-login
 
-  <div id="section-6" class="usage-section">
-    <h3>Automatic auth via <code>solFetch</code></h3>
-    <p>The recommended way to fetch a Solid resource is
-      <code>solFetch</code>, exported from
-      <code>core/auth-fetch.js</code>:</p>
-    <pre><code>import { solFetch } from 'solid-web-components/core/auth-fetch.js';
+    mode="popup"
+    popup-callback="popup-auth-callback.html"
+    issuers="https://solidcommunity.net,https://login.inrupt.com"
 
-const r = await solFetch('https://example.pod/private/notes.ttl', {
-  method: 'PATCH', headers: { 'content-type': 'text/n3' }, body: …,
-});</code></pre>
-    <p>If the response is <b>401</b> (or <b>403</b> with no active
-      session), <code>solFetch</code> dispatches a
-      <code>sol-auth-needed</code> event on <code>document</code>.
-      A <code>&lt;sol-login&gt;</code> anywhere on the page receives the
-      event, runs its configured login flow, and resolves the
-      waiting promise. <code>solFetch</code> then retries the original
-      request once. The calling widget never has to handle the 401
-      itself.</p>
-    <p>When <em>no</em> <code>&lt;sol-login&gt;</code> is mounted, the
-      event is not dispatched and <code>solFetch</code> returns the
-      401 response as-is — so widgets that need to work in
-      unauthenticated contexts (static pages, demos) still behave
-      sensibly.</p>
-  </div>
+&gt;&lt;/sol-login&gt;</code></pre>
 
-  <div id="section-7" class="usage-section">
-    <h3><code>sol-auth-needed</code> event contract</h3>
-    <p>For frame authors who want to hook the login UX (e.g. a custom
-      chrome that shows a banner during auth):</p>
-    <pre><code>document.addEventListener('sol-auth-needed', (e) =&gt; {
-  const { url, response, side, resolve, reject } = e.detail;
-  // url      — the resource being fetched
-  // response — the original Response (status 401 or 403)
-  // side     — the authTag the request was made under (or undefined for
-  //            untagged calls). When set, ONLY the &lt;sol-login&gt; with
-  //            matching `side` handles the event; others early-return.
-  //            Untagged events fall through to every listener — first
-  //            to resolve wins.
-  // resolve(true)  → solFetch retries the original request
-  // resolve(false) → solFetch returns the original response
-  // reject(err)    → solFetch throws err
-});</code></pre>
-    <p>The built-in <code>&lt;sol-login&gt;</code> listener picks the
-      default issuer (own <code>issuer</code> attr →
-      <code>&lt;sol-default default-issuer="…"&gt;</code> → first entry
-      of the <code>issuers</code> list) and runs the configured login
-      flow. Concurrent prompts are coalesced into one login attempt.
-      A five-minute timeout caps the wait so an ignored popup doesn't
-      hang the calling widget forever.</p>
-    <p>Pages with multiple <code>&lt;sol-login&gt;</code> chips (e.g.
-      podz's left + right per-pod chips) get side-scoped routing: a
-      <code>solFetch(url, {authTag: 'left'})</code> only wakes the
-      <code>side="left"</code> chip. Callers without an
-      <code>authTag</code> still wake every chip — same as before.</p>
-  </div>
+  <pre><code>&lt;!-- two logins at once, one per pod --&gt;
+&lt;sol-login mode="popup" side="left"  issuers="…"&gt;&lt;/sol-login&gt;
+&lt;sol-login mode="popup" side="right" issuers="…"&gt;&lt;/sol-login&gt;</code></pre>
 
-  <div id="section-8" class="usage-section">
-    <h3>Visibility model</h3>
-    <p><code>&lt;sol-login&gt;</code> is <b>hidden by default</b>
-      (<code>:host { display: none }</code>). It surfaces only while
-      an auth prompt is in flight — the host element gains the
-      <code>active</code> attribute and the rule
-      <code>:host([active])</code> flips display back on. After
-      success/cancel/popup-blocked the attribute clears and the
-      element returns to invisible.</p>
-    <p>Hosts that DO want a permanent login chip can override the
-      default with inline style, or use the <code>visible</code>
-      attribute:</p>
-    <pre><code>&lt;sol-login <b>visible</b> mode="popup" issuers="…"&gt;&lt;/sol-login&gt;</code></pre>
-    <p>Frames that prefer to show login state somewhere else
-      (e.g. paint another chrome chip green when logged in) listen
-      for the <code>sol-login</code> / <code>sol-logout</code> events
-      and keep <code>sol-login</code> itself hidden.</p>
-  </div>
-
-  <div id="section-9" class="usage-section">
-    <h3>Default issuer via <code>&lt;sol-default&gt;</code></h3>
-    <p><code>&lt;sol-login&gt;</code>'s auth-needed listener reads its
-      default issuer in this order:</p>
-    <ol>
-      <li>The element's own <code>issuer</code> attribute.</li>
-      <li><code>&lt;sol-default default-issuer="…"&gt;</code> elsewhere
-        on the page.</li>
-      <li>The first entry of the <code>issuers</code> list.</li>
-    </ol>
-    <pre><code>&lt;sol-default <b>default-issuer</b>="https://solidcommunity.net"&gt;&lt;/sol-default&gt;
-&lt;sol-login mode="popup" issuers="https://solidcommunity.net,https://login.inrupt.com"&gt;&lt;/sol-login&gt;</code></pre>
-  </div>
+  <p>Once a <code>&lt;sol-login&gt;</code> is on the page and the user signs in,
+  the other data components automatically use that access — you don't have to
+  wire anything up. If a component tries to read something private and the user
+  isn't signed in yet, the login prompt appears on its own.</p>
 
 </body>
 </html>

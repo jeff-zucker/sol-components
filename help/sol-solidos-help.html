@@ -10,116 +10,47 @@
 <div class="container">
   <h1>sol-solidos</h1>
 
-  <p>A custom element that mounts the
+  <p>Embeds the
      <a href="https://github.com/SolidOS/mashlib">SolidOS</a> data
-     browser inside its light DOM. Setting the <code>source</code>
-     attribute drives <code>outliner.GotoSubject(...)</code> so the
-     panes navigate to that resource.</p>
+     browser right in your page. Point it at a Solid resource with the
+     <code>source</code> attribute and it shows that resource in the
+     SolidOS browser, with all its panes for viewing and editing the
+     data. Use it when you want a full data browser inside your own
+     page instead of building one.</p>
 
-  <h2>Attributes</h2>
-  <ul>
-    <li><code>source</code> — URL of the Solid resource to display.
-        Setting it after the element is connected triggers a
-        navigation. If unset on first mount, the panes initialise
-        with <code>window.location.href</code> as the subject.</li>
-  </ul>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the
+  components available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-with="solidos"&gt;&lt;/script&gt;</code></pre>
+  <p>Then drop the tag in and give it a resource to show:</p>
+  <pre><code>&lt;sol-solidos source="https://your.pod/some/resource"&gt;&lt;/sol-solidos&gt;</code></pre>
 
-  <h2>Runtime dependencies</h2>
-  <p>sol-solidos relies on mashlib + solid-panes (a substantial
-     dependency tree — RDF store, panes, login UI, theme module).
-     mashlib is a heavy peer that sol-solidos does <em>not</em> bundle
-     in. The loader's <code>data-with="solidos"</code> capability pulls
-     it in for you (rdflib + mashlib), in order, and injects the
-     importmap — so <code>window.panes</code>,
-     <code>window.SolidLogic</code>, and <code>window.Mashlib</code>
-     are populated before sol-solidos's <code>connectedCallback</code>
-     runs. You don't name the deps yourself.</p>
+  <h2>Options</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>source</code></td>
+          <td>The Solid resource to display. Change it after the page has
+              loaded and the browser navigates to the new resource. Leave it
+              off and it starts on the current page's address.</td></tr>
+    </tbody>
+  </table>
+  <p><code>source</code> is shared across components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
 
-  <pre><code>&lt;script src="../dist/sol-loader.min.js"
-        data-stage="local"
-        data-with="solidos"&gt;&lt;/script&gt;
+  <h2>Examples</h2>
+  <pre><code>&lt;!-- browse one resource --&gt;
+&lt;sol-solidos source="https://your.pod/notes/today.ttl"&gt;&lt;/sol-solidos&gt;
 
-&lt;sol-solidos source="https://your.pod/some/resource"&gt;&lt;/sol-solidos&gt;</code></pre>
-
-  <h2>Known mashlib quirk: empty <code>window.Mashlib</code></h2>
-  <p>mashlib's UMD wrapper sets <code>window.Mashlib</code> to its
-     entry-point exports — and its entry point
-     (<code>./src/index.ts</code>) is pure side-effects with no
-     exports. So <code>window.Mashlib</code> ends up an empty
-     <code>{}</code>. sol-solidos's <code>getMashlib()</code> looks
-     for <code>Mashlib.initMainPage</code>, which is actually exposed
-     on <code>window.panes</code>. Patch it before mounting
-     sol-solidos:</p>
-
-  <pre><code>&lt;script type="module"&gt;
-  await SolidWebComponents.ready;   // mashlib globals are populated by now
-  if (window.Mashlib &amp;&amp; window.panes &amp;&amp; window.panes.initMainPage) {
-    window.Mashlib.initMainPage = window.panes.initMainPage;
-  }
-&lt;/script&gt;
+&lt;!-- start on whatever page the user is on --&gt;
 &lt;sol-solidos&gt;&lt;/sol-solidos&gt;</code></pre>
+  <p>Changing <code>source</code> later — for example from a button or a menu
+  elsewhere on the page — moves the browser to that resource.</p>
 
-  <h2>Header / footer hidden by default</h2>
-  <p>sol-solidos CSS-hides its own
-     <code>&lt;header id="PageHeader"&gt;</code> and
-     <code>&lt;footer id="PageFooter"&gt;</code>, because when sol-solidos
-     is mounted inside a host shell (data-kitchen, …) the host already
-     owns login + help/prefs chrome and a duplicate login button in
-     mashlib's header is broken anyway (popup-mode pod sessions don't
-     reach mashlib's default Inrupt session, so its login button stalls).
-     Mashlib's reads still go through rdflib's patched Fetcher →
-     <code>solFetch</code> → the host's <code>&lt;sol-login&gt;</code>
-     chip handles any <code>sol-auth-needed</code> prompt and retries.</p>
-  <p>If you want mashlib's standalone header back, override the rule
-     in your page CSS:</p>
-  <pre><code>sol-solidos &gt; #PageHeader,
-sol-solidos &gt; #PageFooter { display: block !important; }</code></pre>
-
-  <h2>Embedding alternative: skip sol-solidos, use panes directly</h2>
-  <p>sol-solidos creates its own DOM scaffolding
-     (<code>&lt;header id="PageHeader"&gt;</code>,
-     <code>&lt;main id="mainContent"&gt;</code>,
-     <code>&lt;footer id="PageFooter"&gt;</code>) and then calls
-     <code>initMainPage</code>, which creates a parallel set of
-     SolidOS-shell elements
-     (<code>#mainSolidUiHeader</code>, <code>#MainContent</code>,
-     <code>#PageFooter</code>) at the document body. If you want the
-     SolidOS chrome (banner + side menu + footer) and the outline
-     <em>without</em> the duplicate IDs, skip sol-solidos and use
-     mashlib's lower-level API directly:</p>
-
-  <pre><code>&lt;body id="PageBody"&gt;
-  &lt;solid-ui-header id="mainSolidUiHeader"&gt;&lt;span slot="title"&gt;&lt;/span&gt;&lt;/solid-ui-header&gt;
-  &lt;main id="MainContent" role="main"&gt;
-    &lt;div class="app-shell"&gt;
-      &lt;aside id="NavMenu" class="app-nav" hidden&gt;&lt;div id="NavMenuContent"&gt;&lt;/div&gt;&lt;/aside&gt;
-      &lt;div class="app-view"&gt;&lt;table id="OutlineView" class="outline-view"&gt;&lt;/table&gt;&lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/main&gt;
-  &lt;footer id="PageFooter"&gt;&lt;/footer&gt;
-  &lt;script type="module"&gt;
-    await SolidWebComponents.ready;   // window.panes / window.SolidLogic ready
-    const store = window.SolidLogic.solidLogicSingleton.store;
-    window.panes.initMainPage(store, 'https://your.pod/foo');
-  &lt;/script&gt;
-&lt;/body&gt;</code></pre>
-
-  <p>This is the structure
-     <a href="../../node_modules/mashlib/dist/databrowser.html">mashlib's
-     <code>databrowser.html</code></a> uses; <code>initMainPage</code>
-     fills the existing elements instead of creating new ones. For
-     navigation after the initial render, hold the outliner and call
-     it directly:</p>
-
-  <pre><code>const $rdf = await import('rdflib');   // bare specifier resolved by the loader's importmap
-const outliner = window.panes.getOutliner(document);
-outliner.GotoSubject($rdf.sym(newUrl), true, undefined, true, undefined);</code></pre>
-
-  <h2>Working embedded example</h2>
+  <h2>Working example</h2>
   <p>See <a href="https://github.com/jeff-zucker/data-kitchen">data-kitchen</a>
-     for an integration that hosts SolidOS inside a same-origin iframe
-     (so its CSS / globals / theme handling stay contained) and drives
-     it from a sidebar <code>&lt;sol-pod&gt;</code>.</p>
+     for a page that hosts the SolidOS browser alongside the rest of its
+     chrome.</p>
 
 </div>
 </body></html>

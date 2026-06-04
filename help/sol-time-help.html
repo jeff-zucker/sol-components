@@ -11,57 +11,55 @@
 </head>
 <body class="scroll-help help-sol-time">
 
-  <h1>sol-time component</h1>
-  <p>A compact clock. Always shows <i>local</i> and <i>GMT</i>;
-  optionally adds a third clock for a named timezone. Ticks once a
-  minute (no seconds).</p>
+  <h1>sol-time</h1>
+  <p>A compact clock. It always shows your <em>local</em> time and <em>GMT</em>,
+  and can add a third clock for any timezone you name. It updates once a minute
+  (no ticking seconds).</p>
 
-  <h2>Live demo</h2>
+  <h2>Try it</h2>
   <div class="demo-area">
     <sol-time source="data/time-settings.ttl#Settings"></sol-time>
   </div>
 
-  <h2>Configure from RDF</h2>
-  <p>Point <code>source</code> at a Turtle settings file. The third
-  clock is named by one direct predicate &mdash; the IANA name supplies
-  both the label and the UTC offset (computed at runtime), so there is
-  no separate offset setting.</p>
-  <pre><code>&lt;sol-time source="<i>data/time-settings.ttl#Settings</i>"&gt;&lt;/sol-time&gt;</code></pre>
-  <p><code>data/time-settings.ttl</code>:</p>
-  <sol-include source="data/time-settings.ttl" raw></sol-include>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-include sol-time"&gt;&lt;/script&gt;</code></pre>
+  <p>Then point the tag at a small settings file that says which extra timezone
+  to show:</p>
+  <pre><code>&lt;sol-time source="data/time-settings.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
 
-  <h2>Settings</h2>
+  <h2>Options</h2>
+  <p>sol-time is configured from a small settings file rather than from many
+  attributes. The one setting inside that file:</p>
   <table class="attr-table">
-    <thead><tr><th>Predicate</th><th>Type</th><th>Meaning</th></tr></thead>
+    <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td><code>schema:timezone</code></td><td>string</td>
-          <td>An IANA timezone name, e.g. <code>"Asia/Kolkata"</code> or
-              <code>"America/New_York"</code>. The label shown is the
-              last path segment (<code>Kolkata</code>); the offset is
-              derived from the zone.</td></tr>
+      <tr><td><code>schema:timezone</code></td>
+          <td>The extra timezone to show, given as an IANA timezone name such as
+              <code>"Asia/Kolkata"</code> or <code>"America/New_York"</code>. The
+              label shown is the last part of the name (<code>Kolkata</code>), and
+              the time is worked out from that zone automatically — there's no
+              separate offset to set.</td></tr>
     </tbody>
   </table>
-  <p>Reading the settings file needs <code>rdflib</code> on the page — the
-  loader pulls it in transitively (deduped to one shared instance via the
-  injected importmap). The schema.org namespace is
-  always <code>http://schema.org/</code>, never the HTTPS form.</p>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
 
-  <h2>Theming</h2>
-  <p>Each label / value / separator is a shadow part:
-  <code>local-label</code>, <code>local-time</code>,
-  <code>utc-label</code>, <code>utc-time</code>,
-  <code>extra-label</code>, <code>extra-time</code>, <code>sep</code>.</p>
-  <pre><code>sol-time::part(local-time)  { font-variant-numeric: tabular-nums; }
-sol-time::part(extra-label) { color: var(--accent); }</code></pre>
+  <h2>Examples</h2>
+  <p>Point <code>source</code> at a small settings file:</p>
+  <pre><code>&lt;sol-time source="data/time-settings.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+  <p>This page's <code>data/time-settings.ttl</code> looks like this — one entry
+  naming the extra timezone:</p>
+  <sol-include source="data/time-settings.ttl" raw></sol-include>
+  <p>The schema.org name is always written as <code>http://schema.org/</code>,
+  never the HTTPS form.</p>
 
-<!-- IMPORTED SCRIPTS ------------------------------------------------- -->
-  <!-- The loader injects the importmap and import()s the modules (rdflib,
-       dompurify, marked ride in transitively). sol-include renders the
-       data/time-settings.ttl listing on this page. -->
+  <!-- Loads the components so the live demo on this page works. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-bundles="sol-include sol-time"></script>
-<!-- ------------------------------------------------------------------ -->
+          data-bundles="sol-include sol-time"
+  ></script>
 
 </body>
 </html>

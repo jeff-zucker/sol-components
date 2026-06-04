@@ -11,18 +11,17 @@
   <!-- The loader registers sol-dropdown-button (part of sol-basic). -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-bundles="sol-basic"></script>
+          data-bundles="sol-basic"
+  ></script>
 </head>
 <body class="scroll-help">
 
-  <h1>sol-dropdown-button component</h1>
-  <p>A trigger button that drops a menu in a floating popup. Declare the items inline
-  in a <code>&lt;menu&gt;</code>: each item's <code>handler</code> says what it does — a
-  bare name is a <b>command</b> (it fires an event for your app to handle on click), a
-  custom-element tag or an <code>&lt;a href&gt;</code> mounts a component. Nothing is
-  pre-selected; the popup opens on click and closes on pick / outside-click / Escape.</p>
+  <h1>sol-dropdown-button</h1>
+  <p>A small trigger button that drops a menu of actions when you click it — handy
+  for an "⋮ More" or "Actions" button. You list the choices inside it; the menu
+  opens on click and closes when you pick one, click away, or press Escape.</p>
 
-  <h2>Live demo</h2>
+  <h2>Try it</h2>
   <div class="demo-area" style="align-items:center; gap:1rem;">
     <sol-dropdown-button label="⋮ Actions">
       <menu>
@@ -41,51 +40,56 @@
     });
   </script>
 
-  <h2>Authoring</h2>
-  <p>The items live in a single <code>&lt;menu&gt;</code> child. An item whose
-  <code>handler</code> is a bare name (no hyphen, not a registered element) is a command:
-  clicking it dispatches <code>sol-command</code> with
-  <code>detail: { command, params }</code> — your page listens and acts. An item that is
-  an <code>&lt;a href&gt;</code>, or whose <code>handler</code> is a component tag, mounts
-  that content instead; point it at a <code>region</code> (e.g.
-  <code>region="modal"</code>) to choose where it surfaces. Nest a
-  <code>&lt;submenu&gt;</code> for a fly-out group.</p>
-  <p>Mark an item <code>requires-write</code> (or <code>if-logged-in</code>) and it is
-  exposed as <code>::part(requires-write)</code> so the host page can hide or disable it
-  for guests — the dropdown itself takes no policy.</p>
+  <h2>Use it in your HTML</h2>
+  <p>Add this line once, near the top of your page — it makes the components
+  available:</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-basic"&gt;&lt;/script&gt;</code></pre>
+  <p>Then write the button with a <code>&lt;menu&gt;</code> of choices inside it. Each
+  choice is a <code>&lt;button&gt;</code> (an action your page reacts to) or an
+  <code>&lt;a href&gt;</code> (opens a page or file):</p>
+  <pre><code>&lt;sol-dropdown-button label="⋮ Actions"&gt;
+  &lt;menu&gt;
+    &lt;button handler="rename"&gt;Rename&lt;/button&gt;
+    &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
+  &lt;/menu&gt;
+&lt;/sol-dropdown-button&gt;</code></pre>
 
-  <h2>Attributes</h2>
+  <h2>Options</h2>
   <table class="attr-table">
-    <thead><tr><th>Attribute</th><th>Purpose</th></tr></thead>
+    <thead><tr><th>Attribute</th><th>What it does</th></tr></thead>
     <tbody>
       <tr><td><code>label</code></td>
-          <td>Trigger text (default <code>⋮</code>).</td></tr>
-      <tr><td><code>handler</code> <span class="muted">(on an item)</span></td>
-          <td>Bare name → command (fires <code>sol-command</code>); component tag →
-              mount that element.</td></tr>
-      <tr><td><code>params</code> <span class="muted">(on a command item)</span></td>
-          <td>JSON forwarded in the <code>sol-command</code> detail.</td></tr>
-      <tr><td><code>requires-write</code> <span class="muted">(on an item)</span></td>
-          <td>Flag an item as owner-only; surfaced via
-              <code>::part(requires-write)</code>.</td></tr>
+          <td>The text on the trigger button (defaults to <code>⋮</code>).</td></tr>
+      <tr><td><code>handler</code> <span class="muted">(on a choice)</span></td>
+          <td>A plain word (like <code>rename</code>) makes the choice an
+              <em>action</em>: clicking it tells your page which command was picked,
+              so your own code can do the work. A component tag instead opens that
+              component.</td></tr>
+      <tr><td><code>params</code> <span class="muted">(on an action choice)</span></td>
+          <td>Extra information to pass along with an action, written as JSON — for
+              example <code>params='{"format":"csv"}'</code>.</td></tr>
+      <tr><td><code>requires-write</code> <span class="muted">(on a choice)</span></td>
+          <td>Marks a choice as owner-only, so the page can hide or disable it for
+              visitors who aren't signed in.</td></tr>
     </tbody>
   </table>
-  <p>The trigger is exposed as <code>::part(trigger)</code>.</p>
+  <p>Some attributes here are shared across components — see
+  <a href="common-attributes.html">Common attributes</a>.</p>
 
   <h2>Examples</h2>
-  <pre><code>&lt;!-- command items: each fires sol-command on click --&gt;
+  <pre><code>&lt;!-- a menu of actions your page handles --&gt;
 &lt;sol-dropdown-button label="⋮ More"&gt;
   &lt;menu&gt;
     &lt;button handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
     &lt;button handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
     &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
   &lt;/menu&gt;
-&lt;/sol-dropdown-button&gt;
-
-&lt;script&gt;
+&lt;/sol-dropdown-button&gt;</code></pre>
+  <p>When someone picks an action, your page finds out which one and can respond:</p>
+  <pre><code>&lt;script&gt;
   document.addEventListener('sol-command', (e) =&gt; {
     const { command, params } = e.detail;
-    // dispatch to your app's handlers…
+    // do something based on which command was chosen…
   });
 &lt;/script&gt;</code></pre>
 

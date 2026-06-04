@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Install — one script tag is all you need</title>
+  <title>Loading the components</title>
   <link rel="stylesheet" href="../web/styles/root.css">
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
@@ -12,206 +12,69 @@
     .api-block { padding:1.5rem; margin-bottom:1.5rem; }
   </style>
 </head>
-<body>
+<body class="scroll-help">
 
-  <h1>Invoking Components</h1>
+  <h1>Loading the components</h1>
 
-  <p>Everything is ES modules. You need three things on the page: the
-  components you want (custom-element tags), one <code>&lt;script&gt;</code> that
-  loads them, and an importmap so bare specifiers like <code>rdflib</code>
-  resolve. The <strong>loader</strong> (option 0) bundles all three into a single
-  tag and injects the importmap for you, so an app can stay a thin shell that is
-  unaware of the dependency stack. If you want full control, drive the modules
-  and importmap yourself (option 1).</p>
+  <p>The loader is one <code>&lt;script&gt;</code> tag you add near the top of
+  your page. It makes the components available, so you can then use tags like
+  <code>&lt;sol-button&gt;</code> or <code>&lt;sol-menu&gt;</code> anywhere in
+  your HTML.</p>
 
-  <nav class="page-nav" aria-label="Page sections">
-    <a href="#loader">0. The loader (simplest)</a>
-    <a href="#importmap">1. Importmap + modules</a>
-    <a href="#bundler">2. With a bundler</a>
-    <a href="#reference">Module / capability reference</a>
-    <a href="#troubleshoot">Troubleshooting</a>
-  </nav>
-
-  <div class="hero" id="loader">
-    <h2>0. Simplest: one tag — the loader</h2>
-      <code>dist/sol-loader.min.js</code> is a parser-blocking
-      <code>&lt;head&gt;</code> script. It injects the right importmap, then
-      <code>import()</code>s each module you name — in dependency order — and
-      fires <code>swc:ready</code>. In <code>data-bundles</code> list the
-      <strong>module specifiers</strong> you want: <code>sol-basic</code> (the
-      no-RDF UI family) and any component (<code>sol-feed</code>,
-      <code>sol-time</code>, <code>sol-pod</code>, <code>menu-from-rdf</code>, …).
-      In <code>data-with</code> add capabilities — <code>auth</code>
-      (⇒ sol-login), <code>sparql</code> (⇒ sol-query), <code>rdf</code> (the
-      solid-ui editing stack ⇒ sol-tree-edit / sol-form / sol-settings), and
-      <code>solidos</code> (⇒ mashlib + sol-solidos).
-<pre><code>&lt;script src="../dist/sol-loader.min.js"
+  <h2>The loader tag</h2>
+  <p>Add it once, in the <code>&lt;head&gt;</code> of your page:</p>
+<pre><code>&lt;script src="dist/sol-loader.min.js"
         data-stage="local"
-        data-bundles="sol-basic sol-time sol-weather sol-feed"
-        data-with="auth sparql rdf"&gt;&lt;/script&gt;</code></pre>
-      Run code once everything is ready:
+        data-bundles="sol-basic sol-feed"
+        data-with="auth"&gt;&lt;/script&gt;</code></pre>
+
+  <p>It has three knobs:</p>
+  <ul>
+    <li><code>data-bundles</code> — the components (or families) you want; each
+    token is a tag name, like <code>sol-basic</code> for the everyday UI plus
+    widgets such as <code>sol-feed</code>.</li>
+    <li><code>data-with</code> — extra capabilities to switch on:
+    <code>auth</code> (sign-in), <code>sparql</code> (queries),
+    <code>rdf</code> (the editing components), and <code>solidos</code> (the
+    data browser).</li>
+    <li><code>data-stage</code> — where the code is loaded from:
+    <code>local</code> for files you host yourself, or <code>cdn</code> for
+    loading over the internet.</li>
+  </ul>
+
+  <h2>Run your code when it's ready</h2>
+  <p>If you have JavaScript that uses the components, wait for them to be ready
+  first:</p>
 <pre><code>&lt;script&gt;
-  await SolidWebComponents.ready;        // or: document.addEventListener('swc:ready', …)
-  // …or load programmatically:
-  await SolidWebComponents.load(['sol-basic', 'sol-time'], { with: ['auth', 'rdf'] });
+  await SolidWebComponents.ready;
+  // your code here
 &lt;/script&gt;</code></pre>
-      <div class="note-box"><strong>Deps ride in transitively.</strong> You never
-        list <code>rdflib</code>, <code>dompurify</code>, or <code>marked</code> —
-        the components import them, and the injected importmap resolves (and
-        dedupes) them to one shared instance. That single-instance guarantee is
-        what keeps term/store identity coherent across every module, so auth
-        propagation and the editing stack just work.</div>
-      <h3><code>data-stage</code> — where deps come from</h3>
-      <p><code>local</code> resolves deps to the vendored copies in
-      <code>dist/vendor/*.js</code> (offline-ready); <code>cdn</code> resolves
-      them to <code>esm.sh</code>. Need a custom deployment? Point
-      <code>data-importmap="path/to/map.json"</code> at your own importmap — that
-      is the only time an app has to know the dep list. A page that already
-      carries its own <code>&lt;script type="importmap"&gt;</code> is left
-      untouched.</p>
-  </div>
+  <p>If you'd rather listen for an event, the loader fires
+  <code>swc:ready</code> on the document when everything is loaded.</p>
 
-  <div class="api-block" id="importmap">
-    <h2>1. Importmap + ES modules (full control)</h2>
-    <p>Skip the loader and drive the modules yourself. The browser needs an
-    importmap so bare specifiers resolve; then import the component modules. The
-    build already writes ready-made importmaps —
-    <code>dist/importmap-local.json</code> (vendored) and
-    <code>dist/importmap-cdn.json</code> (esm.sh) — each with one entry per dep
-    <em>and</em> per component, so you can reference both bare
-    <code>rdflib</code> and bare <code>sol-feed</code>.</p>
-
-    <h3>Inline the map (works in every browser)</h3>
-    <p>List only the deps your components actually use. For
-    <code>sol-include</code> (dompurify + marked):</p>
-<pre><code>&lt;script type="importmap"&gt;
-{
-  "imports": {
-    "dompurify": "../dist/vendor/dompurify.js",
-    "marked":    "../dist/vendor/marked.js"
-  }
-}
-&lt;/script&gt;
-&lt;script type="module" src="../web/sol-include.js"&gt;&lt;/script&gt;</code></pre>
-
-    <h3>The editing stack (sol-form / sol-settings / sol-tree-edit)</h3>
-    <p>These read &amp; write data as RDF, so they need solid-logic + solid-ui.
-    Load them <strong>in order</strong> — solid-logic before solid-ui (which sets
-    <code>window.UI</code>) before the components:</p>
-<pre><code>&lt;script type="importmap"&gt;
-{
-  "imports": {
-    "rdflib":             "../dist/vendor/rdflib.js",
-    "n3":                 "../dist/vendor/n3.js",
-    "dompurify":          "../dist/vendor/dompurify.js",
-    "marked":             "../dist/vendor/marked.js",
-    "solid-logic":        "../dist/vendor/solid-logic.js",
-    "solid-ui":           "../dist/vendor/solid-ui.js",
-    "rdf-validate-shacl": "../dist/vendor/rdf-validate-shacl.js"
-  }
-}
-&lt;/script&gt;
-&lt;script type="module"&gt;
-  import 'solid-logic';   // solid-logic BEFORE solid-ui
-  import 'solid-ui';      // sets window.UI
-  import '../web/sol-form.js';
-&lt;/script&gt;
-
-&lt;sol-form shape="shapes/x.shacl" subject="data/x.ttl#It"&gt;&lt;/sol-form&gt;</code></pre>
-    <div class="note-box">
-      <strong>Why inline the JSON?</strong> External-file importmaps
-      (<code>&lt;script type="importmap" src="…"&gt;</code>) work only in Chrome
-      124+, Firefox 132+, Safari 16.4+. Inline JSON works everywhere. The loader
-      (option 0) inlines it for you. For <code>cdn</code> instead of vendored
-      files, swap the <code>../dist/vendor/*.js</code> paths for the
-      <code>https://esm.sh/…</code> entries in <code>importmap-cdn.json</code>.
-    </div>
-  </div>
-
-  <div class="api-block" id="bundler">
-    <h2>2. With a bundler (Vite, webpack, Rollup, esbuild…)</h2>
-    <p>Building an app with a bundler? Install the package and import what you
-    want. The bundler reads <code>solid-web-components</code>'s
-    <code>exports</code> map and resolves the right entry per runtime — browser
-    builds get the web component, Node builds get the Node API.</p>
-<pre><code>npm install solid-web-components</code></pre>
-<pre><code>import 'solid-web-components/web/sol-menu.js';
-import 'solid-web-components/web/sol-include.js';
-import 'solid-web-components/web/sol-feed.js';
-// or all at once:
-import 'solid-web-components/web';   // → web/sol-full.js</code></pre>
-    <p>Heavy environment-specific deps (<code>@comunica/query-sparql</code>, the
-    inrupt auth packages, <code>solid-ui</code>) are <strong>optional peer
-    dependencies</strong> — your install only pulls what you ask for. Add them as
-    needed:</p>
-<pre><code>npm install @comunica/query-sparql       # only if you query remote SPARQL endpoints</code></pre>
-  </div>
-
-  <h2 id="reference">Module / capability reference</h2>
+  <h2>Module / capability reference</h2>
   <div class="api-block">
-    <p>For the loader's <code>data-bundles</code> (module specifiers) and
-    <code>data-with</code> (capabilities). Deps listed are pulled in for you —
-    you never name them.</p>
+    <p>A quick guide to which tokens to use for what you want to build.</p>
     <table class="attr-table">
-      <thead><tr><th>You want…</th><th>Loader tokens</th><th>Deps pulled in (transitively)</th></tr></thead>
+      <thead><tr><th>You want…</th><th>Loader tokens</th><th>It pulls in for you</th></tr></thead>
       <tbody>
-        <tr><td>No-RDF UI (button, dropdown-button, include, menu, tabs, accordion, rolodex, modal, window, default)</td><td><code>data-bundles="sol-basic"</code></td><td>dompurify, marked</td></tr>
-        <tr><td>Drive the menu/tabs family from RDF</td><td><code>data-bundles="sol-basic menu-from-rdf"</code></td><td>+ rdflib</td></tr>
-        <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>rdflib, dompurify, marked</td></tr>
-        <tr><td>Pods (pod, live-edit; pod-ops + wac combined as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>rdflib, dompurify</td></tr>
-        <tr><td>Login</td><td><code>data-with="auth"</code></td><td>rdflib, @inrupt/solid-client-authn-browser</td></tr>
-        <tr><td>SPARQL queries (sol-query)</td><td><code>data-with="sparql"</code></td><td>rdflib, dompurify, marked, @comunica/query-sparql</td></tr>
-        <tr><td>Editing stack (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-with="rdf"</code></td><td>rdflib, n3, solid-logic, solid-ui, rdf-validate-shacl</td></tr>
-        <tr><td>SolidOS data browser</td><td><code>data-with="solidos"</code></td><td>rdflib, mashlib</td></tr>
+        <tr><td>The everyday UI (button, dropdown-button, include, menu, tabs, accordion, rolodex, modal, window, default)</td><td><code>data-bundles="sol-basic"</code></td><td>the basic UI components</td></tr>
+        <tr><td>Drive the menu/tabs family from a data file</td><td><code>data-bundles="sol-basic menu-from-rdf"</code></td><td>+ data support</td></tr>
+        <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>that widget and what it needs</td></tr>
+        <tr><td>Pods (pod, live-edit; pod-ops + wac as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>the pod components</td></tr>
+        <tr><td>Sign-in</td><td><code>data-with="auth"</code></td><td>sol-login</td></tr>
+        <tr><td>SPARQL queries</td><td><code>data-with="sparql"</code></td><td>sol-query</td></tr>
+        <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-with="rdf"</code></td><td>the editing components</td></tr>
+        <tr><td>The SolidOS data browser</td><td><code>data-with="solidos"</code></td><td>sol-solidos</td></tr>
       </tbody>
     </table>
-    <p>The capabilities live in the fixed <code>dist/swc.manifest.json</code>
-    (identical for every app — you never edit it). Auth fetch propagates
-    page-wide: once <code>&lt;sol-login&gt;</code> is present and the user is
-    logged in, every <code>&lt;sol-query&gt;</code> / <code>&lt;sol-include&gt;</code>
-    automatically uses the authenticated <code>fetch</code> — no wiring.</p>
+    <p>Add a <code>&lt;sol-login&gt;</code> to the page and, once the user is
+    signed in, the data components automatically use that sign-in — no wiring
+    needed.</p>
   </div>
 
-  <h2 id="build">Build commands (only needed to regenerate <code>dist/</code>)</h2>
-  <div class="api-block">
-    <table class="attr-table">
-      <thead><tr><th>Script</th><th>What it does</th></tr></thead>
-      <tbody>
-        <tr><td>npm run build:importmaps</td><td>Reads <code>tools/external-deps.json</code> + <code>web/</code>; writes <code>dist/importmap-cdn.json</code>, <code>dist/importmap-local.json</code>, and the fixed <code>dist/swc.manifest.json</code>.</td></tr>
-        <tr><td>npm run build:vendor</td><td>For each external dep, runs Rollup once to produce <code>dist/vendor/&lt;name&gt;.js</code> — a single self-contained ESM file. Idempotent. <code>--force</code> rebuilds everything.</td></tr>
-        <tr><td>npm run bundle</td><td>Builds the one shipped artifact: <code>dist/sol-loader.min.js</code> (the importmaps + manifest baked in).</td></tr>
-        <tr><td>npm run build</td><td>All of the above.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2 id="troubleshoot">Troubleshooting</h2>
-  <div class="api-block">
-    <h3>"Custom element 'sol-query' is not defined"</h3>
-    <p>The module hasn't loaded yet. With the loader, await
-    <code>SolidWebComponents.ready</code> (or the <code>swc:ready</code> event)
-    before code that touches the element, and confirm the token is spelled like
-    the module (<code>sol-query</code>, not <code>query</code>). In importmap
-    mode, confirm the <code>&lt;script type="module"&gt;</code> URL resolves (open
-    it — you should see JS, not a 404).</p>
-
-    <h3>"Failed to resolve module specifier 'rdflib'"</h3>
-    <ol>
-      <li>The importmap is missing the entry — add it, or use the loader, which injects a complete map.</li>
-      <li>The importmap is loaded after the first <code>&lt;script type="module"&gt;</code> — order matters:
-<pre><code>&lt;script type="importmap"&gt;{ ... }&lt;/script&gt;   &lt;!-- always first --&gt;
-&lt;script type="module"    src="..."&gt;&lt;/script&gt;</code></pre>
-      </li>
-      <li>You used the external-file form in an older browser — inline the JSON.</li>
-    </ol>
-
-    <h3>404 on a vendored file (offline / <code>data-stage="local"</code>)</h3>
-    <p>Either <code>npm run build:vendor</code> hasn't run, or the importmap's
-    relative path doesn't match where <code>dist/vendor/</code> sits relative to
-    the page. Importmap paths resolve against the importmap's own URL, not the
-    page URL — the loader handles this with a <code>__BASE__</code> placeholder
-    pinned to its own location.</p>
-  </div>
+  <p>Once the components are loaded, see <a href="common-attributes.html">Common
+  attributes</a> for the options most of them share.</p>
 
 </body>
 </html>

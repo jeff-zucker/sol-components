@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Common attributes — Solid Web Components</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body class="scroll-help">
+
+  <h1>Common attributes</h1>
+  <p>Many of these components share the same attributes, so once you learn them
+  you know them everywhere. This page is the shared vocabulary — each
+  component's own help page lists only its extras. All of these go right on the
+  HTML tag, the same way you'd write <code>class</code> or <code>href</code>.</p>
+
+  <h2>Quick reference</h2>
+  <table class="attr-table">
+    <thead><tr><th>Attribute</th><th>What it does</th><th>Used by</th></tr></thead>
+    <tbody>
+      <tr><td><code>source</code></td>
+          <td>What the component loads — a file, a web address, or (for the
+              data-driven components) a settings file written in Turtle, like
+              <code>data/settings.ttl#Settings</code>.</td>
+          <td>nearly all</td></tr>
+      <tr><td><code>region</code></td>
+          <td>Where opened content appears: a CSS selector for an area of your
+              page (e.g. <code>#main</code>), or a pop-up keyword
+              (<code>modal</code>, <code>floating</code>, <code>tab</code>,
+              <code>window</code>).</td>
+          <td>sol-button, sol-menu, sol-query, sol-accordion, sol-weather</td></tr>
+      <tr><td><code>handler</code></td>
+          <td>Which component opens the content. Usually optional — a sensible
+              default is chosen. Set it (e.g. <code>sol-query</code>) to force a
+              particular one.</td>
+          <td>sol-button, sol-menu, sol-tabs, sol-modal, sol-pod</td></tr>
+      <tr><td><code>from-rdf</code></td>
+          <td>Build the component's items from a Turtle file instead of writing
+              them out in HTML.</td>
+          <td>sol-menu, sol-tabs, sol-dropdown-button, sol-settings</td></tr>
+      <tr><td><code>view</code></td>
+          <td>Pick a display style. The available choices depend on the
+              component (each page lists its own).</td>
+          <td>sol-feed, sol-search, sol-query, sol-calendar, sol-form,
+              sol-live-edit, sol-pod-ops</td></tr>
+      <tr><td><code>login</code></td>
+          <td>Point a component at a specific <code>&lt;sol-login&gt;</code> (a CSS
+              selector) when a page has more than one. Otherwise it finds the
+              login on the page automatically.</td>
+          <td>sol-include, sol-query, sol-pod, sol-pod-ops, sol-login</td></tr>
+      <tr><td><code>if-logged-in</code></td>
+          <td>React to whether the user is signed in. On <code>sol-menu</code>
+              it's a yes/no flag (show this item only when logged in); on
+              <code>sol-include</code> it's an alternate <code>source</code> to
+              show once logged in.</td>
+          <td>sol-menu, sol-include</td></tr>
+      <tr><td><code>proxy</code></td>
+          <td>A CORS-proxy web address put in front of cross-site fetches, so a
+              component can read a resource that wouldn't otherwise allow it.</td>
+          <td>sol-feed, sol-calendar (or set once on <code>&lt;sol-default&gt;</code>)</td></tr>
+      <tr><td><code>trusted</code></td>
+          <td>Let same-site HTML render as real HTML. Without it, fetched HTML is
+              shown as plain text. Use only for content you control.</td>
+          <td>sol-include, sol-button, sol-modal</td></tr>
+      <tr><td><code>raw</code></td>
+          <td>Show a file's contents as-is (its literal text) instead of
+              interpreting it.</td>
+          <td>sol-include</td></tr>
+      <tr><td><code>selector</code></td>
+          <td>Show only part of a fetched document — give a CSS selector and just
+              that piece is pulled in.</td>
+          <td>sol-include</td></tr>
+      <tr><td><code>orientation</code></td>
+          <td>Lay the items out <code>horizontal</code> or <code>vertical</code>.</td>
+          <td>sol-menu, sol-tabs, sol-dropdown-button</td></tr>
+      <tr><td><code>editable</code></td>
+          <td>Allow editing of what's shown, right in place.</td>
+          <td>sol-feed, sol-form</td></tr>
+      <tr><td><code>editor-self</code></td>
+          <td>Add a small gear so the component can edit its <em>own</em> settings
+              on the page.</td>
+          <td>sol-calendar, sol-menu, sol-search, sol-time, sol-weather, sol-tabs</td></tr>
+      <tr><td><code>shape</code></td>
+          <td>A SHACL file describing the fields of an edit form (which boxes to
+              show and what type each is).</td>
+          <td>sol-form (and any component you make editable)</td></tr>
+      <tr><td><code>save-to</code></td>
+          <td>Where edits are written back.</td>
+          <td>sol-form</td></tr>
+    </tbody>
+  </table>
+
+  <h2>A closer look</h2>
+
+  <h3><code>source</code> — what to load</h3>
+  <p>The one attribute almost every component takes. For the content components
+  it's a file or web address; for the data-driven ones it points at a small
+  Turtle settings file, usually with a <code>#Name</code> on the end to pick the
+  right entry inside it:</p>
+  <pre><code>&lt;sol-include source="readme.md"&gt;&lt;/sol-include&gt;
+&lt;sol-time source="data/time-settings.ttl#Settings"&gt;&lt;/sol-time&gt;</code></pre>
+
+  <h3><code>region</code> &amp; <code>handler</code> — what opens, and where</h3>
+  <p>The components that <em>launch</em> things (buttons, menu items, tabs) use
+  this pair: <code>handler</code> says <strong>what</strong> opens the content,
+  <code>region</code> says <strong>where</strong> it lands.</p>
+  <pre><code>&lt;!-- open settings.html in the #main area --&gt;
+&lt;sol-button source="settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
+
+&lt;!-- pop a query up in a dialog --&gt;
+&lt;sol-button handler="sol-query" source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;</code></pre>
+  <p>You don't have to repeat <code>region</code> on every launcher. Put it once
+  on a wrapping element with <code>data-region="…"</code>, or on
+  <code>&lt;sol-default&gt;</code> (below), and the launchers inside use it.</p>
+
+  <h3><code>from-rdf</code> — items from a data file</h3>
+  <p>Menus, tab strips, and dropdowns can be written out in HTML, or generated
+  from a Turtle file so the same data can drive several places at once:</p>
+  <pre><code>&lt;sol-menu from-rdf="data/menu.ttl#MainMenu" region="#main"&gt;&lt;/sol-menu&gt;</code></pre>
+
+  <h3><code>login</code> &amp; <code>if-logged-in</code> — being sign-in aware</h3>
+  <p>Drop a <code>&lt;sol-login&gt;</code> on the page and the data components use
+  the signed-in user's access automatically — no wiring. The two attributes here
+  only matter when you want finer control:</p>
+  <pre><code>&lt;!-- show this menu item only to signed-in users --&gt;
+&lt;a href="data/private.ttl" if-logged-in&gt;My private data&lt;/a&gt;
+
+&lt;!-- show one page to guests, another once signed in --&gt;
+&lt;sol-include source="guest.html" if-logged-in="owner.html"&gt;&lt;/sol-include&gt;
+
+&lt;!-- with two logins on the page, target one explicitly --&gt;
+&lt;sol-query login="#alt" source="data.ttl"&gt;&lt;/sol-query&gt;</code></pre>
+
+  <h3>Set shared options once — <code>&lt;sol-default&gt;</code></h3>
+  <p>Rather than repeating the same setting on every component, put a single
+  <code>&lt;sol-default&gt;</code> on the page. A component checks its own
+  attribute first and falls back to <code>&lt;sol-default&gt;</code> for shared
+  options like the CORS <code>proxy</code>, the default <code>region</code>, and
+  the default sign-in provider:</p>
+  <pre><code>&lt;sol-default
+    proxy="https://example.org/proxy?uri="
+    region="#main"
+&gt;&lt;/sol-default&gt;</code></pre>
+  <p>Change a value on <code>&lt;sol-default&gt;</code> at runtime and the
+  components that rely on it update to match.</p>
+
+</body>
+</html>

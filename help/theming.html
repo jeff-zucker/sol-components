@@ -17,47 +17,57 @@
 <body>
 
   <h1>Theming &amp; customization</h1>
-  <p>The components are designed to be styled from the host page using CSS custom properties. There are no Sass overrides or build steps — set a variable in <code>:root</code> (or any ancestor) and the value flows through Shadow DOM to every component on the page.</p>
+  <p>You theme these components with plain CSS — no special setup. They read
+  their colors, fonts, and spacing from CSS custom properties (the
+  <code>--name</code> variables you may already use). Set one of those variables
+  on your page and every component picks up your value.</p>
 
   <nav class="page-nav" aria-label="Page sections">
-    <a href="#how">How customization works</a>
+    <a href="#how">How it works</a>
     <a href="#themes">Light &amp; dark themes</a>
     <a href="#colors">Colors &amp; surfaces</a>
     <a href="#type">Typography</a>
     <a href="#spacing">Spacing &amp; radius</a>
     <a href="#shadows">Shadows &amp; scrim</a>
-    <a href="#menu">sol-menu knobs</a>
-    <a href="#query">sol-query knobs</a>
-    <a href="#include">sol-include knobs</a>
-    <a href="#parts">Shadow parts</a>
+    <a href="#menu">sol-menu variables</a>
+    <a href="#query">sol-query variables</a>
+    <a href="#include">sol-include variables</a>
     <a href="#recipes">Recipes</a>
   </nav>
 
   <!-- ─────────────────────── How it works ─────────────────────── -->
-  <h2 id="how">How customization works</h2>
+  <h2 id="how">How it works</h2>
   <div class="api-block">
-    <p>Every component lives in a Shadow DOM, but CSS custom properties pierce that boundary. Set a token at the root of your page and the components see it:</p>
+    <p>Set a variable at the top of your page, in <code>:root</code>, and the
+    components see it:</p>
 <pre><code>:root {
-  --accent: #ff6f00;          /* changes link / focus / hover accent everywhere */
-  --medium-font: 18px;        /* shrinks the base font size globally */
+  --accent: #ff6f00;          /* the link / focus / hover color, everywhere */
+  --medium-font: 18px;        /* the base font size */
 }</code></pre>
-    <p>You can also scope an override to a region of the page (e.g. only the sidebar) by setting the variable on a specific ancestor:</p>
+    <p>You can also change a variable for just one part of the page — set it on a
+    specific element and only the components inside that element are affected:</p>
 <pre><code>aside.sidebar {
-  --menu-active-bg: #fff5e6;  /* only the menu inside this aside picks up the override */
+  --menu-active-bg: #fff5e6;  /* only the menu inside this sidebar changes */
 }</code></pre>
-    <p>Where a component-specific knob exists (<code>--menu-*</code>, <code>--query-*</code>, <code>--include-*</code>), it takes precedence over the global token it's based on, so you can retheme one component without touching others.</p>
+    <p>Some components have their own variables (named <code>--menu-*</code>,
+    <code>--query-*</code>, <code>--include-*</code>). When one of those is set it
+    wins over the matching general variable, so you can restyle a single
+    component without affecting the others.</p>
   </div>
 
   <!-- ─────────────────────── Themes ─────────────────────── -->
   <h2 id="themes">Light &amp; dark themes</h2>
   <div class="api-block">
-    <p>Light is the default. Add <code>data-theme="dark"</code> to the <code>&lt;html&gt;</code> element (or any ancestor of your components) to switch to the bundled dark palette:</p>
+    <p>Light is the default. To switch to the built-in dark theme, add
+    <code>data-theme="dark"</code> to your <code>&lt;html&gt;</code> tag (or any
+    element above your components):</p>
 <pre><code>&lt;html data-theme="dark"&gt;
   ...
 &lt;/html&gt;</code></pre>
-    <p>The dark theme reassigns these tokens — every component that respects them flips automatically:</p>
+    <p>The dark theme just gives these variables new values, and every component
+    that uses them switches over:</p>
     <table class="attr-table">
-      <thead><tr><th>Token</th><th>Light default</th><th>Dark override</th></tr></thead>
+      <thead><tr><th>Variable</th><th>Light default</th><th>Dark value</th></tr></thead>
       <tbody>
         <tr><td>--bg</td>          <td>#f5f5f5</td><td>#1a1a1a</td></tr>
         <tr><td>--surface</td>     <td>#ffffff</td><td>#252525</td></tr>
@@ -71,13 +81,14 @@
         <tr><td>--accent-dark</td> <td>#2980b9</td><td>#339af0</td></tr>
       </tbody>
     </table>
-    <p>To follow the system preference automatically:</p>
+    <p>To follow the visitor's system setting automatically:</p>
 <pre><code>&lt;script&gt;
   if (matchMedia('(prefers-color-scheme: dark)').matches) {
     document.documentElement.dataset.theme = 'dark';
   }
 &lt;/script&gt;</code></pre>
-    <p>To define your own theme, override any subset of tokens — you don't have to redefine the whole palette:</p>
+    <p>To make your own theme, set just the variables you want to change — you
+    don't have to list them all:</p>
 <pre><code>:root[data-theme="brand"] {
   --accent:      #ff6f00;
   --accent-dark: #c44a00;
@@ -92,10 +103,10 @@
     <table class="attr-table">
       <thead><tr><th>Variable</th><th>Default (light)</th><th>What it controls</th></tr></thead>
       <tbody>
-        <tr><td>--bg</td>         <td><span class="swatch" style="background:#f5f5f5"></span>#f5f5f5</td><td>Page background (intended for the host page; components mostly use --surface)</td></tr>
-        <tr><td>--surface</td>    <td><span class="swatch" style="background:#fff"></span>#ffffff</td>   <td>Component surface fill — popups, modals, cards, table cells</td></tr>
+        <tr><td>--bg</td>         <td><span class="swatch" style="background:#f5f5f5"></span>#f5f5f5</td><td>Page background (for your page; components mostly use --surface)</td></tr>
+        <tr><td>--surface</td>    <td><span class="swatch" style="background:#fff"></span>#ffffff</td>   <td>Component fill — popups, modals, cards, table cells</td></tr>
         <tr><td>--border</td>     <td><span class="swatch" style="background:#d0d0d0"></span>#d0d0d0</td><td>Lines and dividers</td></tr>
-        <tr><td>--text</td>       <td><span class="swatch" style="background:#000"></span>#000000</td>   <td>Primary text color</td></tr>
+        <tr><td>--text</td>       <td><span class="swatch" style="background:#000"></span>#000000</td>   <td>Main text color</td></tr>
         <tr><td>--text-muted</td> <td><span class="swatch" style="background:#4d4d4d"></span>#4d4d4d</td><td>Secondary text — captions, field labels</td></tr>
         <tr><td>--accent</td>     <td><span class="swatch" style="background:#1F618D"></span>#1F618D</td><td>Brand color — links, active states, focus rings</td></tr>
         <tr><td>--accent-dark</td><td><span class="swatch" style="background:#2980b9"></span>#2980b9</td><td>Hovered/pressed accent</td></tr>
@@ -103,7 +114,7 @@
         <tr><td>--focus-bg</td>   <td><span class="swatch" style="background:#ebf5fb"></span>#ebf5fb</td><td>Background tint on the focused/active item</td></tr>
         <tr><td>--code-bg</td>    <td><span class="swatch" style="background:#f4f4f4"></span>#f4f4f4</td><td>Background for <code>&lt;code&gt;</code> and <code>&lt;pre&gt;</code></td></tr>
         <tr><td>--error</td>      <td><span class="swatch" style="background:#e74c3c"></span>#e74c3c</td><td>Error message color and outline</td></tr>
-        <tr><td>--success</td>    <td><span class="swatch" style="background:#27ae60"></span>#27ae60</td><td>Success state (reserved — currently unused)</td></tr>
+        <tr><td>--success</td>    <td><span class="swatch" style="background:#27ae60"></span>#27ae60</td><td>Success state</td></tr>
       </tbody>
     </table>
   </div>
@@ -111,14 +122,16 @@
   <!-- ─────────────────────── Type ─────────────────────── -->
   <h2 id="type">Typography</h2>
   <div class="api-block">
-    <p>Three sizes (small/medium/large) plus a separate <code>--font-size</code> alias for "the default body size." Medium is the default. Nothing in any component renders below 16 px.</p>
+    <p>There are three sizes — small, medium, large — plus a
+    <code>--font-size</code> that means "the default body size." Medium is the
+    default, and nothing renders below 16px.</p>
     <table class="attr-table">
       <thead><tr><th>Variable</th><th>Default</th><th>What it controls</th></tr></thead>
       <tbody>
-        <tr><td>--small-font</td>  <td>16px</td><td>Compact text — field labels, sort markers, button text in tight contexts, badges</td></tr>
+        <tr><td>--small-font</td>  <td>16px</td><td>Compact text — field labels, sort markers, button text in tight spots, badges</td></tr>
         <tr><td>--medium-font</td> <td>20px</td><td>Default body / control / table size</td></tr>
         <tr><td>--large-font</td>  <td>24px</td><td>Section headers (e.g. sol-query subject banner)</td></tr>
-        <tr><td>--font-size</td>   <td>var(--medium-font, 20px)</td><td>Alias the components reach for first; override to retag the default size</td></tr>
+        <tr><td>--font-size</td>   <td>var(--medium-font, 20px)</td><td>The default size components reach for first; change it to retag the base size</td></tr>
         <tr><td>--font-ui</td>     <td>'Segoe UI', Roboto, sans-serif</td><td>UI font family</td></tr>
         <tr><td>--font-mono</td>   <td>'Cascadia Code', 'Fira Code', 'Consolas', monospace</td><td>Monospace family for code blocks and Turtle output</td></tr>
         <tr><td>--font-weight-normal</td><td>400</td><td>Body weight</td></tr>
@@ -128,7 +141,10 @@
       </tbody>
     </table>
     <div class="tip-box">
-      <strong>To make everything smaller (or bigger) globally:</strong> override <code>--medium-font</code> (or <code>--font-size</code>). Components that explicitly use <code>--small-font</code> or <code>--large-font</code> for emphasis stay at their tier — small stays smaller than medium even after you change medium.
+      <strong>To make everything smaller (or bigger) at once:</strong> change
+      <code>--medium-font</code> (or <code>--font-size</code>). Text that uses
+      <code>--small-font</code> or <code>--large-font</code> keeps its own tier —
+      small stays smaller than medium even after you change medium.
     </div>
   </div>
 
@@ -159,22 +175,22 @@
         <tr><td>--shadow</td>       <td>rgba(0,0,0,0.08)</td><td>Generic surface drop shadow (cards)</td></tr>
         <tr><td>--shadow-popup</td> <td>0 4px 12px rgba(0,0,0,0.12)</td><td>Submenu popup elevation</td></tr>
         <tr><td>--shadow-modal</td> <td>0 8px 24px rgba(0,0,0,0.25)</td><td>Modal dialog elevation</td></tr>
-        <tr><td>--scrim</td>        <td>rgba(0,0,0,0.4)</td><td>Backdrop dim behind modals</td></tr>
+        <tr><td>--scrim</td>        <td>rgba(0,0,0,0.4)</td><td>Dim backdrop behind modals</td></tr>
       </tbody>
     </table>
   </div>
 
   <!-- ─────────────────────── Per-component: menu ─────────────────────── -->
-  <h2 id="menu">sol-menu knobs</h2>
+  <h2 id="menu">sol-menu variables</h2>
   <div class="api-block">
-    <p>Override these to retheme just the menu without touching anything else.</p>
+    <p>Set these to restyle just the menu, leaving everything else alone.</p>
     <table class="attr-table">
       <thead><tr><th>Variable</th><th>Default</th><th>What it controls</th></tr></thead>
       <tbody>
         <tr><td>--menu-nav-min-width</td>   <td>140px</td><td>Sidebar nav minimum width</td></tr>
         <tr><td>--menu-nav-max-width</td>   <td>260px</td><td>Sidebar nav maximum width</td></tr>
         <tr><td>--menu-popup-min-width</td> <td>160px</td><td>Submenu popup minimum width</td></tr>
-        <tr><td>--menu-button-padding</td>  <td>var(--space-md) var(--space-lg)</td><td>Menu item padding (shorthand: vertical horizontal)</td></tr>
+        <tr><td>--menu-button-padding</td>  <td>var(--space-md) var(--space-lg)</td><td>Menu item padding (vertical horizontal)</td></tr>
         <tr><td>--menu-button-radius</td>   <td>var(--radius-sm, 4px)</td><td>Menu item corner radius</td></tr>
         <tr><td>--menu-hover-bg</td>        <td>var(--hover, #f0f0f0)</td><td>Background on hover</td></tr>
         <tr><td>--menu-hover-color</td>     <td>var(--accent-dark, #1976d2)</td><td>Text color on hover</td></tr>
@@ -185,25 +201,25 @@
   </div>
 
   <!-- ─────────────────────── Per-component: query ─────────────────────── -->
-  <h2 id="query">sol-query knobs</h2>
+  <h2 id="query">sol-query variables</h2>
   <div class="api-block">
     <table class="attr-table">
       <thead><tr><th>Variable</th><th>Default</th><th>What it controls</th></tr></thead>
       <tbody>
         <tr><td>--query-th-bg</td>            <td>var(--accent-dark, #2C3E51)</td><td>Table header background</td></tr>
         <tr><td>--query-th-color</td>         <td>#fff</td><td>Table header text</td></tr>
-        <tr><td>--query-row-alt-bg</td>       <td>var(--hover, #fafafa)</td><td>Zebra-stripe color for even rows</td></tr>
+        <tr><td>--query-row-alt-bg</td>       <td>var(--hover, #fafafa)</td><td>Stripe color for even rows</td></tr>
         <tr><td>--query-cell-padding</td>     <td>var(--space-md) var(--space-lg)</td><td>Cell padding (vertical horizontal)</td></tr>
         <tr><td>--query-link-color</td>       <td>var(--accent, #0066cc)</td><td>Cell link color</td></tr>
-        <tr><td>--query-bnode-link-color</td> <td>var(--text-muted, #777)</td><td>Color of "[…]" blank-node placeholder links</td></tr>
-        <tr><td>--bnode-modal-max-width</td>  <td>min(90vw, 700px)</td><td>Width cap for the blank-node properties modal</td></tr>
-        <tr><td>--bnode-modal-max-height</td> <td>80vh</td><td>Height cap for the blank-node properties modal</td></tr>
+        <tr><td>--query-bnode-link-color</td> <td>var(--text-muted, #777)</td><td>Color of "[…]" placeholder links</td></tr>
+        <tr><td>--bnode-modal-max-width</td>  <td>min(90vw, 700px)</td><td>Width cap for the properties pop-up</td></tr>
+        <tr><td>--bnode-modal-max-height</td> <td>80vh</td><td>Height cap for the properties pop-up</td></tr>
       </tbody>
     </table>
   </div>
 
   <!-- ─────────────────────── Per-component: include ─────────────────────── -->
-  <h2 id="include">sol-include knobs</h2>
+  <h2 id="include">sol-include variables</h2>
   <div class="api-block">
     <table class="attr-table">
       <thead><tr><th>Variable</th><th>Default</th><th>What it controls</th></tr></thead>
@@ -217,109 +233,36 @@
     </table>
   </div>
 
-  <!-- ─────────────────────── Shadow parts ─────────────────────── -->
-  <h2 id="parts">Shadow parts &amp; slots</h2>
-  <div class="api-block">
-    <p>For things that can't be themed via variables alone, components expose <code>part="…"</code> hooks (style from the host page with <code>::part(name)</code>) and <code>&lt;slot&gt;</code>s (insert your own HTML into a known position, then style it with <code>::slotted()</code>). The deliberate stance is to keep this surface small — exposing a part or slot is a public-API commitment that's slower to evolve than CSS variables.</p>
-
-    <h3>Parts</h3>
-    <table class="attr-table">
-      <thead><tr><th>Component</th><th>Part</th><th>What it is</th></tr></thead>
-      <tbody>
-        <tr><td>sol-modal</td><td><code>trigger</code></td><td>The button that opens the modal. Default styling is the standard <code>.sol-btn</code>.</td></tr>
-      </tbody>
-    </table>
-<pre><code>sol-modal::part(trigger) {
-  background: #ff6f00;
-  color: #fff;
-  border-radius: 999px;
-  padding: 8px 16px;
-}</code></pre>
-
-    <h3>Slots</h3>
-    <table class="attr-table">
-      <thead><tr><th>Component</th><th>Slot</th><th>Fallback</th><th>What it is</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>sol-modal</td>
-          <td><em>(default)</em></td>
-          <td>literal text <code>Open</code></td>
-          <td>Inside the trigger button. Put your own label or icon between <code>&lt;sol-modal&gt;</code> tags to override the default text.</td>
-        </tr>
-      </tbody>
-    </table>
-<pre><code>&lt;sol-modal title="Edit settings"&gt;
-  &lt;span&gt;⚙ Settings&lt;/span&gt;       &lt;!-- replaces the "Open" fallback --&gt;
-&lt;/sol-modal&gt;
-
-&lt;style&gt;
-  /* ::slotted() reaches the host-page node we passed in */
-  sol-modal::part(trigger) ::slotted(span) { letter-spacing: .05em; }
-&lt;/style&gt;</code></pre>
-
-    <h3>I want to restyle X — what do I use?</h3>
-    <p>Most surfaces ship as CSS variables rather than parts. Quick reference for the things authors most often want to retheme:</p>
-    <table class="attr-table">
-      <thead><tr><th>To restyle…</th><th>Reach for…</th></tr></thead>
-      <tbody>
-        <tr><td>Brand color anywhere</td>                   <td><code>--accent</code> + <code>--accent-dark</code></td></tr>
-        <tr><td>The modal's open button</td>                <td><code>sol-modal::part(trigger)</code></td></tr>
-        <tr><td>The modal's open-button label</td>          <td>Default <code>&lt;slot&gt;</code> in <code>&lt;sol-modal&gt;</code></td></tr>
-        <tr><td>The modal's body, close button, scrim</td>  <td><code>--surface</code>, <code>--shadow-modal</code>, <code>--scrim</code> (no parts yet)</td></tr>
-        <tr><td>sol-menu sidebar / popup</td>               <td><code>--menu-*</code> variables (see <a href="#menu">sol-menu knobs</a>)</td></tr>
-        <tr><td>sol-query table headers / cells</td>        <td><code>--query-*</code> variables (see <a href="#query">sol-query knobs</a>)</td></tr>
-        <tr><td>sol-query view container</td>               <td>Style the host element directly: <code>sol-query { … }</code> — nothing inside the shadow root reaches it</td></tr>
-        <tr><td>sol-include rendered content</td>           <td><code>--include-*</code> variables; nested HTML appears in the host's light DOM, so normal CSS selectors apply.</td></tr>
-        <tr><td>sol-login button text / icon</td>           <td>No part yet — host-page CSS targeting <code>sol-login</code> can adjust its outer box; for inner button restyle, override <code>--accent</code>/<code>--surface</code>.</td></tr>
-        <tr><td>Loading / error states across components</td><td><code>--text-muted</code> (loading), <code>--error</code> (errors)</td></tr>
-        <tr><td>Per-region override (only one section)</td>  <td>Set the variable on an ancestor element, not <code>:root</code> — see <a href="#how">How customization works</a>.</td></tr>
-      </tbody>
-    </table>
-
-<!--
-    <div class="note-box">
-      <strong>Wishlist for future parts.</strong> Common requests that today require variables (or aren't possible):
-      <ul style="margin:.5rem 0 0 1.25rem">
-        <li><code>sol-modal::part(close)</code>, <code>sol-modal::part(body)</code>, <code>sol-modal::part(scrim)</code></li>
-        <li><code>sol-query::part(table)</code>, <code>sol-query::part(row)</code>, <code>sol-query::part(loading)</code></li>
-        <li><code>sol-menu::part(item)</code>, <code>sol-menu::part(active)</code></li>
-        <li><code>sol-login::part(button)</code>, <code>sol-login::part(issuer-list)</code></li>
-      </ul>
-      Open an issue if you hit a use case the variables genuinely can't cover — that's the gating bar for adding a new part.
-    </div>
-  </div>
--->
-
   <!-- ─────────────────────── Recipes ─────────────────────── -->
   <h2 id="recipes">Recipes</h2>
   <div class="api-block">
-    <h3>Brand-color override (one line, affects everything)</h3>
+    <h3>Change the brand color (one place, affects everything)</h3>
 <pre><code>:root {
   --accent:      #ff6f00;
   --accent-dark: #c44a00;
 }</code></pre>
 
-    <h3>Compact mode (smaller body type, tighter spacing)</h3>
+    <h3>Compact mode (smaller text, tighter spacing)</h3>
 <pre><code>:root {
   --medium-font: 16px;
-  --small-font:  14px;   /* OK to drop below 16px if you accept the WCAG tradeoff */
+  --small-font:  14px;   /* below 16px — fine if you accept the smaller size */
   --space-md:    6px;
   --space-lg:    8px;
 }</code></pre>
 
-    <h3>Theme just the menu, leave query and include alone</h3>
+    <h3>Theme just the menu, leave the rest alone</h3>
 <pre><code>:root {
   --menu-active-bg:    #fff3e0;
   --menu-active-color: #c44a00;
   --menu-hover-bg:     #fff8e1;
 }</code></pre>
 
-    <h3>Replace zebra-striping with a flat table</h3>
+    <h3>Flat table instead of stripes</h3>
 <pre><code>:root {
-  --query-row-alt-bg: var(--surface);   /* makes even rows match odd rows */
+  --query-row-alt-bg: var(--surface);   /* even rows match odd rows */
 }</code></pre>
 
-    <h3>Auto dark mode (follow OS preference)</h3>
+    <h3>Auto dark mode (follow the OS setting)</h3>
 <pre><code>&lt;script&gt;
   const root = document.documentElement;
   const apply = e =&gt; root.dataset.theme = e.matches ? 'dark' : 'light';
@@ -327,11 +270,11 @@
   apply(mql); mql.addEventListener('change', apply);
 &lt;/script&gt;</code></pre>
 
-    <h3>Three custom themes the user can switch between</h3>
+    <h3>A few themes the visitor can switch between</h3>
 <pre><code>:root[data-theme="ocean"]  { --accent: #0277bd; --accent-dark: #01579b; --hover: #e1f5fe; }
 :root[data-theme="forest"] { --accent: #2e7d32; --accent-dark: #1b5e20; --hover: #e8f5e9; }
 :root[data-theme="sunset"] { --accent: #e64a19; --accent-dark: #bf360c; --hover: #fff3e0; }</code></pre>
-<pre><code>// JS to switch
+<pre><code>// switch in JavaScript
 document.documentElement.dataset.theme = 'forest';</code></pre>
   </div>
 </body>
