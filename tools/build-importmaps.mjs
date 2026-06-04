@@ -2,9 +2,12 @@
 /**
  * build-importmaps.mjs
  *
- * Reads tools/external-deps.json and writes two importmap JSON files into
- * dist/ — one mapping bare specifiers to esm.sh URLs (CDN runtime), one
- * mapping them to ./vendor/<name>.js paths (offline / npm-installed runtime).
+ * Reads tools/external-deps.json + web/ and writes, into dist/:
+ *   - importmap-cdn.json / importmap-local.json — bare specifiers → esm.sh URLs
+ *     / ./vendor + ../web paths (for anyone consuming an importmap directly).
+ *   - sol-loader.manifest.json — swc described as a loader manifest (per-stage
+ *     imports + capabilities). sol-loader auto-loads this as its sibling default,
+ *     so the loader bakes in nothing about swc.
  *
  * The vendored files are produced by tools/vendor.mjs.
  */
@@ -57,9 +60,17 @@ mkdirSync(outDir, { recursive: true });
 writeFileSync(resolve(outDir, 'importmap-cdn.json'),   JSON.stringify(cdn,   null, 2) + '\n');
 writeFileSync(resolve(outDir, 'importmap-local.json'), JSON.stringify(local, null, 2) + '\n');
 
-// ── manifest: pure glue, fixed for every app (capabilities only; no groups) ──
+// ── the manifest: swc described as a manifest the (library-agnostic) loader
+// reads, EXACTLY like a third party's. It carries the import resolution per
+// stage AND the capabilities — so sol-loader bakes in nothing about swc; it
+// learns everything from this file (its sibling default manifest). The relative
+// paths below resolve against this manifest's own URL at load time (no __BASE__).
 const manifest = {
   name: PKG,
+  stages: {
+    local: { imports: local.imports },   // offline / npm-installed (./vendor, ../web)
+    cdn:   { imports: cdn.imports },      // esm.sh
+  },
   capabilities: {
     auth:    { modules: ['sol-login'] },
     sparql:  { modules: ['@comunica/query-sparql', 'sol-query'] },
@@ -71,8 +82,12 @@ const manifest = {
     // build (externalising those deps) before sol-solidos can be loader-driven.
   },
 };
-writeFileSync(resolve(outDir, 'swc.manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+// Named for the loader, not the library: the loader auto-loads its sibling
+// `<loader-basename>.manifest.json`, so this file is swc's content under a
+// loader-generic name. (importmap-{local,cdn}.json are still emitted above for
+// anyone consuming an importmap directly.)
+writeFileSync(resolve(outDir, 'sol-loader.manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
 console.log(`[build-importmaps] wrote dist/importmap-cdn.json   (${Object.keys(cdn.imports).length} entries)`);
 console.log(`[build-importmaps] wrote dist/importmap-local.json (${Object.keys(local.imports).length} entries)`);
-console.log(`[build-importmaps] wrote dist/swc.manifest.json    (${Object.keys(manifest.capabilities).length} capabilities)`);
+console.log(`[build-importmaps] wrote dist/sol-loader.manifest.json (${Object.keys(manifest.capabilities).length} capabilities, ${Object.keys(local.imports).length} imports/stage)`);

@@ -57,17 +57,14 @@ test('registerCapability merges into the manifest (append, de-duped)', () => {
   expect(SWC.manifest.capabilities.acme.modules).toEqual(['acme-a', 'acme-b', 'acme-c']);
 });
 
-test('buildImportmap adds extra entries but never redirects a shared dep', () => {
+test('the loader bakes in nothing about swc — manifest starts empty', () => {
   const code = readFileSync(resolve(process.cwd(), 'dist/sol-loader.min.js'), 'utf8');
   // eslint-disable-next-line no-eval
   (0, eval)(code);
   const SWC = window.SolidWebComponents;
-
-  const built = SWC.buildImportmap({
-    'acme-map': 'https://acme.example/acme-map.js',     // a new specifier — added
-    rdflib:     'https://evil.example/rdflib.js',        // a shared dep — must NOT win
-  });
-  expect(built.imports['acme-map']).toBe('https://acme.example/acme-map.js');
-  expect(built.imports.rdflib).not.toBe('https://evil.example/rdflib.js'); // swc's baked one wins
-  expect(built.imports.rdflib).toContain('rdflib');                         // still points at rdflib
+  // No currentScript in eval → no sibling manifest fetched → no baked capabilities.
+  expect(SWC.manifest.capabilities).toEqual({});
+  // …and the loader source itself carries no baked swc manifest/importmap.
+  expect(code).not.toMatch(/__SWC_(MANIFEST|IMPORTMAPS)__/);
+  expect(code).not.toContain('"sol-login"');   // no baked capability module list
 });
