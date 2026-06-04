@@ -13,7 +13,7 @@
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
           data-bundles="sol-query"
-          data-with="auth sparql"
+          data-extend-with="auth sparql"
   ></script>
 
 </head>
@@ -85,7 +85,7 @@
   <p>Add this line once, near the top of your page — it makes the component
   available:</p>
 
-  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-query" data-with="auth sparql"&gt;&lt;/script&gt;</code></pre>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-query" data-extend-with="auth sparql"&gt;&lt;/script&gt;</code></pre>
 
   <p>Then point the tag at some data and pick how to show it:</p>
   <pre><code>&lt;sol-query endpoint="https://example.org/data.ttl" view="table"&gt;&lt;/sol-query&gt;</code></pre>

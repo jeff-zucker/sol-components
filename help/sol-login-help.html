@@ -12,7 +12,7 @@
   <!-- Loads the components so the live demo on this page works. -->
   <script src="../dist/sol-loader.min.js"
           data-stage="local"
-          data-with="auth"
+          data-extend-with="auth"
   ></script>
 
   <style>
@@ -48,9 +48,9 @@
 
   <h2>Use it in your HTML</h2>
   <p>Add this line once, near the top of your page. The
-  <code>data-with="auth"</code> part is what turns on logging in:</p>
+  <code>data-extend-with="auth"</code> part is what turns on logging in:</p>
 
-  <pre><code>&lt;script src="dist/sol-loader.min.js" data-with="auth"&gt;&lt;/script&gt;</code></pre>
+  <pre><code>&lt;script src="dist/sol-loader.min.js" data-extend-with="auth"&gt;&lt;/script&gt;</code></pre>
 
   <p>Then drop the tag wherever you want the sign-in button to appear:</p>
   <pre><code>&lt;sol-login&gt;&lt;/sol-login&gt;</code></pre>

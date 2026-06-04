@@ -26,14 +26,14 @@
 <pre><code>&lt;script src="dist/sol-loader.min.js"
         data-stage="local"
         data-bundles="sol-basic sol-feed"
-        data-with="auth"&gt;&lt;/script&gt;</code></pre>
+        data-extend-with="auth"&gt;&lt;/script&gt;</code></pre>
 
   <p>It has three knobs:</p>
   <ul>
     <li><code>data-bundles</code> — the components (or families) you want; each
     token is a tag name, like <code>sol-basic</code> for the everyday UI plus
     widgets such as <code>sol-feed</code>.</li>
-    <li><code>data-with</code> — extra capabilities to switch on:
+    <li><code>data-extend-with</code> — extra capabilities to switch on:
     <code>auth</code> (sign-in), <code>sparql</code> (queries),
     <code>rdf</code> (the editing components), and <code>solidos</code> (the
     data browser).</li>
@@ -62,10 +62,10 @@
         <tr><td>Drive the menu/tabs family from a data file</td><td><code>data-bundles="sol-basic menu-from-rdf"</code></td><td>+ data support</td></tr>
         <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>that widget and what it needs</td></tr>
         <tr><td>Pods (pod, live-edit; pod-ops + wac as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>the pod components</td></tr>
-        <tr><td>Sign-in</td><td><code>data-with="auth"</code></td><td>sol-login</td></tr>
-        <tr><td>SPARQL queries</td><td><code>data-with="sparql"</code></td><td>sol-query</td></tr>
-        <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-with="rdf"</code></td><td>the editing components</td></tr>
-        <tr><td>The SolidOS data browser</td><td><code>data-with="solidos"</code></td><td>sol-solidos</td></tr>
+        <tr><td>Sign-in</td><td><code>data-extend-with="auth"</code></td><td>sol-login</td></tr>
+        <tr><td>SPARQL queries</td><td><code>data-extend-with="sparql"</code></td><td>sol-query</td></tr>
+        <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-extend-with="rdf"</code></td><td>the editing components</td></tr>
+        <tr><td>The SolidOS data browser</td><td><code>data-extend-with="solidos"</code></td><td>sol-solidos</td></tr>
       </tbody>
     </table>
     <p>Add a <code>&lt;sol-login&gt;</code> to the page and, once the user is

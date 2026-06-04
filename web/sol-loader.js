@@ -6,20 +6,21 @@
  *   <script src="dist/sol-loader.min.js"
  *           data-stage="local"
  *           data-bundles="sol-basic sol-time sol-pod"
- *           data-with="auth sparql rdf"></script>
+ *           data-extend-with="auth sparql rdf"></script>
  *
  * It (1) injects an importmap so bare specifiers resolve, then (2) `import()`s
- * the modules named in `data-bundles`, plus the modules of each `data-with`
- * capability (from the manifest), IN ORDER. Everything is ESM: a component
+ * the modules named in `data-bundles`, plus the modules of each
+ * `data-extend-with` capability (from the manifest), IN ORDER. Everything is
+ * ESM: a component
  * imports its own deps (`rdflib`, `dompurify`, …) through the same importmap,
  * so each resolves to ONE module — coherence is automatic, no UMD/window.$rdf.
  *
  *   - data-bundles  — space-separated module specifiers (e.g. `sol-time`); each
  *                     is `import()`ed. (No groups — list each one.)
- *   - data-with     — capabilities from the manifest (`auth`⇒sol-login,
- *                     `sparql`⇒sol-query, `rdf`⇒solid-logic→solid-ui→form stack,
- *                     `solidos`⇒mashlib+sol-solidos). Each imports its `modules`
- *                     in order.
+ *   - data-extend-with — capabilities from the manifest (`auth`⇒sol-login,
+ *                     `sparql`⇒comunica+sol-query, `rdf`⇒solid-logic→solid-ui→
+ *                     form stack, `solidos`⇒mashlib+sol-solidos). Each imports
+ *                     its `modules` in order.
  *   - data-stage    — `local` (default; swc's vendored importmap) or `cdn`
  *                     (esm.sh). Ignored if the page already has an importmap
  *                     (then the app owns resolution — bring your own deployment).
@@ -82,7 +83,7 @@
     }
   }
 
-  // Expand data-bundles + data-with into an ordered, de-duped module list.
+  // Expand data-bundles + data-extend-with into an ordered, de-duped module list.
   function modulesFor(bundles, withCaps) {
     var mods = [];
     var add = function (m) { if (m && mods.indexOf(m) === -1) mods.push(m); };
@@ -121,8 +122,8 @@
   }
 
   var auto = (ds.bundles || ds.load || '').trim();
-  if (auto || ds.with || ds.stage) {
-    load(auto, { with: ds.with }).then(announce);
+  if (auto || ds.extendWith || ds.stage) {
+    load(auto, { with: ds.extendWith }).then(announce);
   } else {
     ensureImportmap();
     resolveReady(api);
