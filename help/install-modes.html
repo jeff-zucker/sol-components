@@ -8,9 +8,6 @@
   <link rel="stylesheet" href="../web/styles/sol-query-help.css">
   <link rel="stylesheet" href="../web/styles/help.css">
   <script src="../web/scripts/prefs.js"></script>
-  <style>
-    .api-block { padding:1.5rem; margin-bottom:1.5rem; }
-  </style>
 </head>
 <body class="scroll-help">
 
@@ -53,24 +50,22 @@
   <code>swc:ready</code> on the document when everything is loaded.</p>
 
   <h2>Module / capability reference</h2>
-  <div class="api-block">
-    <p>A quick guide to which tokens to use for what you want to build.</p>
-    <table class="attr-table">
-      <thead><tr><th>You want…</th><th>Loader tokens</th><th>It pulls in for you</th></tr></thead>
-      <tbody>
-        <tr><td>The everyday UI (button, dropdown-button, include, menu, tabs, accordion, rolodex, modal, window, default)</td><td><code>data-bundles="sol-basic"</code></td><td>the basic UI components</td></tr>
-        <tr><td>Drive the menu/tabs family from a data file</td><td><code>data-bundles="sol-basic menu-from-rdf"</code></td><td>+ data support</td></tr>
-        <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>that widget and what it needs</td></tr>
-        <tr><td>Pods (pod, live-edit; pod-ops + wac as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>the pod components</td></tr>
-        <tr><td>Sign-in</td><td><code>data-extend-with="auth"</code></td><td>sol-login</td></tr>
-        <tr><td>SPARQL queries</td><td><code>data-extend-with="sparql"</code></td><td>sol-query</td></tr>
-        <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-extend-with="rdf"</code></td><td>the editing components</td></tr>
-      </tbody>
-    </table>
-    <p>Add a <code>&lt;sol-login&gt;</code> to the page and, once the user is
-    signed in, the data components automatically use that sign-in — no wiring
-    needed.</p>
-  </div>
+  <p>A quick guide to which tokens to use for what you want to build.</p>
+  <table class="attr-table">
+    <thead><tr><th>You want…</th><th>Loader tokens</th><th>It pulls in for you</th></tr></thead>
+    <tbody>
+      <tr><td>The everyday UI (button, dropdown-button, include, menu, tabs, accordion, rolodex, modal, window, default)</td><td><code>data-bundles="sol-basic"</code></td><td>the basic UI components</td></tr>
+      <tr><td>Drive the menu/tabs family from a data file</td><td><code>data-bundles="sol-basic menu-from-rdf"</code></td><td>+ data support</td></tr>
+      <tr><td>A widget (time, weather, search, calendar, feed, gallery)</td><td><code>data-bundles="sol-feed"</code> (etc.)</td><td>that widget and what it needs</td></tr>
+      <tr><td>Pods (pod, live-edit; pod-ops + wac as sol-pod-extras)</td><td><code>data-bundles="sol-pod sol-pod-extras sol-live-edit"</code></td><td>the pod components</td></tr>
+      <tr><td>Sign-in</td><td><code>data-extend-with="auth"</code></td><td>sol-login</td></tr>
+      <tr><td>SPARQL queries</td><td><code>data-extend-with="sparql"</code></td><td>sol-query</td></tr>
+      <tr><td>The editing components (sol-tree-edit, sol-form, sol-settings)</td><td><code>data-extend-with="rdf"</code></td><td>the editing components</td></tr>
+    </tbody>
+  </table>
+  <p>Add a <code>&lt;sol-login&gt;</code> to the page and, once the user is
+  signed in, the data components automatically use that sign-in — no wiring
+  needed.</p>
 
   <p>Once the components are loaded, see <a href="common-attributes.html">Common
   attributes</a> for the options most of them share.</p>
