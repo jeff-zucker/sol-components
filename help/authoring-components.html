@@ -32,9 +32,12 @@
   anyone else's), and register it:</p>
   <pre><code>class AcmeMap extends HTMLElement { /* … */ }
 customElements.define('acme-map', AcmeMap);</code></pre>
-  <p>When something happens in your component, announce it with an event named
-  <code>your-tag-action</code> that bubbles and composes, so anything on the page
-  can react without knowing about you:</p>
+  <p>That's the whole of plugging in. <strong>Optionally</strong>, if you want
+  other parts of the page — app code, other components, even across shadow DOM —
+  to react when something happens in yours, announce it with a bubbling, composed
+  event named <code>your-tag-action</code>. Nothing in the loader or the extension
+  mechanism needs this; it's just how components coordinate on a page when they
+  want to:</p>
   <pre><code>this.dispatchEvent(new CustomEvent('acme-map-select', {
   bubbles: true, composed: true, detail: { id },
 }));</code></pre>
