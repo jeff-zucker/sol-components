@@ -62,7 +62,8 @@ customElements.define('acme-map', AcmeMap);</code></pre>
     <li><code>imports</code> — where each of your components actually lives. This
     is the part that spares your users the URLs. Your entries can point anywhere
     (a CDN, a package path), but can't override a library the page already shares,
-    so the page stays coherent.</li>
+    so the page stays coherent. (Want to offer both an offline build and a CDN
+    form? Key them by stage — see below.)</li>
     <li><code>capabilities</code> — only if you provide a capability others switch
     on with <code>data-extend-with</code> (see <a href="#step4">Step&nbsp;4</a>).</li>
   </ul>
@@ -71,6 +72,7 @@ customElements.define('acme-map', AcmeMap);</code></pre>
   <p>Their <em>entire</em> integration is one loader tag pointing at your manifest,
   plus your tag. No URLs, no import map, no build:</p>
   <pre><code>&lt;script src="dist/sol-loader.min.js"
+        data-stage="local"
         data-manifest="acme/swc-manifest.json"
         data-bundles="acme-map"
 &gt;&lt;/script&gt;
@@ -79,7 +81,28 @@ customElements.define('acme-map', AcmeMap);</code></pre>
   <p>The loader reads your manifest, learns where <code>acme-map</code> lives, and
   loads it. The details stayed with you, the author, where they belong.</p>
 
-  <h2>Step 3 — Let capabilities enhance your component</h2>
+  <h3>Offer both an offline and a CDN build (optional)</h3>
+  <p>Because they're on the loader, you can hand your users one more convenience
+  for free: a deployment switch. Key your imports by stage in the same manifest…</p>
+  <pre><code>{
+  "stages": {
+    "local": { "imports": { "acme-map": "vendor/acme-map.js" } },
+    "cdn":   { "imports": { "acme-map": "https://cdn.acme.example/acme-map.js" } }
+  }
+}</code></pre>
+  <p>…and the consumer's <code>data-stage</code> picks which — <code>local</code>
+  for a self-hosted/offline build, <code>cdn</code> to pull from the internet. The
+  one knob covers your components <em>and</em> the loader's own pieces. (A flat
+  top-level <code>imports</code> still works if you don't care which.) See
+  <a href="install-modes.html">Loading the components</a>.</p>
+
+  <p><strong>You can stop here.</strong> Steps 1–2 are a complete, useful
+  integration on their own: plenty of components use the loader purely to give
+  people clean includes. The rest are optional extras — only if you want your
+  component <em>enhanced</em> (Step&nbsp;3) or want it to <em>provide</em> a
+  capability (Step&nbsp;4).</p>
+
+  <h2>Step 3 — (Optional) Let capabilities enhance your component</h2>
   <p>Declare the extension points you offer with one static getter. The handy one
   is <code>edit</code>: point it at a small file listing your fields and the page's
   editing capability builds your component a settings form and a ⚙ gear, for

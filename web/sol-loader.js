@@ -34,7 +34,10 @@
  *                     `capabilities` are merged before data-extend-with expands,
  *                     and its `imports` ({specifier:url}) are folded into the
  *                     importmap — so a consumer references an author's manifest +
- *                     names the components, and supplies no URLs/import map.
+ *                     names the components, and supplies no URLs/import map. A
+ *                     manifest may key imports by stage (`stages.local` /
+ *                     `stages.cdn`, overriding a flat `imports`), so data-stage
+ *                     selects local/cdn for the author's components too.
  *
  * The per-stage importmaps and the manifest are baked in at build from
  * tools/external-deps.json + the manifest (see rollup.config.js). A third party
@@ -129,6 +132,7 @@
     return (Array.isArray(v) ? v.slice() : String(v || '').trim().split(/\s+/)).filter(Boolean);
   }
   function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function assign(t, s) { if (s) for (var k in s) if (own(s, k)) t[k] = s[k]; return t; }
 
   // A third party's OWN importmap entries to fold in: data-importmap-extra is
   // inline JSON ({specifier:url} or {imports:{…}}). Parse-time + sync, so it
@@ -229,8 +233,13 @@
         .then(function (m) {
           var caps = (m && m.capabilities) || {};
           for (var name in caps) if (own(caps, name)) mergeCapability(name, caps[name]);
-          var imp = (m && m.imports) || {};
-          // First manifest to name a specifier wins; swc's baked map still wins overall.
+          // imports: a flat `imports`, plus a stage-specific
+          // `stages.<data-stage>.imports` that overrides it — so data-stage picks
+          // local/cdn for the author's components too, the same knob that picks
+          // swc's own deps. First manifest to name a specifier wins across
+          // manifests; swc's baked map still wins overall (coherence).
+          var stage = (ds.stage || 'local').trim();
+          var imp = assign(assign({}, m && m.imports), m && m.stages && m.stages[stage] && m.stages[stage].imports);
           for (var s in imp) if (own(imp, s) && !own(manifestImports, s)) manifestImports[s] = imp[s];
         })
         .catch(function (e) { console.error('[sol-loader] data-manifest ' + u + ': ' + e.message); });
