@@ -14,12 +14,14 @@
   <h1>Add your component to the ecosystem</h1>
 
   <p style="border-left:4px solid var(--accent,#888); padding:.5rem .9rem; background:var(--surface,#f5f5f5);">
-  <strong>Proposed — in progress.</strong> This guide describes the
-  component-author contract we're building toward. Some of the API it uses
-  (<code>window.SolidWebComponents.services</code> / <code>.rdf</code> /
-  <code>.fetch</code> / <code>.defaults</code> and <code>static get
-  extensionPoints()</code>) is not shipped yet — the guide is the spec the
-  implementation has to satisfy. Steps marked <em>(today)</em> already work.</p>
+  <strong>Newly implemented.</strong> The surface this guide describes —
+  <code>window.SolidWebComponents.services</code> / <code>.rdf</code> /
+  <code>.fetch</code> / <code>.defaults</code> / <code>.EVENTS</code>, the loader's
+  <code>data-manifest</code> / <code>data-importmap-extra</code> /
+  <code>registerCapability</code>, and <code>static get extensionPoints()</code> —
+  is now shipped. It hasn't yet been exercised end-to-end in a real browser, so
+  treat the runtime details as provisional and report anything that doesn't behave
+  as written.</p>
 
   <p>You wrote a web component. Here's how to make it a good citizen of a
   solid-web-components page — so it loads alongside everyone else's components,
