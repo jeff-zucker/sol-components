@@ -46,11 +46,17 @@ function makeRegistry() {
 
 let _local = null;
 
-/** The `window.SolidWebComponents` object (created if missing), or a Node-side
- *  stand-in so registration works in tests without a `window`. */
+/** The one shared host surface. It is the broker's `window.ComponentInterop`
+ *  when component-interop's loader is on the page; `window.SolidWebComponents`
+ *  is swc's historical alias for the SAME object. Unifying them here lets swc
+ *  work whether the page loaded component-interop's generic loader OR swc's own
+ *  (which vendors it). A Node-side stand-in is used in tests without a window. */
 export function root() {
   if (typeof window !== 'undefined') {
-    return (window.SolidWebComponents = window.SolidWebComponents || {});
+    const surface = window.ComponentInterop || window.SolidWebComponents || {};
+    window.ComponentInterop = surface;
+    window.SolidWebComponents = surface;
+    return surface;
   }
   return (_local = _local || {});
 }
@@ -92,6 +98,9 @@ export function adoptFetch(fn, info) {
 if (typeof window !== 'undefined') {
   const r = root();
   if (!r.adoptFetch) r.adoptFetch = adoptFetch;
+  // Register the broker consumer that adopts a foreign authenticated fetch: the
+  // loader invokes it for a manifest `consumes: { auth: { call: 'adoptFetch' } }`.
+  if (typeof r.registerConsumer === 'function') r.registerConsumer('adoptFetch', (fn) => adoptFetch(fn));
 }
 
 export { EVENTS };

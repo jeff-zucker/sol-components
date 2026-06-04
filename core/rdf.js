@@ -144,3 +144,11 @@ export default rdf;
 // Publish the shared store as the `rdf` host-service so any component can reach
 // it via window.SolidWebComponents.rdf — no import of this module required.
 registerService('rdf', rdf);
+
+// Register the broker consumer that adopts a foreign rdflib store: the loader
+// invokes it for a manifest `consumes: { rdf: { call: 'rdf.useStore' } }`. (The
+// loader publishes registerConsumer; absent in Node/jest, so this is guarded.)
+if (typeof window !== 'undefined' && window.SolidWebComponents
+    && typeof window.SolidWebComponents.registerConsumer === 'function') {
+  window.SolidWebComponents.registerConsumer('rdf.useStore', function (store) { rdf.useStore(store); });
+}

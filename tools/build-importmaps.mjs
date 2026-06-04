@@ -79,8 +79,12 @@ const manifest = {
     // the ESM inrupt build, so sol-login finds the Session class on every stage
     // without a separate UMD <script>. It MUST precede sol-login.
     auth:    { modules: ['solid-web-components/core/inrupt-global.js', 'sol-login'], attributes: [] },
-    sparql:  { modules: ['@comunica/query-sparql', 'sol-query', 'solid-web-components/core/from-query.js'],
-               attributes: ['data-from-query'] },
+    // `sparql` ships only the data-from-query ACTIVATOR + the shared engine it
+    // imports (Comunica lazy-loads on the first SPARQL query). The <sol-query>
+    // ELEMENT is a separate, optional bundle on the same engine — so you can have
+    // the attribute without the component (or vice-versa).
+    sparql:  { modules: ['solid-web-components/core/from-query.js'], attributes: ['data-from-query'] },
+    'sol-query': { modules: ['sol-query'] },
     rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings',
                          'solid-web-components/core/edit-placements.js', 'solid-web-components/core/from-rdf.js'],
                attributes: ['data-edit-shape', 'data-edit-mode', 'data-subject', 'data-from-rdf'] },

@@ -11,6 +11,7 @@ import { resolve } from 'path';
 // Each test evals the loader into a fresh global, as a real page has exactly one.
 beforeEach(() => {
   delete window.SolidWebComponents;
+  delete window.ComponentInterop;   // the generic loader's global; the swc tail aliases SolidWebComponents to it
   document.querySelectorAll('script[type="importmap"]').forEach((s) => s.remove());
 });
 

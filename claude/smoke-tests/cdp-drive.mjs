@@ -65,6 +65,9 @@ function rpc(ws, method, params) {
 
   await rpc(ws, 'Runtime.enable');
   await rpc(ws, 'Page.enable');
+  if (process.env.DARK) {
+    await rpc(ws, 'Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] });
+  }
 
   // Inject a capture of pod-os:loaded BEFORE page scripts run (test-only, via
   // CDP — the page itself stays script-free), then reload so it's in place.
@@ -103,6 +106,15 @@ function rpc(ws, method, params) {
 
   const ev = async (expr) => (await rpc(ws, 'Runtime.evaluate',
     { expression: expr, returnByValue: true, awaitPromise: true })).result.value;
+
+  if (probeExpr && probeExpr.startsWith('shot:')) {
+    const { writeFileSync } = await import('node:fs');
+    const path = probeExpr.slice(5);
+    const shot = await rpc(ws, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+    writeFileSync(path, Buffer.from(shot.data, 'base64'));
+    console.log('screenshot written:', path);
+    ws.close(); chrome.kill('SIGKILL'); process.exit(0);
+  }
 
   if (probeExpr) {
     const val = await ev(probeExpr);

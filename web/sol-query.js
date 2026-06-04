@@ -47,37 +47,14 @@ import { assertSafeQuery, sanitizeVarValue, substituteVariables } from '../core/
 import { getAuthFetch } from '../core/auth-fetch.js';
 import { rdf } from '../core/rdf.js';
 import { SparqlResultsRenderer } from './utils/sol-query-ui.js';
+import { loadBuiltinView } from './utils/sol-query-views.js';
 import { TriplePatternValidator, TriplePatternParser } from './utils/sol-query-triple-patterns.js';
 import { define } from '../core/define.js';
 import { adopt } from '../core/adopt.js';
 import { CSS as QUERY_CSS, sheet as querySheet } from './styles/sol-query-css.js';
 
-// Built-in views are loaded on demand. Each entry returns the render
-// function for that view name. The all-in-one Rollup bundle uses
-// `inlineDynamicImports: true` so these `import()` calls are inlined at
-// build time; ESM/importmap consumers fetch only the views they use.
-const BUILTIN_VIEW_LOADERS = {
-  table:           () => import('./views/table.js'),
-  dl:              () => import('./views/dl.js'),
-  list:            () => import('./views/list.js'),
-  accordion:       () => import('./views/accordion.js'),
-  anchorlist:      () => import('./views/anchorlist.js'),
-  'auto-complete': () => import('./views/auto-complete.js'),
-  menu:            () => import('./views/menu.js'),
-  rolodex:         () => import('./views/rolodex.js'),
-  select:          () => import('./views/select.js'),
-  tabs:            () => import('./views/tabs.js'),
-};
-const _viewCache = new Map();
-async function loadBuiltinView(name) {
-  if (_viewCache.has(name)) return _viewCache.get(name);
-  const loader = BUILTIN_VIEW_LOADERS[name];
-  if (!loader) return null;
-  const mod = await loader();
-  const fn  = mod.render ?? mod.default;
-  _viewCache.set(name, fn);
-  return fn;
-}
+// Built-in views are loaded on demand from a module shared with the
+// data-from-query activator (so the attribute and the element stay decoupled).
 
 /**
  * Query and display RDF / Linked Data from plain HTML.

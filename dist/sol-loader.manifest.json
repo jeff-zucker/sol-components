@@ -112,12 +112,15 @@
     },
     "sparql": {
       "modules": [
-        "@comunica/query-sparql",
-        "sol-query",
         "solid-web-components/core/from-query.js"
       ],
       "attributes": [
         "data-from-query"
+      ]
+    },
+    "sol-query": {
+      "modules": [
+        "sol-query"
       ]
     },
     "rdf": {
