@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add your component to the ecosystem</title>
+  <link rel="stylesheet" href="../web/styles/root.css">
+  <link rel="stylesheet" href="../web/styles/sol-query-help.css">
+  <link rel="stylesheet" href="../web/styles/help.css">
+  <script src="../web/scripts/prefs.js"></script>
+</head>
+<body>
+
+  <h1>Add your component to the ecosystem</h1>
+
+  <p style="border-left:4px solid var(--accent,#888); padding:.5rem .9rem; background:var(--surface,#f5f5f5);">
+  <strong>Proposed — in progress.</strong> This guide describes the
+  component-author contract we're building toward. Some of the API it uses
+  (<code>window.SolidWebComponents.services</code> / <code>.rdf</code> /
+  <code>.fetch</code> / <code>.defaults</code> and <code>static get
+  extensionPoints()</code>) is not shipped yet — the guide is the spec the
+  implementation has to satisfy. Steps marked <em>(today)</em> already work.</p>
+
+  <p>You wrote a web component. Here's how to make it a good citizen of a
+  solid-web-components page — so it loads alongside everyone else's components,
+  shares the same data and login, and can be enhanced by capabilities like
+  editing without you wiring anything up.</p>
+
+  <p>There are <strong>three things you can do</strong>, each optional and
+  independent:</p>
+  <ol>
+    <li><strong>Plug in</strong> — so it loads and coexists.</li>
+    <li><strong>Share resources</strong> — use the page's one data store, login, and settings.</li>
+    <li><strong>Offer extension points</strong> — let capabilities enhance your component.</li>
+  </ol>
+  <p>You never import any solid-web-components source code. Everything is plain
+  custom elements, the <code>window.SolidWebComponents</code> object, and DOM
+  events.</p>
+
+  <h2>1. Plug in <span style="font-weight:normal; opacity:.6;">(today)</span></h2>
+  <p>Your component is a standard custom element. Two conventions make it a good
+  neighbour. <strong>Pick a hyphenated tag with your own prefix</strong> so it
+  never collides:</p>
+  <pre><code>customElements.define('acme-map', AcmeMap);</code></pre>
+
+  <p><strong>Emit events that bubble and compose</strong>, named
+  <code>your-tag-action</code>, so anything on the page can react without knowing
+  about you:</p>
+  <pre><code>this.dispatchEvent(new CustomEvent('acme-map-select', {
+  bubbles: true, composed: true, detail: { id }
+}));</code></pre>
+
+  <p><strong>Put it on the page.</strong> A page using the loader just names your
+  module in <code>data-bundles</code>; <code>data-manifest</code> tells the loader
+  where to find it (see step 4):</p>
+  <pre><code>&lt;script src="dist/sol-loader.min.js"
+        data-bundles="sol-basic acme-map"
+        data-manifest="https://acme.example/swc-manifest.json"
+&gt;&lt;/script&gt;</code></pre>
+  <p>Or, simplest of all, the page author adds their own
+  <code>&lt;script type="module"&gt;</code> and writes <code>&lt;acme-map&gt;</code>
+  — no manifest needed.</p>
+
+  <div class="note-box">
+    <strong>Sharing libraries:</strong> if your component uses
+    <code>rdflib</code>, import it as a bare specifier
+    (<code>import { sym } from 'rdflib'</code>) and mark it <strong>external</strong>
+    in your build. The page already provides one shared copy through its importmap
+    — that single copy is what keeps every component's data identical. Don't bundle
+    your own.
+  </div>
+
+  <h2>2. Share resources</h2>
+  <p>Everything shared lives on one object the loader puts on the page:
+  <code>window.SolidWebComponents</code>. Wait for it to be ready, then use it:</p>
+  <pre><code>const SWC = window.SolidWebComponents;
+await SWC.ready;            // components + capabilities have loaded</code></pre>
+
+  <h3>What's on it</h3>
+  <table class="attr-table">
+    <thead><tr><th>You want…</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>The one shared data store</td><td><code>SWC.rdf.store</code>, <code>await SWC.rdf.load(url)</code></td></tr>
+      <tr><td>The signed-in fetch (carries the user's credentials when logged in)</td><td><code>await SWC.fetch(url)</code></td></tr>
+      <tr><td>React to sign-in / sign-out</td><td><code>SWC.on(SWC.EVENTS.LOGIN, fn)</code> / <code>SWC.on(SWC.EVENTS.LOGOUT, fn)</code></td></tr>
+      <tr><td>Page-wide settings (e.g. a CORS <code>proxy</code>)</td><td><code>SWC.defaults.get('proxy')</code>, <code>SWC.defaults.onChange(fn)</code></td></tr>
+      <tr><td>Check what's available before using it</td><td><code>SWC.has('auth')</code></td></tr>
+      <tr><td>Wait for a resource that may load after you</td><td><code>await SWC.services.whenReady('rdf')</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>So a component that shows a "save to my pod" button only when login is
+  available, and re-renders when the user signs in:</p>
+  <pre><code>if (SWC.has('auth')) this.showSaveButton();
+SWC.on(SWC.EVENTS.LOGIN,  () =&gt; this.reload());
+SWC.on(SWC.EVENTS.LOGOUT, () =&gt; this.reload());
+const res = await SWC.fetch('https://my.pod/private.ttl');</code></pre>
+  <p>No imports — your component and every <code>sol-*</code> component read and
+  write the same store and use the same login.</p>
+
+  <h2>3. Offer extension points</h2>
+  <p>This is the interesting part: you can let <strong>capabilities</strong>
+  improve your component without importing anything or knowing which capability
+  will show up.</p>
+
+  <p>Declare, on your class, the extension points you offer. The most useful one
+  is <code>edit</code>: declare it with a SHACL shape and the editing capability
+  (loaded with <code>data-extend-with="rdf"</code>) gives your component a settings
+  form and a ⚙ gear, for free:</p>
+  <pre><code>class AcmeMap extends HTMLElement {
+  static get extensionPoints() {
+    return {
+      edit: { shape: 'https://acme.example/shapes/map.shacl' },
+    };
+  }
+  get source() { return this.getAttribute('source'); }  // where it reads config
+  reload() { /* re-read source, re-render */ }           // called after a save
+}</code></pre>
+  <p>That's the whole opt-in. When a page includes both your component and the
+  <code>rdf</code> capability, <code>&lt;sol-settings&gt;</code> discovers
+  <code>acme-map</code>, builds an editor from your shape, and calls your
+  <code>reload()</code> after a save — and you wrote no glue.</p>
+  <div class="note-box">
+    The mechanism is open-ended: a capability can define new points (e.g.
+    <code>annotate</code>, <code>translate</code>), and any component that lists
+    that point in <code>extensionPoints</code> gets enhanced. You only declare the
+    points you want. <code>static get shape()</code> / <code>static get editor()</code>
+    (the form swc's own components use today) are just shorthand for the
+    <code>edit</code> point.
+  </div>
+
+  <h2>4. <span style="font-weight:normal;">(Optional)</span> Ship a capability others extend with</h2>
+  <p>If you want to <em>provide</em> a capability — something pulled in by
+  <code>data-extend-with="acme-thing"</code> that enhances other people's
+  components — publish two things.</p>
+
+  <p>A <strong>manifest fragment</strong> (what <code>data-manifest</code> points
+  at), listing your capability's modules:</p>
+  <pre><code>{
+  "capabilities": {
+    "acme-thing": { "modules": ["acme-enhancer"] }
+  }
+}</code></pre>
+
+  <p>And a <strong>capability module</strong> that finds and enhances every
+  component offering your point — now, or whenever one is added later:</p>
+  <pre><code>import { observeExtensionPoint } from 'solid-web-components/core/extension-points.js';
+
+observeExtensionPoint('annotate', (el, spec) =&gt; {
+  // attach your enhancement to `el` using `spec`
+});</code></pre>
+  <p>You never import the components you enhance; they never import you. You meet
+  in the DOM.</p>
+
+  <h2>Checklist</h2>
+  <table class="attr-table">
+    <thead><tr><th>Do you…</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>Use a hyphenated, prefixed tag and <code>bubbles + composed</code> events named <code>tag-action</code>?</td><td>plug in</td></tr>
+      <tr><td>Import <code>rdflib</code> (and other shared libs) bare and mark them <strong>external</strong>?</td><td>share one copy</td></tr>
+      <tr><td>Use <code>window.SolidWebComponents</code> for the store / fetch / defaults — no swc imports?</td><td>share resources</td></tr>
+      <tr><td>Declare <code>static get extensionPoints()</code> if you want capabilities to enhance you?</td><td>be extended</td></tr>
+      <tr><td>Publish a manifest fragment + a capability module if you provide a capability?</td><td>extend others</td></tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
