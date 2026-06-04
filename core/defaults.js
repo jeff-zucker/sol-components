@@ -7,6 +7,8 @@
 // properties, not here. This module is for JS-side values like the
 // CORS proxy URL.
 
+import { register as registerService } from './services.js';
+
 /**
  * Read the current value of a named default. Returns the matching
  * attribute on the first <sol-default> element in the document, or
@@ -39,3 +41,8 @@ export function onDefaultChange(handler) {
   document.addEventListener('sol-default-change', fn);
   return () => document.removeEventListener('sol-default-change', fn);
 }
+
+// Publish shared config as the `defaults` host-service so any component reaches
+// it via window.SolidWebComponents.defaults — no import required. Registered
+// unconditionally; the getters simply return null when no <sol-default> exists.
+registerService('defaults', { get: getDefault, onChange: onDefaultChange });

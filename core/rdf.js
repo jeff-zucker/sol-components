@@ -7,6 +7,7 @@
 // vendored copy) or by a bundler. Per-component UMD builds list `rdflib`
 // in `external` so it stays a runtime global.
 import * as _rdflib from 'rdflib';
+import { register as registerService } from './services.js';
 
 // `import * as _rdflib` exposes rdflib's named exports directly.
 const _lib = _rdflib;
@@ -75,6 +76,18 @@ class Rdf {
     return this._fetcher;
   }
 
+  // Fetch a document into the shared store via the shared (auth-aware) Fetcher,
+  // at most once per document. Returns the shared store. This is the convenience
+  // a component reaches through window.SolidWebComponents.rdf.load(url).
+  async load(url) {
+    const doc = String(url).split('#')[0];
+    if (!this.isLoaded(doc)) {
+      await this.storeFetcher.load(doc);
+      this.markLoaded(doc);
+    }
+    return this.store;
+  }
+
   // SPARQL
   fetcher(store, opts)             { return new _lib.Fetcher(store, opts); }
   sparqlToQuery(query, isUpdate, store) { return _lib.SPARQLToQuery(query, isUpdate, store); }
@@ -121,3 +134,7 @@ export const rdf = (typeof window !== 'undefined')
   ? (window[_RDF_SINGLETON] || (window[_RDF_SINGLETON] = new Rdf()))
   : new Rdf();
 export default rdf;
+
+// Publish the shared store as the `rdf` host-service so any component can reach
+// it via window.SolidWebComponents.rdf — no import of this module required.
+registerService('rdf', rdf);

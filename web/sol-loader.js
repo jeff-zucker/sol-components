@@ -33,7 +33,13 @@
  * their own manifest — the loader stays library-agnostic.
  *
  * API: window.SolidWebComponents.{ ready (Promise), load(bundles,{with}),
- * manifest, loaded }; fires `swc:ready` on document + window when done.
+ * manifest, loaded, version }; fires `swc:ready` on document + window when done.
+ *
+ * Host-services surface (so any author's component shares resources without
+ * importing swc): .services (register/get/has/whenReady), the convenience getters
+ * .rdf / .auth / .fetch / .defaults, .has(name) / .capabilities, .on(name,fn) /
+ * .emit(name,detail), and .EVENTS (the event-name table, published by
+ * core/services.js). Capability modules register their impls via core/services.js.
  */
 (function () {
   'use strict';
@@ -50,8 +56,58 @@
   var api = window.SolidWebComponents = window.SolidWebComponents || {};
   api.manifest = MANIFEST;
   api.loaded = api.loaded || [];
+  api.version = api.version || '1';   // host-services surface version (feature detection)
   var resolveReady;
   api.ready = new Promise(function (r) { resolveReady = r; });
+
+  // ── host-services surface ──────────────────────────────────────────────────
+  // A tiny registry that capability modules register their shared services into
+  // (core/services.js is the import-side accessor). Created here, import-free, so
+  // the surface exists from the first parser-blocking moment — a component can
+  // `await SolidWebComponents.services.whenReady('rdf')` before anything loads.
+  // The registry is duck-typed by these methods, so core/services.js can adopt it.
+  function makeRegistry() {
+    var map = {}, waiters = {};
+    return {
+      register: function (name, impl) {
+        map[name] = impl;
+        var ws = waiters[name];
+        if (ws) { delete waiters[name]; ws.forEach(function (fn) { fn(impl); }); }
+      },
+      get:   function (name) { return map[name]; },
+      has:   function (name) { return Object.prototype.hasOwnProperty.call(map, name); },
+      names: function () { return Object.keys(map); },
+      whenReady: function (name) {
+        if (Object.prototype.hasOwnProperty.call(map, name)) return Promise.resolve(map[name]);
+        return new Promise(function (res) { (waiters[name] = waiters[name] || []).push(res); });
+      }
+    };
+  }
+  api.services = api.services || makeRegistry();
+
+  // Convenience getters — proxy the registry, lazy, never throw when absent.
+  function define(name, getter) {
+    if (!(name in api)) { try { Object.defineProperty(api, name, { get: getter, configurable: true }); } catch (e) {} }
+  }
+  define('rdf',      function () { return api.services.get('rdf'); });
+  define('auth',     function () { return api.services.get('auth'); });
+  define('defaults', function () { return api.services.get('defaults'); });
+  define('fetch',    function () {
+    var a = api.services.get('auth');
+    if (a && typeof a.fetch === 'function') return a.fetch;
+    return (typeof fetch !== 'undefined') ? fetch.bind(window) : undefined;
+  });
+  define('capabilities', function () { return api.services.names(); });
+  api.has = api.has || function (name) { return api.services.has(name); };
+  api.on  = api.on  || function (name, fn) {
+    document.addEventListener(name, fn);
+    return function () { document.removeEventListener(name, fn); };
+  };
+  api.emit = api.emit || function (name, detail) {
+    var e = new CustomEvent(name, { bubbles: true, composed: true, detail: detail });
+    document.dispatchEvent(e);
+    return e;
+  };
 
   function toList(v) {
     return (Array.isArray(v) ? v.slice() : String(v || '').trim().split(/\s+/)).filter(Boolean);

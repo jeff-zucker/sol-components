@@ -28,6 +28,7 @@ import {
 } from '../core/auth-core.js';
 import { PopupProxySession } from '../core/popup-proxy.js';
 import { solFetch } from '../core/auth-fetch.js';
+import { register as registerService, root as swcRoot } from '../core/services.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const login = document.querySelector('sol-login');
@@ -177,6 +178,20 @@ class AuthManager {
 // podz's per-side login elements register into a single session Map.
 // Single-login pages are unaffected (one consumer of the singleton).
 const sharedAuth = new AuthManager();
+
+// Publish auth to the ecosystem: expose AuthManager on the global (consumers in
+// core/auth-fetch.js + web/sol-include.js already READ window.SolidWebComponents
+// .AuthManager but nothing assigned it — this closes that gap), and register the
+// `auth` host-service so any component reaches the signed-in fetch via
+// window.SolidWebComponents.{auth,fetch} without importing swc.
+try {
+  swcRoot().AuthManager = AuthManager;
+  registerService('auth', {
+    manager: sharedAuth,
+    fetch: solFetch,
+    fetchFor: (url, tag) => sharedAuth.fetchFor(url, tag),
+  });
+} catch (_) { /* no window / pre-registration race — harmless */ }
 
 /**
  * Solid OIDC login web component.
