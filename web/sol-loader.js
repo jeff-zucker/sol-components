@@ -26,6 +26,13 @@
  *                     (then the app owns resolution — bring your own deployment).
  *   - data-base     — override the directory the importmap paths resolve against
  *                     (defaults to this script's own directory).
+ *   - data-importmap-extra — inline JSON ({specifier:url}) a third party folds
+ *                     into the single injected importmap (their own components/
+ *                     deps); swc's baked entries win on conflict so shared deps
+ *                     stay single. Works in every browser (one parse-time map).
+ *   - data-manifest — space-separated SAME-ORIGIN manifest URLs whose
+ *                     capabilities are merged before data-extend-with expands,
+ *                     so a third party can add/extend capabilities.
  *
  * The per-stage importmaps and the manifest are baked in at build from
  * tools/external-deps.json + the manifest (see rollup.config.js). A third party
@@ -40,6 +47,11 @@
  * .rdf / .auth / .fetch / .defaults, .has(name) / .capabilities, .on(name,fn) /
  * .emit(name,detail), and .EVENTS (the event-name table, published by
  * core/services.js). Capability modules register their impls via core/services.js.
+ *
+ * Open manifest: .registerCapability(name,{modules}) adds/extends a capability at
+ * runtime; .buildImportmap(extra) returns swc's stage map merged with `extra`
+ * (swc wins) for an author who inlines one combined importmap. `swc:capability`
+ * fires (detail {name}) as each capability's modules finish loading.
  */
 (function () {
   'use strict';
@@ -56,6 +68,7 @@
   var api = window.SolidWebComponents = window.SolidWebComponents || {};
   api.manifest = MANIFEST;
   api.loaded = api.loaded || [];
+  api._caps = api._caps || {};        // capability names whose modules finished loading
   api.version = api.version || '1';   // host-services surface version (feature detection)
   var resolveReady;
   api.ready = new Promise(function (r) { resolveReady = r; });
@@ -97,8 +110,8 @@
     if (a && typeof a.fetch === 'function') return a.fetch;
     return (typeof fetch !== 'undefined') ? fetch.bind(window) : undefined;
   });
-  define('capabilities', function () { return api.services.names(); });
-  api.has = api.has || function (name) { return api.services.has(name); };
+  define('capabilities', function () { return Object.keys(api._caps); });
+  api.has = api.has || function (name) { return !!api._caps[name] || api.services.has(name); };
   api.on  = api.on  || function (name, fn) {
     document.addEventListener(name, fn);
     return function () { document.removeEventListener(name, fn); };
@@ -112,23 +125,50 @@
   function toList(v) {
     return (Array.isArray(v) ? v.slice() : String(v || '').trim().split(/\s+/)).filter(Boolean);
   }
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
-  // Inject the stage importmap — UNLESS the page already provides one (then the
-  // app owns resolution). Must run before any module resolves; the loader is a
-  // parser-blocking <head> script, so injecting here precedes deferred modules.
+  // A third party's OWN importmap entries to fold in: data-importmap-extra is
+  // inline JSON ({specifier:url} or {imports:{…}}). Parse-time + sync, so it
+  // works in every browser (no second importmap needed).
+  function extraImports() {
+    var raw = (ds.importmapExtra || '').trim();
+    if (!raw) return {};
+    try {
+      var obj = JSON.parse(raw);
+      return (obj && obj.imports) ? obj.imports : (obj || {});
+    } catch (e) {
+      console.warn('[sol-loader] data-importmap-extra is not valid JSON — ignored', e);
+      return {};
+    }
+  }
+
+  // Merge swc's baked stage map with `extra`. swc's entries are applied LAST, so
+  // they win on conflict — a third party can ADD specifiers (their components)
+  // but never redirect a shared dep (rdflib, solid-ui, …), keeping it single.
+  function mergedImports(extra) {
+    var stage = (ds.stage || 'local').trim();
+    var map = IMPORTMAPS && IMPORTMAPS[stage];
+    var out = {}, k;
+    if (extra) for (k in extra) if (own(extra, k)) out[k] = extra[k];
+    if (map) for (k in map.imports) if (own(map.imports, k)) out[k] = map.imports[k].replace(/__BASE__/g, base);
+    return out;
+  }
+  // Portable helper: returns swc's stage map merged with `extra`, for an author
+  // who'd rather inline ONE combined <script type="importmap"> on the page.
+  api.buildImportmap = function (extra) { return { imports: mergedImports(extra || {}) }; };
+
+  // Inject the stage importmap (swc's baked entries + any data-importmap-extra),
+  // UNLESS the page already provides one (then the app owns resolution — use
+  // api.buildImportmap to construct a combined map). Must run before any module
+  // resolves; the loader is a parser-blocking <head> script, so injecting here
+  // precedes deferred modules.
   function ensureImportmap() {
     if (api._mapInjected) return;
     api._mapInjected = true;
     if (document.querySelector('script[type="importmap"]')) return; // page owns it
     var stage = (ds.stage || 'local').trim();
-    var map = IMPORTMAPS && IMPORTMAPS[stage];
-    if (!map) { console.warn('[sol-loader] unknown stage "' + stage + '" — no importmap injected'); return; }
-    var imports = {};
-    for (var k in map.imports) {
-      if (Object.prototype.hasOwnProperty.call(map.imports, k)) {
-        imports[k] = map.imports[k].replace(/__BASE__/g, base);
-      }
-    }
+    if (!(IMPORTMAPS && IMPORTMAPS[stage])) { console.warn('[sol-loader] unknown stage "' + stage + '" — no importmap injected'); return; }
+    var imports = mergedImports(extraImports());
     var el = document.createElement('script');
     el.type = 'importmap';
     el.textContent = JSON.stringify({ imports: imports });
@@ -139,33 +179,75 @@
     }
   }
 
-  // Expand data-bundles + data-extend-with into an ordered, de-duped module list.
-  function modulesFor(bundles, withCaps) {
-    var mods = [];
-    var add = function (m) { if (m && mods.indexOf(m) === -1) mods.push(m); };
-    toList(bundles).forEach(add);
-    toList(withCaps).forEach(function (cap) {
-      var c = MANIFEST && MANIFEST.capabilities && MANIFEST.capabilities[cap];
-      if (!c) { console.warn('[sol-loader] unknown capability "' + cap + '"'); return; }
-      (c.modules || []).forEach(add);
-    });
-    return mods;
+  // Merge a capability into the manifest (append modules, de-duped, order-kept).
+  // Used by data-manifest + registerCapability so a third party can add a new
+  // capability or contribute modules to an existing one.
+  function mergeCapability(name, def) {
+    if (!MANIFEST.capabilities) MANIFEST.capabilities = {};
+    var existing = MANIFEST.capabilities[name];
+    var mods = (existing && existing.modules) ? existing.modules.slice() : [];
+    ((def && def.modules) || []).forEach(function (m) { if (mods.indexOf(m) === -1) mods.push(m); });
+    MANIFEST.capabilities[name] = { modules: mods };
+  }
+  api.registerCapability = function (name, def) { mergeCapability(name, def); return api; };
+
+  // Fetch + merge any data-manifest JSON (capabilities only) before expanding
+  // data-extend-with. SAME-ORIGIN ONLY: a manifest names modules the loader will
+  // import(), so a cross-origin one is a code-execution surface and is rejected.
+  function loadManifests() {
+    var urls = toList(ds.manifest);
+    if (!urls.length) return Promise.resolve();
+    return Promise.all(urls.map(function (u) {
+      var abs;
+      try { abs = new URL(u, document.baseURI); }
+      catch (e) { console.warn('[sol-loader] bad data-manifest URL: ' + u); return null; }
+      if (abs.origin !== location.origin) {
+        console.error('[sol-loader] data-manifest must be same-origin — ignored: ' + u);
+        return null;
+      }
+      return fetch(abs.href)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+        .then(function (m) {
+          var caps = (m && m.capabilities) || {};
+          for (var name in caps) if (own(caps, name)) mergeCapability(name, caps[name]);
+        })
+        .catch(function (e) { console.error('[sol-loader] data-manifest ' + u + ': ' + e.message); });
+    }));
   }
 
-  // Import the modules sequentially so capability order is honoured
-  // (solid-logic before solid-ui before sol-form). A failed import is logged and
-  // skipped — it never rejects the chain.
+  function importModule(spec) {
+    return import(spec).then(
+      function () { if (api.loaded.indexOf(spec) === -1) api.loaded.push(spec); },
+      function (e) { console.error('[sol-loader] failed to import', spec, e); }
+    );
+  }
+  function importSeq(mods) {
+    return mods.reduce(function (p, spec) {
+      return p.then(function () { return importModule(spec); });
+    }, Promise.resolve());
+  }
+  function markCapability(name) {
+    if (api._caps[name]) return;
+    api._caps[name] = true;
+    api.emit('swc:capability', { name: name });
+  }
+
+  // Import data-bundles first, then each data-extend-with capability's modules IN
+  // ORDER (solid-logic before solid-ui …); fire swc:capability when each finishes
+  // so late plug-ins can react. A failed import is logged and skipped — it never
+  // rejects the chain.
   function load(bundles, opts) {
     ensureImportmap();
-    var mods = modulesFor(bundles, opts && opts.with);
-    return mods.reduce(function (p, spec) {
-      return p.then(function () {
-        return import(spec).then(
-          function () { api.loaded.push(spec); },
-          function (e) { console.error('[sol-loader] failed to import', spec, e); }
-        );
-      });
-    }, Promise.resolve());
+    var caps = toList(opts && opts.with);
+    return importSeq(toList(bundles)).then(function () {
+      return caps.reduce(function (p, cap) {
+        return p.then(function () {
+          var c = MANIFEST && MANIFEST.capabilities && MANIFEST.capabilities[cap];
+          if (!c) { console.warn('[sol-loader] unknown capability "' + cap + '"'); return; }
+          return importSeq(c.modules || []).then(function () { markCapability(cap); });
+        });
+      }, Promise.resolve());
+    });
   }
   api.load = load;
   api.ensureImportmap = ensureImportmap;
@@ -178,8 +260,9 @@
   }
 
   var auto = (ds.bundles || ds.load || '').trim();
-  if (auto || ds.extendWith || ds.stage) {
-    load(auto, { with: ds.extendWith }).then(announce);
+  if (auto || ds.extendWith || ds.stage || ds.manifest) {
+    ensureImportmap();   // inject the map up front (sync); manifest merge is async
+    loadManifests().then(function () { return load(auto, { with: ds.extendWith }); }).then(announce);
   } else {
     ensureImportmap();
     resolveReady(api);
