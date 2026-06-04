@@ -119,7 +119,19 @@ export class ComunicaSparqlAdapter {
     // level deeper at `window.Comunica.default.QueryEngine`.
     if (window.Comunica?.default?.QueryEngine) return () => new window.Comunica.default.QueryEngine();
     if (window.Comunica?.default?.newEngine) return window.Comunica.default.newEngine;
-    return null;
+    // All-ESM fallback: no UMD sets a Comunica global anymore. The loader's
+    // importmap resolves `@comunica/query-sparql` to the one shared engine, so
+    // import it on demand and build a QueryEngine from its export. Async factory
+    // — awaited by executeQuery, so the (large) engine only loads when a
+    // federated query actually runs, not on page load.
+    return async () => {
+      let mod;
+      try { mod = await import('@comunica/query-sparql'); }
+      catch (e) { throw new Error(`Comunica engine could not be loaded: ${e.message}`); }
+      const QueryEngine = mod.QueryEngine || mod.default?.QueryEngine || mod.default;
+      if (typeof QueryEngine !== 'function') throw new Error('Comunica module has no QueryEngine export');
+      return new QueryEngine();
+    };
   }
 
   async executeQuery(query, endpoint, fetchFn) {
