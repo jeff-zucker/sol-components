@@ -43,7 +43,21 @@ const stubNodeBuiltins = () => ({
   },
   load(id) {
     if (id === '\0stub:node-builtin') {
-      return 'export default {}; export const channel = () => ({ publish: () => {}, hasSubscribers: false });';
+      // diagnostics_channel: `channel()` and `tracingChannel()` (lru-cache, a
+      // Comunica transitive dep, calls tracingChannel and would otherwise throw
+      // "tracingChannel is not a function" in the browser). All no-ops; trace*
+      // just invoke the wrapped fn so instrumentation is transparent.
+      return [
+        'export default {};',
+        'export const channel = () => ({ publish: () => {}, subscribe: () => {}, unsubscribe: () => {}, hasSubscribers: false });',
+        'export const tracingChannel = () => ({',
+        '  hasSubscribers: false, subscribe: () => {}, unsubscribe: () => {},',
+        '  traceSync: (fn, ctx, ...a) => fn.apply(ctx, a),',
+        '  tracePromise: (fn, ctx, ...a) => fn.apply(ctx, a),',
+        '  traceCallback: (fn, pos, ctx, ...a) => fn.apply(ctx, a),',
+        '  start: {}, end: {}, asyncStart: {}, asyncEnd: {}, error: {},',
+        '});',
+      ].join('\n');
     }
     return null;
   },
