@@ -143,29 +143,29 @@
   },
   "interop": {
     "provides": {
-      "rdf": {
+      "store": {
         "service": "rdf",
         "path": "store"
       },
       "auth": {
         "service": "auth",
         "path": "fetch"
+      },
+      "resource": {
+        "event": "sol-navigate",
+        "path": "detail.url"
       }
     },
     "consumes": {
-      "rdf": {
+      "store": {
         "call": "rdf.useStore"
       },
       "auth": {
         "call": "adoptFetch"
       }
     },
-    "resource": {
-      "emits": {
-        "event": "sol-navigate",
-        "path": "detail.url"
-      },
-      "accepts": {
+    "accepts": {
+      "resource": {
         "selector": "sol-query",
         "attr": "endpoint",
         "transform": "stripHash"

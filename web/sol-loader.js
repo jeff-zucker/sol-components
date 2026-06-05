@@ -35,14 +35,15 @@
  *     "stages": { "local": {"imports":{…}}, "cdn": {"imports":{…}} },
  *     "capabilities": { cap: { "modules": [...], "attributes": [...] } },
  *     "interop": {
- *       "provides": { cap: { service|event: "…", path: "…", priority?: n } }, // offer + channel (+ rank)
- *       "consumes": { cap: { call: "<registered-consumer>", from?: "<lib>" } }, // adopt (+ preferred provider)
- *       "resource": { "emits":   { event: "…", path: "…" },       // shared current-focus channel
- *                     "accepts": { selector: "…", attr: "…", transform: "stripHash" } } } }
+ *       "provides": { cap: { service|event: "…", path: "…", priority?: n } }, // offer a value (from a service or an event)
+ *       "consumes": { cap: { call: "<registered-consumer>", from?: "<lib>" } }, // adopt it by calling a handler
+ *       "accepts":  { cap: { selector: "…", attr: "…", transform?: "stripHash" } } } } // adopt it by setting a DOM attribute
  * Relative import URLs resolve against THAT manifest's URL. The earlier manifest
  * wins a conflicting specifier (so a shared dep stays single). The broker pairs a
- * `consumes` cap with ANOTHER library's `provides` cap (the adopt rule) and wires
- * the `resource` channel — so a page mixing libraries needs no bridge script.
+ * `consumes` OR `accepts` cap with ANOTHER library's `provides` cap of the same
+ * name (the adopt rule) — so a page mixing libraries needs no bridge script. (A
+ * shared "current resource" is just a key both libraries provide via an event and
+ * accept onto an attribute — no special-casing.)
  *
  * A `consumes.call` names a handler the consuming library registered via
  * `ComponentInterop.registerConsumer(name, fn)` — the broker invokes the
@@ -284,45 +285,44 @@
     var libs = interopSources.filter(function (s) { return s && s.interop; });
     if (!libs.length) return;
 
-    // capabilities: pair each consumer with a provider from a DIFFERENT library.
+    // Providers of `cap` declared by some OTHER library (manifest order preserved).
+    function providersOf(cap, exceptName) {
+      var out = [];
+      for (var i = 0; i < libs.length; i++) {
+        var prov = libs[i].interop.provides && libs[i].interop.provides[cap];
+        if (prov && libs[i].name !== exceptName) out.push({ name: libs[i].name, prov: prov });
+      }
+      return out;
+    }
+
+    // Each library adopts a value another library `provides` either by handing it
+    // to a registered handler (`consumes` → call) or by writing it onto a DOM
+    // attribute (`accepts` → setAttribute). A `provides` reads from a service or an
+    // event; `onProvide` handles both. `resource` is no longer special — it's just
+    // a key some libraries both provide (an event) and accept (an attribute).
     libs.forEach(function (cLib) {
       var consumes = cLib.interop.consumes || {};
       Object.keys(consumes).forEach(function (cap) {
         var consumer = consumes[cap];
-        var candidates = [];
-        for (var i = 0; i < libs.length; i++) {
-          var prov = libs[i].interop.provides && libs[i].interop.provides[cap];
-          if (prov && libs[i].name !== cLib.name) candidates.push({ name: libs[i].name, prov: prov });
-        }
-        var chosen = pickProvider(candidates, cap, consumer);
+        var chosen = pickProvider(providersOf(cap, cLib.name), cap, consumer);
         if (!chosen) return;
         onProvide(chosen.prov, function (value) {
           invokeConsumer(consumer.call, value);
           api.emit('interop:wired', { capability: cap, from: chosen.name, to: cLib.name });
         });
       });
-    });
 
-    // resource channel: one shared "current resource". Any `emits` sets it; the
-    // broker applies it to every OTHER library's `accepts`.
-    var specs = libs.map(function (l) {
-      return l.interop.resource ? { name: l.name, res: l.interop.resource } : null;
-    }).filter(Boolean);
-    var current = null;
-    function applyExcept(fromName, uri) {
-      specs.forEach(function (s) {
-        if (s.name === fromName || !s.res.accepts) return;
-        var a = s.res.accepts;
-        var el = document.querySelector(a.selector);
-        if (el) el.setAttribute(a.attr, applyTransform(uri, a.transform));
-      });
-    }
-    specs.forEach(function (s) {
-      var em = s.res.emits;
-      if (!em) return;
-      api.on(em.event, function (e) {
-        var uri = getByPath(e, em.path);
-        if (uri && String(uri) !== current) { current = String(uri); applyExcept(s.name, current); }
+      var accepts = cLib.interop.accepts || {};
+      Object.keys(accepts).forEach(function (cap) {
+        var a = accepts[cap];
+        var chosen = pickProvider(providersOf(cap, cLib.name), cap, a);
+        if (!chosen) return;
+        onProvide(chosen.prov, function (value) {
+          var el = document.querySelector(a.selector);
+          if (!el) return;
+          el.setAttribute(a.attr, applyTransform(value, a.transform));
+          api.emit('interop:wired', { capability: cap, from: chosen.name, to: cLib.name });
+        });
       });
     });
   }
