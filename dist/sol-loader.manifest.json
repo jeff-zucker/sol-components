@@ -1,6 +1,51 @@
 {
   "name": "sol-components",
-
+  "attributes": {
+    "data-from-query": "sol-components/core/from-query.js",
+    "data-handler": "sol-components/core/handler.js",
+    "data-edit-shape data-from-rdf": "rdf-bundle"
+  },
+  "objects": {
+    "provides": {
+      "store": {
+        "service": "rdf",
+        "sendValue": "store"
+      },
+      "auth": {
+        "service": "auth",
+        "sendValue": "fetch"
+      },
+      "navigation": {
+        "respondTo": "sol-navigate",
+        "sendValue": "detail.url"
+      }
+    },
+    "consumes": {
+      "store": {
+        "call": "rdf.useStore"
+      },
+      "auth": {
+        "call": "adoptFetch"
+      }
+    },
+    "accepts": {
+      "navigation": {
+        "onElement": "sol-query",
+        "applyValueTo": "endpoint"
+      }
+    }
+  },
+  "bundles": {
+    "rdf-bundle": [
+      "solid-logic",
+      "solid-ui",
+      "sol-tree-edit",
+      "sol-form",
+      "sol-settings",
+      "sol-components/core/edit-placements.js",
+      "sol-components/core/from-rdf.js"
+    ]
+  },
   "stages": {
     "local": {
       "components": {
@@ -103,39 +148,6 @@
         "sol-components/data/": "https://esm.sh/sol-components/data/",
         "sol-components/": "https://esm.sh/sol-components/web/"
       }
-    }
-  },
-
-  "bundles": {
-    "rdf-bundle": [
-      "solid-logic",
-      "solid-ui",
-      "sol-tree-edit",
-      "sol-form",
-      "sol-settings",
-      "sol-components/core/edit-placements.js",
-      "sol-components/core/from-rdf.js"
-    ]
-  },
-
-  "attributes": {
-    "data-from-query": "sol-components/core/from-query.js",
-    "data-handler": "sol-components/core/handler.js",
-    "data-edit-shape data-from-rdf": "rdf-bundle"
-  },
-
-  "objects": {
-    "provides": {
-      "store":      { "service": "rdf",  "sendValue": "store" },
-      "auth":       { "service": "auth", "sendValue": "fetch" },
-      "navigation": { "respondTo": "sol-navigate", "sendValue": "detail.url" }
-    },
-    "consumes": {
-      "store": { "call": "rdf.useStore" },
-      "auth":  { "call": "adoptFetch" }
-    },
-    "accepts": {
-      "navigation": { "onElement": "sol-query", "applyValueTo": "endpoint" }
     }
   }
 }
