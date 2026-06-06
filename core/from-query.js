@@ -118,8 +118,22 @@ function fillSelect(el, vars, rows) {
   }
 }
 
-// The host's tag picks the shape. Unknown tags render nothing — the W3C JSON is
-// left on `el.swcData` for the page to consume.
+// While the query runs, show a loading indicator IN the host, shaped to its tag
+// (a <li> in a list, an <option> in a select, else a <div>). aria-live announces it.
+function setLoading(el) {
+  const tag = el.localName;
+  let node;
+  if (tag === 'ul' || tag === 'ol') node = document.createElement('li');
+  else if (tag === 'select') { node = document.createElement('option'); node.disabled = true; node.selected = true; }
+  else { node = document.createElement('div'); node.setAttribute('role', 'status'); }
+  node.className = 'swc-loading';
+  node.setAttribute('aria-live', 'polite');
+  node.textContent = 'Loading…';
+  el.replaceChildren(node);
+}
+
+// The host's tag picks the shape. Unknown tags render nothing into the DOM — the
+// W3C JSON is left on `el.swcData` for the page to consume.
 function renderInto(el, data) {
   el.swcData = data;
   const vars = data.head.vars;
@@ -127,11 +141,12 @@ function renderInto(el, data) {
   const tag = el.localName;
   if (tag === 'ul' || tag === 'ol') return fillList(el, vars, rows);
   if (tag === 'select')            return fillSelect(el, vars, rows);
-  // anything else: leave the DOM untouched; the JSON is on el.swcData.
+  el.replaceChildren();   // clear the loading indicator; the JSON is on el.swcData
 }
 
 activate('[data-from-query]', (el) => {
   if (el.localName === 'sol-query') return;            // the element handles itself
+  setLoading(el);
   buildData(el)
     .then((data) => renderInto(el, data))
     .catch((e) => { el.innerHTML = `<div class="error">${(e && e.message) || e}</div>`; console.error('[data-from-query]', e); });
