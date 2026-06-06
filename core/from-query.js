@@ -14,6 +14,11 @@
 // row (+ a `sol-select` event on change); anything else → nothing is rendered and
 // the W3C SPARQL 1.1 Query Results JSON is left on `el.swcData` for you to use.
 //
+// When the results land, the host fires a `sol-data-ready` event (bubbles/composed,
+// detail.data = the W3C JSON), so a custom element or page can react on the event
+// instead of reading el.swcData:
+//   el.addEventListener('sol-data-ready', (e) => render(e.detail.data.results.bindings));
+//
 // Config attributes (endpoint, pattern, sparql, query, var-<name>) may be written
 // bare OR `data-`-prefixed (data-endpoint, …, data-var-<name>) to keep the markup
 // spec-valid HTML; bare wins if both are given. `data-from-query` is the trigger.
@@ -133,15 +138,20 @@ function setLoading(el) {
 }
 
 // The host's tag picks the shape. Unknown tags render nothing into the DOM — the
-// W3C JSON is left on `el.swcData` for the page to consume.
+// W3C JSON is left on `el.swcData` for the page to consume. Either way, when the
+// results land we fire a `sol-data-ready` event (detail.data = the W3C JSON) so a
+// custom element / page can react without polling el.swcData.
 function renderInto(el, data) {
   el.swcData = data;
   const vars = data.head.vars;
   const rows = data.results.bindings;
   const tag = el.localName;
-  if (tag === 'ul' || tag === 'ol') return fillList(el, vars, rows);
-  if (tag === 'select')            return fillSelect(el, vars, rows);
-  el.replaceChildren();   // clear the loading indicator; the JSON is on el.swcData
+  if (tag === 'ul' || tag === 'ol')   fillList(el, vars, rows);
+  else if (tag === 'select')          fillSelect(el, vars, rows);
+  else                                el.replaceChildren();   // clear the loading indicator
+  el.dispatchEvent(new CustomEvent('sol-data-ready', {
+    bubbles: true, composed: true, detail: { data: data },
+  }));
 }
 
 activate('[data-from-query]', (el) => {
