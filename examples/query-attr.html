@@ -19,8 +19,10 @@
     .note { background: #f3f6fa; border: 1px solid #c9d3df; border-radius: 6px;
             padding: .75rem 1rem; font-size: .92rem; color: #1a1a1a; }
     code { background: #e7e9f5; color: #1a1a1a; padding: 0 .25rem; border-radius: 3px; }
-    .target { border: 1px dashed #999; border-radius: 8px; padding: .5rem; margin: 1rem 0;
+    h2 { font-size: 1rem; margin: 1.4rem 0 .4rem; }
+    .target { border: 1px dashed #999; border-radius: 8px; padding: .5rem; margin: .4rem 0;
               background: #ffffff; color: #1a1a1a; }
+    ul.target { list-style: none; }
   </style>
 </head>
 <body>
@@ -28,18 +30,29 @@
 <h1>SPARQL on a plain element — <code>data-from-query</code></h1>
 
 <p class="note">
-  A plain <code>&lt;div&gt;</code> made query-driven: the <code>sparql</code> capability's activator
-  reads the element's <code>data-from-query</code> + the usual <code>sol-query</code> attributes
-  (<code>endpoint</code>, <code>view</code>, …), runs the query, and replaces the element's content.
-  HTML views render in place; a URL view (<code>view="…/view.js"</code>) gets the result as a
-  <strong>W3C SPARQL 1.1 Query Results JSON</strong> object via <code>render(container, data, el)</code>.
+  Any element made query-driven: the <code>sparql</code> capability's activator reads
+  <code>data-from-query</code> + the query attributes (<code>endpoint</code>,
+  <code>sparql</code>/<code>pattern</code>, <code>var-*</code>) and renders the result based on the
+  <strong>host element's tag</strong> — there is no <code>view</code>. A <code>&lt;ul&gt;</code> gets one
+  <code>&lt;li&gt;</code> per row; a <code>&lt;select&gt;</code> gets one <code>&lt;option&gt;</code>
+  per row (and fires <code>sol-select</code>); any other element renders nothing and the
+  <strong>W3C SPARQL 1.1 Query Results JSON</strong> is left on <code>el.swcData</code> for you to use.
+  (Want swc to pick a view instead? Use the <code>&lt;sol-query&gt;</code> element.)
 </p>
 
-<div class="target"
-     data-from-query
-     endpoint="sample-profile.ttl"
-     pattern="?s foaf:name ?name"
-     view="table"></div>
+<p>The same query on two different elements — the tag decides the output:</p>
+
+<h2>A <code>&lt;ul&gt;</code> → one <code>&lt;li&gt;</code> per row</h2>
+<ul class="target"
+    data-from-query
+    endpoint="sample-profile.ttl"
+    pattern="?s foaf:name ?name"></ul>
+
+<h2>A <code>&lt;select&gt;</code> → one <code>&lt;option&gt;</code> per row</h2>
+<select class="target"
+    data-from-query
+    endpoint="sample-profile.ttl"
+    pattern="?s foaf:name ?name"></select>
 
 </body>
 </html>

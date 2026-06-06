@@ -1,27 +1,27 @@
 // core/from-query.js — the `data-from-query` capability attribute (part of the
 // `sparql` capability). Makes ANY element query-driven WITHOUT pulling in the
 // <sol-query> component: it runs the query through the shared engine
-// (core/rdf-utils.js) and renders into the host element with the shared view
-// loader. The <sol-query> element and this activator are independent peers on
-// the same engine — load whichever you need.
+// (core/rdf-utils.js) and renders the result INTO the host element based on the
+// host's TAG — there is no `view` here. The split with <sol-query> is deliberate:
+//   • want swc to choose the view → use the <sol-query> element (view-driven)
+//   • want to choose yourself      → use this attribute (container-driven)
 //
-//   <ul data-from-query endpoint="data.ttl" pattern="?s foaf:name ?name" view="list"></ul>
-//   <div data-from-query="SELECT …" endpoint="https://pod/doc" view="./my-view.js"></div>
+//   <ul data-from-query endpoint="data.ttl" sparql="SELECT ?name …"></ul>          <!-- → <li> per row -->
+//   <select data-from-query endpoint="…" sparql="SELECT ?label ?uri …"></select>   <!-- → <option> per row -->
+//   <div data-from-query endpoint="…" sparql="…"></div>                            <!-- no DOM: read el.swcData -->
 //
-// Config attributes (endpoint, pattern, sparql, query, view, var-<name>) may be
-// written bare OR `data-`-prefixed (data-endpoint, …, data-var-<name>) to keep the
-// markup spec-valid HTML; bare wins if both are given. `data-from-query` is the trigger.
+// Output by host tag: <ul>/<ol> → one <li> per row; <select> → one <option> per
+// row (+ a `sol-select` event on change); anything else → nothing is rendered and
+// the W3C SPARQL 1.1 Query Results JSON is left on `el.swcData` for you to use.
 //
-// HTML views (table/list/dl/…) render in place; a URL view (`view="…/view.js"`)
-// gets the W3C SPARQL 1.1 Query Results JSON via render(container, data, el). The
-// data is also set on `el.swcData`.
+// Config attributes (endpoint, pattern, sparql, query, var-<name>) may be written
+// bare OR `data-`-prefixed (data-endpoint, …, data-var-<name>) to keep the markup
+// spec-valid HTML; bare wins if both are given. `data-from-query` is the trigger.
 import { activate } from './activate.js';
 import { rdf } from './rdf.js';
 import { getAuthFetch } from './auth-fetch.js';
 import { substituteVariables, assertSafeQuery } from './sparql-safety.js';
 import { execSparql, loadRdfStore, parsePatternParts, matchStore, fetchQueryFromRdf } from './rdf-utils.js';
-import { SparqlResultsRenderer, defaultStylesSheet } from '../web/utils/sol-query-ui.js';
-import { loadBuiltinView, PREPROCESS_VIEWS } from '../web/utils/sol-query-views.js';
 
 // Config attributes may be written bare (`endpoint`) or `data-`-prefixed
 // (`data-endpoint`) — the latter keeps the host markup spec-valid HTML. Bare
@@ -68,31 +68,66 @@ async function buildData(el) {
   throw new Error('data-from-query needs `sparql`, `query`, `pattern`, or a query value');
 }
 
-let _styled = false;
-function ensureStyles() {
-  if (_styled || typeof document === 'undefined' || !document.adoptedStyleSheets) return;
-  try { document.adoptedStyleSheets = [...document.adoptedStyleSheets, defaultStylesSheet]; _styled = true; } catch (e) {}
+// ── render: the host's tag decides the shape (no `view`) ─────────────────────
+function cellText(cell) {
+  if (!cell) return '';
+  if (cell.type === 'uri') return cell.value.replace(/.*[/#]([^/#]+)\/?$/, '$1') || cell.value;
+  return cell.value ?? '';
+}
+function cellValue(cell) { return cell ? (cell.value ?? '') : ''; }
+
+// Display text for a row across however many SELECT variables there are.
+function rowText(vars, row) {
+  return vars.map((v) => cellText(row[v])).filter(Boolean).join(' — ');
 }
 
-async function renderInto(el, data) {
-  el.swcData = data;                                  // W3C JSON, same as the component would expose
-  const view = attr(el, 'view') || 'table';
-  if (/^https?:\/\/|^\.\.?\//.test(view)) {            // custom view module
-    const mod = await import(new URL(view, document.baseURI).href);
-    const fn = mod.render ?? mod.default;
-    el.innerHTML = '';
-    if (typeof fn === 'function') await fn(el, data, el);
-    return;
+function fillList(el, vars, rows) {
+  el.replaceChildren(...rows.map((row) => {
+    const li = document.createElement('li');
+    li.textContent = rowText(vars, row);
+    return li;
+  }));
+}
+
+function fillSelect(el, vars, rows) {
+  const opts = rows.map((row, i) => {
+    const opt = document.createElement('option');
+    // 1 col → text & value are the cell; 2 cols → text col0, value col1;
+    // 3+ cols → text "col0 — col1", value is the last column.
+    if (vars.length === 1)      { opt.textContent = cellText(row[vars[0]]); opt.value = cellValue(row[vars[0]]); }
+    else if (vars.length === 2) { opt.textContent = cellText(row[vars[0]]); opt.value = cellValue(row[vars[1]]); }
+    else { opt.textContent = `${cellText(row[vars[0]])} — ${cellText(row[vars[1]])}`; opt.value = cellValue(row[vars[vars.length - 1]]); }
+    opt.dataset.rowIndex = String(i);
+    return opt;
+  });
+  const placeholder = document.createElement('option');
+  placeholder.value = ''; placeholder.disabled = true; placeholder.selected = true;
+  placeholder.textContent = `— ${rows.length} result${rows.length === 1 ? '' : 's'} —`;
+  el.replaceChildren(placeholder, ...opts);
+  el._swcRows = rows;
+  if (!el._swcSelectWired) {                            // emit sol-select like the select view
+    el._swcSelectWired = true;
+    el.addEventListener('change', () => {
+      const chosen = el.options[el.selectedIndex];
+      const i = chosen ? parseInt(chosen.dataset.rowIndex, 10) : -1;
+      el.dispatchEvent(new CustomEvent('sol-select', {
+        bubbles: true, composed: true,
+        detail: { value: el.value, row: el._swcRows ? el._swcRows[i] : undefined, index: i },
+      }));
+    });
   }
-  const fn = await loadBuiltinView(view);
-  if (!fn) { el.innerHTML = `<div class="error">Unknown view: ${view}</div>`; return; }
-  if (PREPROCESS_VIEWS.has(view)) {
-    ensureStyles();
-    new SparqlResultsRenderer(el).renderResults(data, fn, {});
-  } else {
-    el.innerHTML = '';
-    await fn(el, data, el);
-  }
+}
+
+// The host's tag picks the shape. Unknown tags render nothing — the W3C JSON is
+// left on `el.swcData` for the page to consume.
+function renderInto(el, data) {
+  el.swcData = data;
+  const vars = data.head.vars;
+  const rows = data.results.bindings;
+  const tag = el.localName;
+  if (tag === 'ul' || tag === 'ol') return fillList(el, vars, rows);
+  if (tag === 'select')            return fillSelect(el, vars, rows);
+  // anything else: leave the DOM untouched; the JSON is on el.swcData.
 }
 
 activate('[data-from-query]', (el) => {
