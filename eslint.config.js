@@ -10,7 +10,7 @@ export default [
       'node_modules/',
       'help/',
       'tests/',
-      'web/solid-web-components.bundle.js',
+      'web/sol-components.bundle.js',
       '**/*~',
       'rollup.config.js',
       'babel.config.cjs',

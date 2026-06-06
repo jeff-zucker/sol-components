@@ -20,11 +20,11 @@
   details as provisional and report anything that misbehaves.</p>
 
   <p>You wrote a web component. This guide takes you through making it a good
-  citizen of a solid-web-components page, step by step — so other people can drop
+  citizen of a sol-components page, step by step — so other people can drop
   it in without fuss, and capabilities like editing can enhance it. Each step is
   optional and independent; do the ones you need.</p>
 
-  <p>You never import any solid-web-components source code. Everything is plain
+  <p>You never import any sol-components source code. Everything is plain
   custom elements, a JSON manifest, and DOM events.</p>
 
   <h2>Step 1 — Make it a custom element</h2>
@@ -120,7 +120,7 @@ customElements.define('acme-map', AcmeMap);</code></pre>
   components — add a <code>capabilities</code> block to your manifest
   (Step&nbsp;2), and write a module that finds and enhances every component
   offering your point, now or whenever one mounts later:</p>
-  <pre><code>import { observeExtensionPoint } from 'solid-web-components/core/extension-points.js';
+  <pre><code>import { observeExtensionPoint } from 'sol-components/core/extension-points.js';
 
 observeExtensionPoint('annotate', (el, spec) =&gt; {
   // attach your enhancement to `el` using `spec`

@@ -12,9 +12,10 @@
        alongside sol-basic (the component family). The add-on is what turns the
        `from-rdf` attribute on; without it the component is declarative-only.
        rdflib is pulled in transitively. -->
-  <script src="../dist/sol-loader.min.js"
+  <script src="https://cdn.jsdelivr.net/npm/component-interop@0.1.0/component-interop.js"
+          data-manifest="../dist/sol-loader.manifest.json"
           data-stage="local"
-          data-bundles="sol-basic menu-from-rdf"
+          data-components="sol-basic menu-from-rdf"
   ></script>
 </head>
 <body class="scroll-help">
@@ -39,8 +40,8 @@
 
 &lt;!-- …or ESM: import the add-on once, anywhere --&gt;
 &lt;script type="module"&gt;
-  import 'solid-web-components/sol-menu.js';
-  import 'solid-web-components/menu-from-rdf.js';   // ← activation
+  import 'sol-components/sol-menu.js';
+  import 'sol-components/menu-from-rdf.js';   // ← activation
 &lt;/script&gt;</code></pre>
   <p>Importing <code>menu-from-rdf</code> once activates <code>from-rdf</code> for every
   member of the menu family on the page — <code>sol-menu</code>, <code>sol-tabs</code> and

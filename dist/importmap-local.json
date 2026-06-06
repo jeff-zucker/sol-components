@@ -24,7 +24,6 @@
     "sol-gallery": "../web/sol-gallery.js",
     "sol-include": "../web/sol-include.js",
     "sol-live-edit": "../web/sol-live-edit.js",
-    "sol-loader": "../web/sol-loader.js",
     "sol-login": "../web/sol-login.js",
     "sol-menu": "../web/sol-menu.js",
     "sol-modal": "../web/sol-modal.js",
@@ -42,9 +41,9 @@
     "sol-wac": "../web/sol-wac.js",
     "sol-weather": "../web/sol-weather.js",
     "sol-window": "../web/sol-window.js",
-    "solid-web-components/core/": "../core/",
-    "solid-web-components/sources/": "../sources/",
-    "solid-web-components/data/": "../data/",
-    "solid-web-components/": "../web/"
+    "sol-components/core/": "../core/",
+    "sol-components/sources/": "../sources/",
+    "sol-components/data/": "../data/",
+    "sol-components/": "../web/"
   }
 }

@@ -40,7 +40,7 @@ for (const [name, info] of Object.entries(deps)) {
 // So a `data-bundles="sol-time sol-feed"` tag (or any app importing 'sol-time')
 // resolves to the source ESM. Components import their own deps (rdflib via
 // core/rdf, etc.) through the entries above. local → repo source; cdn → esm.sh.
-const PKG = 'solid-web-components';
+const PKG = 'sol-components';
 const components = readdirSync(webDir)
   .filter((f) => /^[a-z][a-z0-9-]*\.js$/.test(f))   // top-level modules only
   .map((f) => f.replace(/\.js$/, ''));
@@ -78,15 +78,15 @@ const manifest = {
     // inrupt-global is a tiny shim that publishes window.solidClientAuthn from
     // the ESM inrupt build, so sol-login finds the Session class on every stage
     // without a separate UMD <script>. It MUST precede sol-login.
-    auth:    { modules: ['solid-web-components/core/inrupt-global.js', 'sol-login'], attributes: [] },
+    auth:    { modules: ['sol-components/core/inrupt-global.js', 'sol-login'], attributes: [] },
     // `sparql` ships only the data-from-query ACTIVATOR + the shared engine it
     // imports (Comunica lazy-loads on the first SPARQL query). The <sol-query>
     // ELEMENT is a separate, optional bundle on the same engine — so you can have
     // the attribute without the component (or vice-versa).
-    sparql:  { modules: ['solid-web-components/core/from-query.js'], attributes: ['data-from-query'] },
+    sparql:  { modules: ['sol-components/core/from-query.js'], attributes: ['data-from-query'] },
     'sol-query': { modules: ['sol-query'] },
     rdf:     { modules: ['solid-logic', 'solid-ui', 'sol-tree-edit', 'sol-form', 'sol-settings',
-                         'solid-web-components/core/edit-placements.js', 'solid-web-components/core/from-rdf.js'],
+                         'sol-components/core/edit-placements.js', 'sol-components/core/from-rdf.js'],
                attributes: ['data-edit-shape', 'data-edit-mode', 'data-subject', 'data-from-rdf'] },
     // NOTE: solidos is PARKED — intentionally not wired here. mashlib's
     // published bundle inlines its own rdflib/solid-ui/solid-logic, so loading

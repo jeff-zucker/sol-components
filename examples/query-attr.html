@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="light">
   <title>SWC capability attributes — SPARQL on any element</title>
 
-  <!-- The sparql capability provides the data-from-query attribute (the query
-       engine). The sol-query component is a separate bundle (data-extend-with="sol-query"). -->
-  <script src="../dist/sol-loader.min.js"
+  <!-- One loader tag: component-interop (from the CDN) reads swc's manifest. The
+       data-from-query attribute below auto-loads the SPARQL engine on demand. -->
+  <script src="https://cdn.jsdelivr.net/npm/component-interop@0.1.0/component-interop.js"
           data-stage="local"
-          data-extend-with="sparql"></script>
+          data-manifest="../dist/sol-loader.manifest.json"></script>
 
   <style>
     :root { color-scheme: light; }

@@ -31,7 +31,7 @@ import './sol-feed.js';
 
 // Deliberately NOT in sol-full: sol-weather, sol-time, sol-calendar — chrome
 // widgets with their own heavy deps (e.g. ical). Load them as ESM where
-// needed, e.g. import 'solid-web-components/sol-weather.js'.
+// needed, e.g. import 'sol-components/sol-weather.js'.
 //
 // TODO: add the rest as their externals get vendored:
 //   sol-accordion, sol-modal, sol-tabs, sol-rolodex, sol-live-edit, sol-pod,

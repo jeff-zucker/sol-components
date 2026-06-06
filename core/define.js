@@ -7,7 +7,7 @@ export function define(name, klass) {
   const existing = customElements.get(name);
   if (existing) {
     if (existing !== klass && !window.__SolSuppressDefineWarn) {
-      console.warn(`[solid-web-components] <${name}> already registered; keeping the existing definition.`);
+      console.warn(`[sol-components] <${name}> already registered; keeping the existing definition.`);
     }
     return;
   }

@@ -1,8 +1,8 @@
 // core/services.js — import-side accessor for the host-services registry.
 //
 // The ecosystem's "share resources without importing each other" surface. The
-// loader (web/sol-loader.js) publishes a tiny registry at
-// `window.SolidWebComponents.services`; swc capability modules import THIS file
+// component-interop loader publishes a tiny registry at `window.ComponentInterop.services`
+// (services.js#root() also accepts a window.SolidWebComponents surface); swc capability modules import THIS file
 // to register the shared services they provide:
 //
 //   import { register } from '../core/services.js';

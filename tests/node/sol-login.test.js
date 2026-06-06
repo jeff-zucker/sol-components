@@ -409,7 +409,7 @@ describe('fetch', () => {
     const resp = await auth.fetch('./package.json');
     expect(resp.status).toBe(200);
     const text = await resp.text();
-    expect(text).toContain('solid-web-components');
+    expect(text).toContain('sol-components');
   });
 
   test('routes remote URLs through fetchFor', async () => {

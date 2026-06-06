@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="light">
   <title>SWC capability attributes — editing any element via a shape</title>
 
-  <!-- The rdf capability: components sol-form/sol-settings + the editing
-       attributes (data-edit-shape / data-edit-mode / data-subject). -->
-  <script src="../dist/sol-loader.min.js"
+  <!-- component-interop (from the CDN) reads swc's manifest; the data-edit-* and
+       data-from-rdf attributes below auto-load the rdf editing bundle on demand. -->
+  <script src="https://cdn.jsdelivr.net/npm/component-interop@0.1.0/component-interop.js"
           data-stage="local"
-          data-extend-with="rdf"></script>
+          data-manifest="../dist/sol-loader.manifest.json"></script>
 
   <style>
     :root { color-scheme: light; }
@@ -31,11 +31,10 @@
 <h1>Editing any element from a SHACL shape — attributes only</h1>
 
 <p class="note">
-  Load <code>data-extend-with="rdf"</code>, then make <em>any</em> element editable with attributes
-  — no manifest, no component code. The element below is a plain <code>&lt;div&gt;</code>; the
-  <code>rdf</code> capability's activator reads its <code>data-edit-shape</code> /
-  <code>data-subject</code> / <code>data-edit-mode</code> and <code>sol-form</code> auto-generates
-  the editor from the SHACL shape.
+  With swc's manifest loaded, make <em>any</em> element editable with attributes — no component code.
+  The element below is a plain <code>&lt;div&gt;</code>; <code>data-edit-shape</code> auto-loads the
+  editing bundle, the activator reads its <code>data-edit-shape</code> / <code>data-subject</code> /
+  <code>data-edit-mode</code>, and <code>sol-form</code> auto-generates the editor from the SHACL shape.
 </p>
 
 <h2>Collected — gathered into a settings panel</h2>

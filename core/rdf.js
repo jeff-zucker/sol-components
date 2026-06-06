@@ -135,7 +135,7 @@ class Rdf {
 //
 // Browser only: in Node / jest each module keeps its own instance (no `window`),
 // preserving test isolation.
-const _RDF_SINGLETON = Symbol.for('solid-web-components:rdf-singleton');
+const _RDF_SINGLETON = Symbol.for('sol-components:rdf-singleton');
 export const rdf = (typeof window !== 'undefined')
   ? (window[_RDF_SINGLETON] || (window[_RDF_SINGLETON] = new Rdf()))
   : new Rdf();

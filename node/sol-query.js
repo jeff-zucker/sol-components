@@ -2,7 +2,7 @@
 // returns plain JS data instead of rendering HTML.
 //
 // Usage:
-//   import { solQuery } from 'solid-web-components/node';
+//   import { solQuery } from 'sol-components/node';
 //   const data = await solQuery({ endpoint, sparql: 'SELECT ...' });
 //   const data = await solQuery({ endpoint, pattern: '?s foaf:name ?o' });
 //   const data = await solQuery({ endpoint, sparql: 'SELECT ...', vars: { name: 'Alice' } });

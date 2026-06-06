@@ -6,7 +6,7 @@
  *
  * @module sol-login-node
  * @example
- * import { SolidAuth } from 'solid-web-components/login-node';
+ * import { SolidAuth } from 'sol-components/login-node';
  * const auth = new SolidAuth();
  *
  * // Username/password (NSS & CSS — no browser needed):

@@ -57,7 +57,7 @@
  * it keeps the declarative path dependency-free); without it this element stays
  * declarative-only and waits for the add-on if one arrives later.
  *
- *   import 'solid-web-components/menu-from-rdf.js';   // activation
+ *   import 'sol-components/menu-from-rdf.js';   // activation
  *   <sol-tabs from-rdf="./demo-tabs.ttl#MainTabs"></sol-tabs>
  *
  * The tab bar is hidden when only one tab is supplied. Set attribute

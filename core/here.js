@@ -1,7 +1,7 @@
 // Resolve a sibling module URL that works in both ESM and IIFE/UMD contexts.
 //
 // Background: `import.meta.url` is the natural way to locate sibling modules,
-// but esbuild's IIFE output (used by podz when it bundles solid-web-components
+// but esbuild's IIFE output (used by podz when it bundles sol-components
 // source into a single script) flattens `import.meta.url` to `undefined`.
 // rollup's UMD output is the same. Result: dynamic-import paths like
 // `new URL('./sibling.js', import.meta.url)` silently break in those bundles.

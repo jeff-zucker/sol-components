@@ -13,7 +13,7 @@
 // copy of this module. Wiring is order-independent: register-after-install and
 // install-after-register both end up wired.
 
-const KEY = Symbol.for('solid-web-components.menu-consumers');
+const KEY = Symbol.for('sol-components.menu-consumers');
 const reg = (globalThis[KEY] ||= { consumers: new Set(), loader: null, pending: new Set() });
 
 export function registerMenuConsumer(klass) {

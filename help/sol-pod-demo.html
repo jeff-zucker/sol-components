@@ -79,9 +79,10 @@
 &lt;/script&gt;</code></pre>
 
   <!-- Loads the components so the live demo on this page works. -->
-  <script src="../dist/sol-loader.min.js"
+  <script src="https://cdn.jsdelivr.net/npm/component-interop@0.1.0/component-interop.js"
+          data-manifest="../dist/sol-loader.manifest.json"
           data-stage="local"
-          data-bundles="sol-pod"
+          data-components="sol-pod"
   ></script>
   <script type="module">
     await SolidWebComponents.ready;

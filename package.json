@@ -1,5 +1,5 @@
 {
-  "name": "solid-web-components",
+  "name": "sol-components",
   "version": "2.1.0",
   "description": "Web components and Node.js tools for querying, including, and editing RDF/Linked Data on Solid Pods",
   "type": "module",
@@ -48,10 +48,9 @@
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/.bin/jest",
-    "bundle": "rollup -c rollup.config.js --environment MINIFY:true",
     "build:importmaps": "node tools/build-importmaps.mjs",
     "build:vendor": "node tools/vendor.mjs",
-    "build": "npm run build:importmaps && npm run build:vendor && npm run bundle",
+    "build": "npm run build:importmaps && npm run build:vendor",
     "lint": "eslint .",
     "docs": "jsdoc -c jsdoc.config.json"
   },

@@ -3,7 +3,7 @@
 // the result as Turtle.
 //
 // Usage:
-//   import { solForm } from 'solid-web-components/form';
+//   import { solForm } from 'sol-components/form';
 //   const { turtle } = await solForm({
 //     source: 'data/menu-form.ttl',
 //     data:   { label: 'My Menu', orientation: 'horizontal', parts: [...] },
