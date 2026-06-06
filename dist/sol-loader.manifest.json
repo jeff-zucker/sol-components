@@ -120,6 +120,7 @@
 
   "attributes": {
     "data-from-query": "sol-components/core/from-query.js",
+    "data-handler": "sol-components/core/handler.js",
     "data-edit-shape data-from-rdf": "rdf-bundle"
   },
 
