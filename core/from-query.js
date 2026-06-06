@@ -8,6 +8,10 @@
 //   <ul data-from-query endpoint="data.ttl" pattern="?s foaf:name ?name" view="list"></ul>
 //   <div data-from-query="SELECT …" endpoint="https://pod/doc" view="./my-view.js"></div>
 //
+// Config attributes (endpoint, pattern, sparql, query, view, var-<name>) may be
+// written bare OR `data-`-prefixed (data-endpoint, …, data-var-<name>) to keep the
+// markup spec-valid HTML; bare wins if both are given. `data-from-query` is the trigger.
+//
 // HTML views (table/list/dl/…) render in place; a URL view (`view="…/view.js"`)
 // gets the W3C SPARQL 1.1 Query Results JSON via render(container, data, el). The
 // data is also set on `el.swcData`.
@@ -19,13 +23,22 @@ import { execSparql, loadRdfStore, parsePatternParts, matchStore, fetchQueryFrom
 import { SparqlResultsRenderer, defaultStylesSheet } from '../web/utils/sol-query-ui.js';
 import { loadBuiltinView, PREPROCESS_VIEWS } from '../web/utils/sol-query-views.js';
 
+// Config attributes may be written bare (`endpoint`) or `data-`-prefixed
+// (`data-endpoint`) — the latter keeps the host markup spec-valid HTML. Bare
+// wins when both are present. (`data-from-query` itself stays the trigger.)
+function attr(el, name) {
+  const v = el.getAttribute(name);
+  return v != null ? v : el.getAttribute('data-' + name);
+}
 function readVars(el) {
   const vars = {};
+  // `var-foo` or `data-var-foo`; data-* is read first so a bare `var-foo` wins.
+  for (const a of Array.from(el.attributes)) if (a.name.indexOf('data-var-') === 0) vars[a.name.slice(9)] = a.value;
   for (const a of Array.from(el.attributes)) if (a.name.indexOf('var-') === 0) vars[a.name.slice(4)] = a.value;
   return vars;
 }
 function endpointsOf(el) {
-  const raw = el.getAttribute('endpoint');
+  const raw = attr(el, 'endpoint');
   return raw ? raw.trim().split(/[\s,]+/).filter(Boolean) : [];
 }
 function isStoredRef(s) { return !/\s/.test(s) && /^https?:\/\/|^\/|^\.\.?\//.test(s.trim()); }
@@ -35,8 +48,8 @@ function isStoredRef(s) { return !/\s/.test(s) && /^https?:\/\/|^\/|^\.\.?\//.te
 async function buildData(el) {
   const eps = endpointsOf(el);
   if (!eps.length) throw new Error('data-from-query needs an `endpoint`');
-  const pattern = el.getAttribute('pattern');
-  const sparql = el.getAttribute('sparql') || el.getAttribute('query') ||
+  const pattern = attr(el, 'pattern');
+  const sparql = attr(el, 'sparql') || attr(el, 'query') ||
     (pattern ? '' : (el.getAttribute('data-from-query') || ''));
 
   if (sparql) {
@@ -63,7 +76,7 @@ function ensureStyles() {
 
 async function renderInto(el, data) {
   el.swcData = data;                                  // W3C JSON, same as the component would expose
-  const view = el.getAttribute('view') || 'table';
+  const view = attr(el, 'view') || 'table';
   if (/^https?:\/\/|^\.\.?\//.test(view)) {            // custom view module
     const mod = await import(new URL(view, document.baseURI).href);
     const fn = mod.render ?? mod.default;
