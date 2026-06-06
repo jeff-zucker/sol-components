@@ -122,7 +122,7 @@
 
   "attributes": {
     "data-from-query": "solid-web-components/core/from-query.js",
-    "data-edit-shape data-subject data-edit-mode data-from-rdf": "rdf-bundle"
+    "data-edit-shape data-from-rdf": "rdf-bundle"
   },
 
   "objects": {
