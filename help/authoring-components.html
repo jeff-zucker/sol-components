@@ -13,19 +13,23 @@
 
   <h1>Add your component to the ecosystem</h1>
 
+  <p>You wrote a web component. This page covers the <strong>sol-components-specific</strong>
+  part of being a good citizen: letting swc capabilities (like editing) enhance your
+  component, and offering an enhancement capability of your own. Each step is optional
+  and independent.</p>
+
+  <p>You never import any sol-components source code — everything is plain custom
+  elements and DOM events.</p>
+
   <p style="border-left:4px solid var(--accent,#888); padding:.5rem .9rem; background:var(--surface,#f5f5f5);">
-  <strong>Newly implemented.</strong> All of this is shipped, including the
-  manifest's <code>imports</code> block in <a href="#step2">Step&nbsp;2</a>. It
-  hasn't been exercised end-to-end in a real browser yet, so treat the runtime
-  details as provisional and report anything that misbehaves.</p>
-
-  <p>You wrote a web component. This guide takes you through making it a good
-  citizen of a sol-components page, step by step — so other people can drop
-  it in without fuss, and capabilities like editing can enhance it. Each step is
-  optional and independent; do the ones you need.</p>
-
-  <p>You never import any sol-components source code. Everything is plain
-  custom elements, a JSON manifest, and DOM events.</p>
+  <strong>Loading and resource-sharing are a separate, library-agnostic concern.</strong>
+  To let people load your component with one tag (no URLs, no build), and to share a
+  store, auth, or other resources between libraries, you write a <strong>component-interop
+  manifest</strong> — documented with the broker, not here:
+  <a href="https://github.com/jeff-zucker/component-interop">component-interop</a> (the
+  manifest format, <code>provides</code>/<code>consumes</code>, and the rule that
+  <em>exposing a value is data; adopting one is behavior</em>). This page is only the swc
+  capability hooks.</p>
 
   <h2>Step 1 — Make it a custom element</h2>
   <p>Give it a hyphenated tag with your own prefix (so it never collides with
@@ -35,70 +39,7 @@ customElements.define('acme-map', AcmeMap);</code></pre>
   <p>That's all it takes to plug in — a custom element is a first-class citizen of
   the page.</p>
 
-  <h2 id="step2">Step 2 — Create a manifest (so people use it without the details)</h2>
-  <p>You know the messy details of your component — where its module lives, what it
-  offers. Write them down <strong>once</strong>, in a small JSON manifest you ship
-  alongside your component (in your npm package, or a file people drop in). After
-  that, nobody using your component needs to know any of it.</p>
-
-  <p>A manifest has two parts, both optional:</p>
-  <pre><code>{
-  "name": "acme-components",
-
-  "imports": {
-    "acme-map":   "https://cdn.acme.example/acme-map.js",
-    "acme-chart": "https://cdn.acme.example/acme-chart.js"
-  },
-
-  "capabilities": {
-    "acme-viz": { "modules": ["acme-map", "acme-chart"] }
-  }
-}</code></pre>
-  <ul>
-    <li><code>imports</code> — where each of your components actually lives. This
-    is the part that spares your users the URLs. Your entries can point anywhere
-    (a CDN, a package path), but can't override a library the page already shares,
-    so the page stays coherent. (Want to offer both an offline build and a CDN
-    form? Key them by stage — see below.)</li>
-    <li><code>capabilities</code> — only if you provide a capability others switch
-    on with <code>data-extend-with</code> (see <a href="#step4">Step&nbsp;4</a>).</li>
-  </ul>
-
-  <h3>What the person who uses your component writes</h3>
-  <p>Their <em>entire</em> integration is one loader tag pointing at your manifest,
-  plus your tag. No URLs, no import map, no build:</p>
-  <pre><code>&lt;script src="dist/sol-loader.min.js"
-        data-stage="local"
-        data-manifest="acme/swc-manifest.json"
-        data-bundles="acme-map"
-&gt;&lt;/script&gt;
-
-&lt;acme-map src="data/places.ttl"&gt;&lt;/acme-map&gt;</code></pre>
-  <p>The loader reads your manifest, learns where <code>acme-map</code> lives, and
-  loads it. The details stayed with you, the author, where they belong.</p>
-
-  <h3>Offer both an offline and a CDN build (optional)</h3>
-  <p>Because they're on the loader, you can hand your users one more convenience
-  for free: a deployment switch. Key your imports by stage in the same manifest…</p>
-  <pre><code>{
-  "stages": {
-    "local": { "imports": { "acme-map": "vendor/acme-map.js" } },
-    "cdn":   { "imports": { "acme-map": "https://cdn.acme.example/acme-map.js" } }
-  }
-}</code></pre>
-  <p>…and the consumer's <code>data-stage</code> picks which — <code>local</code>
-  for a self-hosted/offline build, <code>cdn</code> to pull from the internet. The
-  one knob covers your components <em>and</em> the loader's own pieces. (A flat
-  top-level <code>imports</code> still works if you don't care which.) See
-  <a href="install-modes.html">Loading the components</a>.</p>
-
-  <p><strong>You can stop here.</strong> Steps 1–2 are a complete, useful
-  integration on their own: plenty of components use the loader purely to give
-  people clean includes. The rest are optional extras — only if you want your
-  component <em>enhanced</em> (Step&nbsp;3) or want it to <em>provide</em> a
-  capability (Step&nbsp;4).</p>
-
-  <h2>Step 3 — (Optional) Let capabilities enhance your component</h2>
+  <h2>Step 2 — (Optional) Let capabilities enhance your component</h2>
   <p>Declare the extension points you offer with one static getter. The handy one
   is <code>edit</code>: point it at a small file listing your fields and the page's
   editing capability builds your component a settings form and a ⚙ gear, for
@@ -114,30 +55,34 @@ customElements.define('acme-map', AcmeMap);</code></pre>
   can define other points (e.g. <code>annotate</code>), and any component listing
   that point in <code>extensionPoints</code> gets enhanced.</p>
 
-  <h2 id="step4">Step 4 — (Optional) Provide a capability others switch on</h2>
-  <p>If you want to <em>offer</em> a capability — something people pull in with
-  <code>data-extend-with="acme-thing"</code> that enhances other people's
-  components — add a <code>capabilities</code> block to your manifest
-  (Step&nbsp;2), and write a module that finds and enhances every component
-  offering your point, now or whenever one mounts later:</p>
+  <h2>Step 3 — (Optional) Provide a capability that enhances others</h2>
+  <p>To <em>offer</em> a capability — one that enhances other people's components —
+  write a module that finds and enhances every component offering your extension
+  point, now or whenever one mounts later:</p>
   <pre><code>import { observeExtensionPoint } from 'sol-components/core/extension-points.js';
 
 observeExtensionPoint('annotate', (el, spec) =&gt; {
   // attach your enhancement to `el` using `spec`
 });</code></pre>
-  <p>You never import the components you enhance; they never import you. You meet
-  in the DOM.</p>
+  <p>You never import the components you enhance; they never import you — you meet
+  in the DOM. Have the module load when its trigger attribute appears by adding an
+  <code>attributes</code> entry to your manifest (see the
+  <a href="https://github.com/jeff-zucker/component-interop">component-interop</a>
+  docs); there is no <code>data-extend-with</code> — capabilities auto-load by
+  presence.</p>
 
   <h2>Checklist</h2>
   <table class="attr-table">
     <thead><tr><th>Step</th><th></th></tr></thead>
     <tbody>
       <tr><td>Hyphenated, prefixed tag, registered with <code>customElements.define</code></td><td>plug in</td></tr>
-      <tr><td>A manifest with your <code>imports</code> (and <code>capabilities</code> if any)</td><td>others use it detail-free</td></tr>
       <tr><td><code>static get extensionPoints()</code> if capabilities should enhance you</td><td>be extended</td></tr>
-      <tr><td>A capability module + manifest <code>capabilities</code> block</td><td>extend others</td></tr>
+      <tr><td>An <code>observeExtensionPoint</code> module (+ a manifest <code>attributes</code> entry to auto-load it)</td><td>extend others</td></tr>
     </tbody>
   </table>
+
+  <p>For loading, the manifest format, and sharing resources between libraries, see
+  <a href="https://github.com/jeff-zucker/component-interop">component-interop</a>.</p>
 
 </body>
 </html>

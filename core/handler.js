@@ -1,10 +1,11 @@
-// handler.js — the `handler` capability (part of component-interop).
+// handler.js — the `handler` capability (a sol-components capability, loaded on
+// demand via the manifest's `data-handler` attribute).
 //
 // Lets ANY element (a library's own button/menu, a plain link) activate a
-// component or a script, with NO display logic in component-interop: ci catches
-// the activation, optionally instantiates a named component, forwards the
-// element's data, and fires ONE event — the consuming app decides what happens
-// and where any result goes.
+// component or a script, with NO display logic here: it catches the activation,
+// optionally instantiates a named component, forwards the element's data, and
+// fires ONE event — the consuming app decides what happens and where any result
+// goes.
 //
 //   <a data-handler="my-viewer" href="report.ttl" data-mode="compact">Open</a>   <!-- component -->
 //   <button data-handler="exportCsv" data-format="utf8">Export</button>          <!-- script -->
