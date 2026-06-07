@@ -8,7 +8,7 @@
 //
 //   <ul data-from-query endpoint="data.ttl" sparql="SELECT ?name …"></ul>          <!-- → <li> per row -->
 //   <select data-from-query endpoint="…" sparql="SELECT ?label ?uri …"></select>   <!-- → <option> per row -->
-//   <h1 data-from-query pattern="<…/card#me> foaf:name ?name"></h1>                 <!-- → innerHTML = the value -->
+//   <h1 data-from-query pattern="<…/card#me> foaf:name ?name"></h1>                 <!-- → textContent = the value -->
 //
 // A `pattern` (triple pattern, CURIEs allowed) matches the rdflib store rather
 // than running SPARQL. WITH an `endpoint` it loads that doc into the shared store
@@ -21,7 +21,7 @@
 // row (+ a `sol-select` event on change); <img> → its `src` is set to the first
 // result's value (a URI); a CUSTOM element (hyphenated tag) → renders itself from
 // the data; any other element (<h1>, <span>, <p>, <div>…) → the result text becomes
-// its `innerHTML`. Either way the full W3C SPARQL 1.1 Query Results JSON is left on
+// its `textContent`. Either way the full W3C SPARQL 1.1 Query Results JSON is left on
 // `el.swcData` (and on the event below) for you to use.
 //
 // When the results land, the host fires a `sol-data-ready` event (bubbles/composed,
@@ -146,10 +146,12 @@ function fillImg(el, vars, rows) {
   else el.removeAttribute('src');
 }
 
-// A text container (<h1>, <span>, <p>, <div>, …): the result becomes its innerHTML —
+// A text container (<h1>, <span>, <p>, <div>, …): the result becomes its textContent —
 // one row → its value, several → joined. The full JSON is still on el.swcData.
+// textContent (not innerHTML) so result values are never interpreted as markup —
+// a literal from an endpoint or the shared store can't inject HTML.
 function fillText(el, vars, rows) {
-  el.innerHTML = rows.map((row) => rowText(vars, row)).join(', ');
+  el.textContent = rows.map((row) => rowText(vars, row)).join(', ');
 }
 
 // While the query runs, show a loading indicator IN the host, shaped to its tag
@@ -168,7 +170,7 @@ function setLoading(el) {
 }
 
 // The host's tag picks the shape. A custom element renders itself (we just clear the
-// loading indicator); any other plain element shows the result as its innerHTML. The
+// loading indicator); any other plain element shows the result as its textContent. The
 // full W3C JSON is always left on `el.swcData`, and when the results land we fire a
 // `sol-data-ready` event (detail.data = the W3C JSON) so a custom element / page can
 // react without polling el.swcData.
@@ -181,7 +183,7 @@ function renderInto(el, data) {
   else if (tag === 'select')          fillSelect(el, vars, rows);
   else if (tag === 'img')             fillImg(el, vars, rows);
   else if (tag.includes('-'))         el.replaceChildren();    // custom element: it renders itself from swcData / the event
-  else                                fillText(el, vars, rows); // <h1>/<span>/<p>/<div>…: result → innerHTML
+  else                                fillText(el, vars, rows); // <h1>/<span>/<p>/<div>…: result → textContent
   el.dispatchEvent(new CustomEvent('sol-data-ready', {
     bubbles: true, composed: true, detail: { data: data },
   }));
