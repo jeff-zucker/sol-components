@@ -8,7 +8,7 @@
 //
 //   <ul data-from-query endpoint="data.ttl" sparql="SELECT ?name …"></ul>          <!-- → <li> per row -->
 //   <select data-from-query endpoint="…" sparql="SELECT ?label ?uri …"></select>   <!-- → <option> per row -->
-//   <div data-from-query endpoint="…" sparql="…"></div>                            <!-- no DOM: read el.swcData -->
+//   <h1 data-from-query pattern="<…/card#me> foaf:name ?name"></h1>                 <!-- → innerHTML = the value -->
 //
 // A `pattern` (triple pattern, CURIEs allowed) matches the rdflib store rather
 // than running SPARQL. WITH an `endpoint` it loads that doc into the shared store
@@ -19,8 +19,10 @@
 //
 // Output by host tag: <ul>/<ol> → one <li> per row; <select> → one <option> per
 // row (+ a `sol-select` event on change); <img> → its `src` is set to the first
-// result's value (a URI); anything else → nothing is rendered and the W3C SPARQL
-// 1.1 Query Results JSON is left on `el.swcData` for you to use.
+// result's value (a URI); a CUSTOM element (hyphenated tag) → renders itself from
+// the data; any other element (<h1>, <span>, <p>, <div>…) → the result text becomes
+// its `innerHTML`. Either way the full W3C SPARQL 1.1 Query Results JSON is left on
+// `el.swcData` (and on the event below) for you to use.
 //
 // When the results land, the host fires a `sol-data-ready` event (bubbles/composed,
 // detail.data = the W3C JSON), so a custom element or page can react on the event
@@ -144,6 +146,12 @@ function fillImg(el, vars, rows) {
   else el.removeAttribute('src');
 }
 
+// A text container (<h1>, <span>, <p>, <div>, …): the result becomes its innerHTML —
+// one row → its value, several → joined. The full JSON is still on el.swcData.
+function fillText(el, vars, rows) {
+  el.innerHTML = rows.map((row) => rowText(vars, row)).join(', ');
+}
+
 // While the query runs, show a loading indicator IN the host, shaped to its tag
 // (a <li> in a list, an <option> in a select, else a <div>). aria-live announces it.
 function setLoading(el) {
@@ -152,17 +160,18 @@ function setLoading(el) {
   let node;
   if (tag === 'ul' || tag === 'ol') node = document.createElement('li');
   else if (tag === 'select') { node = document.createElement('option'); node.disabled = true; node.selected = true; }
-  else { node = document.createElement('div'); node.setAttribute('role', 'status'); }
+  else { node = document.createElement('span'); node.setAttribute('role', 'status'); }   // inline: valid inside <h1>/<span>/<p>
   node.className = 'swc-loading';
   node.setAttribute('aria-live', 'polite');
   node.textContent = 'Loading…';
   el.replaceChildren(node);
 }
 
-// The host's tag picks the shape. Unknown tags render nothing into the DOM — the
-// W3C JSON is left on `el.swcData` for the page to consume. Either way, when the
-// results land we fire a `sol-data-ready` event (detail.data = the W3C JSON) so a
-// custom element / page can react without polling el.swcData.
+// The host's tag picks the shape. A custom element renders itself (we just clear the
+// loading indicator); any other plain element shows the result as its innerHTML. The
+// full W3C JSON is always left on `el.swcData`, and when the results land we fire a
+// `sol-data-ready` event (detail.data = the W3C JSON) so a custom element / page can
+// react without polling el.swcData.
 function renderInto(el, data) {
   el.swcData = data;
   const vars = data.head.vars;
@@ -171,7 +180,8 @@ function renderInto(el, data) {
   if (tag === 'ul' || tag === 'ol')   fillList(el, vars, rows);
   else if (tag === 'select')          fillSelect(el, vars, rows);
   else if (tag === 'img')             fillImg(el, vars, rows);
-  else                                el.replaceChildren();   // clear the loading indicator
+  else if (tag.includes('-'))         el.replaceChildren();    // custom element: it renders itself from swcData / the event
+  else                                fillText(el, vars, rows); // <h1>/<span>/<p>/<div>…: result → innerHTML
   el.dispatchEvent(new CustomEvent('sol-data-ready', {
     bubbles: true, composed: true, detail: { data: data },
   }));
