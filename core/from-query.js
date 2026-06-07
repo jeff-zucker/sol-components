@@ -10,9 +10,17 @@
 //   <select data-from-query endpoint="…" sparql="SELECT ?label ?uri …"></select>   <!-- → <option> per row -->
 //   <div data-from-query endpoint="…" sparql="…"></div>                            <!-- no DOM: read el.swcData -->
 //
+// A `pattern` (triple pattern, CURIEs allowed) matches the rdflib store rather
+// than running SPARQL. WITH an `endpoint` it loads that doc into the shared store
+// first; WITHOUT one it matches the SHARED store as-is — reading whatever another
+// library (PodOS, solid-logic, mashlib…) put there, fetching nothing — and it
+// re-runs LIVE whenever a matching triple is added/removed:
+//   <ul data-from-query pattern="<…/card#me> foaf:name ?name"></ul>                <!-- live shared-store read -->
+//
 // Output by host tag: <ul>/<ol> → one <li> per row; <select> → one <option> per
-// row (+ a `sol-select` event on change); anything else → nothing is rendered and
-// the W3C SPARQL 1.1 Query Results JSON is left on `el.swcData` for you to use.
+// row (+ a `sol-select` event on change); <img> → its `src` is set to the first
+// result's value (a URI); anything else → nothing is rendered and the W3C SPARQL
+// 1.1 Query Results JSON is left on `el.swcData` for you to use.
 //
 // When the results land, the host fires a `sol-data-ready` event (bubbles/composed,
 // detail.data = the W3C JSON), so a custom element or page can react on the event
@@ -52,12 +60,12 @@ function isStoredRef(s) { return !/\s/.test(s) && /^https?:\/\/|^\/|^\.\.?\//.te
 // the <sol-query> element uses: SPARQL via execSparql, triple-pattern via rdflib).
 async function buildData(el) {
   const eps = endpointsOf(el);
-  if (!eps.length) throw new Error('data-from-query needs an `endpoint`');
   const pattern = attr(el, 'pattern');
   const sparql = attr(el, 'sparql') || attr(el, 'query') ||
     (pattern ? '' : (el.getAttribute('data-from-query') || ''));
 
   if (sparql) {
+    if (!eps.length) throw new Error('data-from-query needs an `endpoint` for a SPARQL query');
     let q = isStoredRef(sparql) ? await fetchQueryFromRdf(sparql) : sparql;
     q = substituteVariables(q, readVars(el));
     assertSafeQuery(q);
@@ -66,8 +74,13 @@ async function buildData(el) {
     return execSparql(q, target, getAuthFetch(fetchUrl));
   }
   if (pattern) {
-    const store = await loadRdfStore(eps[0]);
-    const [s, p, o] = parsePatternParts(pattern, rdf, {}, eps[0]);
+    // No `endpoint` → match the SHARED store directly (the rdflib graph PodOS /
+    // solid-logic / solid-ui all populate), so this reads what another library
+    // loaded WITHOUT fetching anything itself. With an `endpoint`, load that
+    // document into the shared store first, then match.
+    const base = eps[0] || document.baseURI;
+    const store = eps.length ? await loadRdfStore(eps[0], fetch, { shared: true }) : rdf.store;
+    const [s, p, o] = parsePatternParts(pattern, rdf, {}, base);
     return matchStore(store, s, p, o);
   }
   throw new Error('data-from-query needs `sparql`, `query`, `pattern`, or a query value');
@@ -123,10 +136,19 @@ function fillSelect(el, vars, rows) {
   }
 }
 
+// Set the host <img>'s `src` to the first result's value (a URI). An <img> is a
+// void element, so it gets a `src`, not children.
+function fillImg(el, vars, rows) {
+  const cell = rows[0] && rows[0][vars[0]];
+  if (cell && cell.value) el.setAttribute('src', cell.value);
+  else el.removeAttribute('src');
+}
+
 // While the query runs, show a loading indicator IN the host, shaped to its tag
 // (a <li> in a list, an <option> in a select, else a <div>). aria-live announces it.
 function setLoading(el) {
   const tag = el.localName;
+  if (tag === 'img') { el.removeAttribute('src'); return; }   // void element — blank it
   let node;
   if (tag === 'ul' || tag === 'ol') node = document.createElement('li');
   else if (tag === 'select') { node = document.createElement('option'); node.disabled = true; node.selected = true; }
@@ -148,16 +170,36 @@ function renderInto(el, data) {
   const tag = el.localName;
   if (tag === 'ul' || tag === 'ol')   fillList(el, vars, rows);
   else if (tag === 'select')          fillSelect(el, vars, rows);
+  else if (tag === 'img')             fillImg(el, vars, rows);
   else                                el.replaceChildren();   // clear the loading indicator
   el.dispatchEvent(new CustomEvent('sol-data-ready', {
     bubbles: true, composed: true, detail: { data: data },
   }));
 }
 
+function runQueryInto(el) {
+  return buildData(el)
+    .then((data) => renderInto(el, data))
+    .catch((e) => { el.innerHTML = `<div class="error">${(e && e.message) || e}</div>`; console.error('[data-from-query]', e); });
+}
+
 activate('[data-from-query]', (el) => {
   if (el.localName === 'sol-query') return;            // the element handles itself
   setLoading(el);
-  buildData(el)
-    .then((data) => renderInto(el, data))
-    .catch((e) => { el.innerHTML = `<div class="error">${(e && e.message) || e}</div>`; console.error('[data-from-query]', e); });
+  runQueryInto(el);
+
+  // Live mode: a triple-`pattern` query re-runs whenever a matching statement is
+  // added to / removed from the shared store — by THIS library or any other one
+  // sharing the rdflib graph (e.g. PodOS writing into the store swc adopted).
+  // SPARQL/endpoint queries stay one-shot. (activate has no disconnect hook, so
+  // the subscription lives for the page — fine for capability-attribute elements
+  // that persist; they re-render against a detached node harmlessly if removed.)
+  const pattern = attr(el, 'pattern');
+  if (pattern) {
+    try {
+      const base = endpointsOf(el)[0] || document.baseURI;
+      const [s, p, o] = parsePatternParts(pattern, rdf, {}, base);
+      rdf.onChange(s, p, o, () => runQueryInto(el));
+    } catch (e) { console.error('[data-from-query] live subscription failed', e); }
+  }
 });

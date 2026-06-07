@@ -18,6 +18,9 @@ class Rdf {
     this._fetcher = null;  // fetcher bound to _store
     this._adopted = false; // a host explicitly adopted an external store (wins)
     this._loaded = new Set(); // URLs already parsed into _store (cache key)
+    this._changeSubs = new Set(); // { pattern, cb, dirty } — see onChange()
+    this._wiredStore = null;      // the store we've attached data callbacks to
+    this._flushPending = false;   // a microtask flush is queued
   }
 
   // Record that `url` has been parsed into the shared store.
@@ -72,7 +75,68 @@ class Rdf {
     this._fetcher = externalStore.fetcher || null;
     this._adopted = true;
     this._loaded.clear();
+    this._wireChange(externalStore);   // re-point change subscribers at the adopted store
     return true;
+  }
+
+  // Subscribe to changes in the shared store, filtered by a triple PATTERN —
+  // `(s, p, o)` exactly as `store.each(s, p, o)`, where any term passed as
+  // null/undefined is a wildcard. `cb` is invoked (coalesced to one call per
+  // microtask) whenever a statement matching the pattern is added OR removed,
+  // **regardless of which library wrote it** — the callbacks live on the shared
+  // rdflib graph, so a write from PodOS (or anyone) notifies an swc subscriber.
+  // Returns an unsubscribe function.
+  //
+  // Why a pattern and not a bare "something changed": the relevance check is
+  // just a match against the changed statement, so it belongs here, once, not
+  // in every component. Subscriptions survive a useStore() swap because they
+  // live on this Rdf instance; the data callbacks get re-attached to whatever
+  // store becomes current.
+  onChange(subject, predicate, object, cb) {
+    const sub = { pattern: { subject, predicate, object }, cb, dirty: false };
+    this._changeSubs.add(sub);
+    this._wireChange(this.store);
+    return () => this._changeSubs.delete(sub);
+  }
+
+  // True when the changed statement `st` matches the (possibly wildcarded)
+  // pattern — the same semantics rdflib's own indexed match uses.
+  _matchesPattern(p, st) {
+    return (!p.subject   || (st.subject   && st.subject.equals(p.subject)))   &&
+           (!p.predicate || (st.predicate && st.predicate.equals(p.predicate))) &&
+           (!p.object    || (st.object    && st.object.equals(p.object)));
+  }
+
+  // Attach add/removal data callbacks to `store` once, fanning every changed
+  // statement out to the pattern-matching subscribers. Idempotent per store,
+  // and called again on useStore() so a swap re-wires the new graph.
+  _wireChange(store) {
+    if (!store || this._wiredStore === store) return;
+    this._wiredStore = store;
+    const onStmt = (st) => {
+      let any = false;
+      for (const sub of this._changeSubs) {
+        if (!sub.dirty && this._matchesPattern(sub.pattern, st)) { sub.dirty = true; any = true; }
+      }
+      if (any) this._scheduleFlush();
+    };
+    if (typeof store.addDataCallback === 'function') store.addDataCallback(onStmt);
+    if (typeof store.addDataRemovalCallback === 'function') store.addDataRemovalCallback(onStmt);
+  }
+
+  // Coalesce a burst of matching changes (e.g. a document parse adds thousands
+  // of statements) into a single callback per subscriber on the microtask queue.
+  _scheduleFlush() {
+    if (this._flushPending) return;
+    this._flushPending = true;
+    queueMicrotask(() => {
+      this._flushPending = false;
+      for (const sub of this._changeSubs) {
+        if (!sub.dirty) continue;
+        sub.dirty = false;
+        try { sub.cb(); } catch (e) { console.error('[rdf] onChange subscriber failed', e); }
+      }
+    });
   }
   get storeFetcher() {
     if (this._fetcher) return this._fetcher;
