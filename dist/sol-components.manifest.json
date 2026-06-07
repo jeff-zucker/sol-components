@@ -3,7 +3,7 @@
   "attributes": {
     "data-from-query": "sol-components/core/from-query.js",
     "data-handler": "sol-components/core/handler.js",
-    "data-edit-shape data-from-rdf": "rdf-bundle"
+    "data-edit-shape": "rdf-bundle"
   },
   "objects": {
     "provides": {
@@ -42,8 +42,7 @@
       "sol-tree-edit",
       "sol-form",
       "sol-settings",
-      "sol-components/core/edit-placements.js",
-      "sol-components/core/from-rdf.js"
+      "sol-components/core/edit-placements.js"
     ]
   },
   "stages": {

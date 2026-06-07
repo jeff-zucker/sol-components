@@ -21,7 +21,9 @@
   <h2>Use it in your HTML</h2>
   <p>Add this line once, near the top of your page — it makes the components
   available:</p>
-  <pre><code>&lt;script src="dist/sol-loader.min.js" data-extend-with="rdf"&gt;&lt;/script&gt;</code></pre>
+  <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
+        data-manifest="../dist/sol-components.manifest.json"
+        data-components="rdf-bundle"&gt;&lt;/script&gt;</code></pre>
   <p>Then put your components on the page and add one settings tag after them:</p>
   <pre><code>&lt;sol-weather place="Portland, OR"&gt;&lt;/sol-weather&gt;
 &lt;sol-menu from-rdf="data/menu.ttl#MainMenu" region="#main"&gt;&lt;/sol-menu&gt;

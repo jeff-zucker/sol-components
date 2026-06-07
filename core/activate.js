@@ -17,7 +17,7 @@ export function activate(selector, fn) {
     for (const el of document.querySelectorAll(selector)) {
       if (seen.has(el)) continue;
       seen.add(el);
-      try { fn(el); } catch (e) { console.error('[sol-loader] activator error for', selector, e); }
+      try { fn(el); } catch (e) { console.error('[sol-components] activator error for', selector, e); }
     }
   };
   scan();

@@ -14,7 +14,7 @@
  *
  * sol-menu's EDITOR (sol-tree-edit + sol-breadcrumb) is NOT here: editing a
  * menu reads/writes it as RDF (SHACL + Turtle), so it's part of the solid-ui
- * editing stack — loaded via sol-loader's `rdf` capability (or the importmap +
+ * editing stack — loaded via component-interop's `rdf` capability (or the importmap +
  * module recipe). sol-menu conjures sol-tree-edit by tag when it's present.
  *
  * Deliberately NOT here (they need the RDF / Solid stack):

@@ -193,7 +193,7 @@ class Rdf {
 // <sol-login>'s `_integrateWithRdflib()` patch would be invisible to an app
 // reading `rdf.store` from a different bundle. Publishing ONE instance on
 // `window` makes the store, fetcher and loaded-set page-wide, so any app can
-// just load components from sol-loader and share one coherent store — no
+// just load components from component-interop and share one coherent store — no
 // bundling-from-source workaround. (Paired with the rdflib→window.$rdf shim
 // so all bundles also share one rdflib *library*, for term `instanceof`.)
 //

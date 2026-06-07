@@ -11,7 +11,7 @@
 
   <!-- Loads the components so the live demo on this page works. -->
   <script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
-          data-manifest="../dist/sol-loader.manifest.json"
+          data-manifest="../dist/sol-components.manifest.json"
           data-components="sol-login"
           data-stage="local"
   ></script>
@@ -48,10 +48,13 @@
   </script>
 
   <h2>Use it in your HTML</h2>
-  <p>Add this line once, near the top of your page. The
-  <code>data-extend-with="auth"</code> part is what turns on logging in:</p>
+  <p>Add the loader once, near the top of your page. Listing
+  <code>sol-login</code> in <code>data-components</code> is what turns on
+  logging in:</p>
 
-  <pre><code>&lt;script src="dist/sol-loader.min.js" data-extend-with="auth"&gt;&lt;/script&gt;</code></pre>
+  <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
+        data-manifest="../dist/sol-components.manifest.json"
+        data-components="sol-login"&gt;&lt;/script&gt;</code></pre>
 
   <p>Then drop the tag wherever you want the sign-in button to appear:</p>
   <pre><code>&lt;sol-login&gt;&lt;/sol-login&gt;</code></pre>

@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="light">
   <title>SWC capability attributes — editing any element via a shape</title>
 
-  <!-- component-interop (from the CDN) reads swc's manifest; the data-edit-* and
-       data-from-rdf attributes below auto-load the rdf editing bundle on demand. -->
+  <!-- component-interop (from the CDN) reads swc's manifest; the data-edit-*
+       attributes below auto-load the rdf editing bundle on demand. -->
   <script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
           data-stage="local"
-          data-manifest="../dist/sol-loader.manifest.json"></script>
+          data-manifest="../dist/sol-components.manifest.json"></script>
 
   <style>
     :root { color-scheme: light; }
@@ -60,15 +60,6 @@
   component — the capability supplied the behavior. (Saving needs write access; against this static
   sample it renders and edits the form, the PUT is what a real pod would accept.)
 </p>
-
-<h2><code>data-from-rdf</code> — load TTL, hand back W3C SPARQL JSON</h2>
-<div class="card">
-  <p class="note">Loads a Turtle doc and hands the element the same
-  <strong>W3C SPARQL Results JSON</strong> object that <code>data-from-query</code> returns (its
-  triples as <code>?s ?p ?o</code> bindings) — no rendering of its own; a custom
-  <code>view</code> module here just dumps it.</p>
-  <div data-from-rdf="sample-profile.ttl" view="./views/json-view.js"></div>
-</div>
 
 </body>
 </html>

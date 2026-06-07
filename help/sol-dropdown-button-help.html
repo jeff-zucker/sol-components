@@ -10,7 +10,7 @@
   <script src="../web/scripts/prefs.js"></script>
   <!-- The loader registers sol-dropdown-button (part of sol-basic). -->
   <script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
-          data-manifest="../dist/sol-loader.manifest.json"
+          data-manifest="../dist/sol-components.manifest.json"
           data-stage="local"
           data-components="sol-basic"
   ></script>
@@ -44,7 +44,9 @@
   <h2>Use it in your HTML</h2>
   <p>Add this line once, near the top of your page — it makes the components
   available:</p>
-  <pre><code>&lt;script src="dist/sol-loader.min.js" data-bundles="sol-basic"&gt;&lt;/script&gt;</code></pre>
+  <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/component-interop@0.2.0/component-interop.js"
+        data-manifest="../dist/sol-components.manifest.json"
+        data-components="sol-basic"&gt;&lt;/script&gt;</code></pre>
   <p>Then write the button with a <code>&lt;menu&gt;</code> of choices inside it. Each
   choice is a <code>&lt;button&gt;</code> (an action your page reacts to) or an
   <code>&lt;a href&gt;</code> (opens a page or file):</p>

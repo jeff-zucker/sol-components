@@ -28,12 +28,8 @@ Then open `http://localhost:8080/examples/<page>`.
     editable from a SHACL shape. `data-edit-mode="inPlace"` edits where the
     element is; `data-edit-mode="collected"` gathers the editor into a
     `<sol-settings>` panel.
-  - `data-from-rdf` loads a Turtle file and hands an element the same W3C SPARQL
-    Results JSON object that `data-from-query` produces (so the same views work).
 
 ## Supporting files
 
 - `profile.shape.ttl`, `sample-profile.ttl` — sample SHACL shape and data the
   pages read.
-- `views/json-view.js` — a tiny URL view that pretty-prints the result object,
-  shared by the pages that use a `view="…"` URL.
