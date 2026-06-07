@@ -174,7 +174,7 @@ function setLoading(el) {
 // full W3C JSON is always left on `el.swcData`, and when the results land we fire a
 // `sol-data-ready` event (detail.data = the W3C JSON) so a custom element / page can
 // react without polling el.swcData.
-function renderInto(el, data) {
+export function renderInto(el, data) {
   el.swcData = data;
   const vars = data.head.vars;
   const rows = data.results.bindings;
