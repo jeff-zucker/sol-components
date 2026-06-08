@@ -1,5 +1,5 @@
 /**
- * sources/contract.js — the shared image vocab + RDF read/write helpers.
+ * web/utils/contract.js — the shared image vocab + RDF read/write helpers.
  *
  * A *fetcher* (e.g. commons.js) acquires data and writes it as RDF; a *display*
  * (e.g. <sol-gallery>) reads that RDF and renders it. Neither knows the other's
@@ -27,7 +27,7 @@
  * @property {number} [position]    display order          (schema:position)
  */
 
-import { rdf } from '../core/rdf.js';
+import { rdf } from '../../core/rdf.js';
 
 export const NS = {
   rdf:    'http://www.w3.org/1999/02/22-rdf-syntax-ns#',

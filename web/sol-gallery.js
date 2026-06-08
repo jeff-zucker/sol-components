@@ -26,7 +26,7 @@
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as GALLERY_CSS, sheet as GALLERY_SHEET } from './styles/sol-gallery-css.js';
-import { readImageItems } from '../sources/contract.js';
+import { readImageItems } from './utils/contract.js';
 
 class SolGallery extends HTMLElement {
   constructor() {
