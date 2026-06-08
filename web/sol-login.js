@@ -30,12 +30,6 @@ import { PopupProxySession } from '../core/popup-proxy.js';
 import { solFetch } from '../core/auth-fetch.js';
 import { register as registerService, root as swcRoot } from '../core/services.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const login = document.querySelector('sol-login');
-  if (login && !login._manualInit) await login.initialize();
-});
-
-
 function getSessionClass() {
   const locations = [
     window.solidClientAuthn?.Session,
@@ -852,5 +846,21 @@ _updateUI() {
 }
 
 define('sol-login', SolLogin);
+
+// Complete an OIDC redirect on load. The element is defined just above, so it is
+// already upgraded when this runs. When sol-login.js is imported lazily (e.g. by
+// component-interop, after manifests load) DOMContentLoaded has already fired —
+// so run immediately in that case instead of waiting for an event that will
+// never come. (Set `_manualInit` on the element to opt out and call initialize()
+// yourself.)
+function bootSolLogin() {
+  const login = document.querySelector('sol-login');
+  if (login && !login._manualInit) return login.initialize();
+}
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootSolLogin);
+  else bootSolLogin();
+}
+
 export { SolLogin, AuthManager };
 export default SolLogin;
