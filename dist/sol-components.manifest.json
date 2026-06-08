@@ -41,6 +41,7 @@
       "solid-ui",
       "sol-tree-edit",
       "sol-form",
+      "sol-modal",
       "sol-settings",
       "sol-components/core/edit-placements.js"
     ]

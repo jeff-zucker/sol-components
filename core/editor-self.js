@@ -30,14 +30,7 @@ const GEAR_CSS = `
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 120ms ease;
   z-index: 1;
-}
-.sol-editor-self-gear:focus,
-:host(:hover) .sol-editor-self-gear,
-.sol-editor-self-gear:hover {
-  opacity: 1;
 }
 .sol-editor-self-gear:focus-visible {
   outline: 2px solid var(--accent, #1F618D);
@@ -86,8 +79,8 @@ export function attachEditorSelfGear(el, spec) {
   const btn = document.createElement('button');
   btn.className = 'sol-editor-self-gear';
   btn.type = 'button';
-  btn.setAttribute('aria-label', `Edit ${el.localName} settings`);
-  btn.textContent = '⚙';   // ⚙
+  btn.setAttribute('aria-label', `Edit ${el.localName}`);
+  btn.textContent = '✏️';   // pencil — edit affordance
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     openEditorModal(el, spec);
@@ -110,18 +103,20 @@ export function openEditorModal(el, spec) {
 
   const modal = document.createElement('sol-modal');
   modal.setAttribute('title', `Edit ${el.localName}`);
-  modal.setAttribute('open', '');
 
-  const close = () => {
-    if (typeof modal.close === 'function') modal.close();
-    else modal.removeAttribute('open');
-  };
+  // A shape-driven form autosaves on every field change, so sol-form-save
+  // fires repeatedly while editing — do NOT close the modal on save. The user
+  // closes it via the ✕ / Esc / overlay; we just refresh the host so it
+  // reflects the edit.
   const onSaved = () => {
     if (typeof el.reload === 'function') el.reload().catch(() => {});
-    close();
   };
   editor.addEventListener('sol-form-save', onSaved);
 
-  modal.appendChild(editor);
+  // sol-modal builds its overlay only on open(), and its body lives in the
+  // shadow root (no slot) — so the editor is inserted through the handler the
+  // modal invokes on open(), not appended into light DOM.
+  modal.handler = (body) => { body.appendChild(editor); };
   document.body.appendChild(modal);
+  modal.open();
 }
