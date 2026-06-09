@@ -31,9 +31,13 @@ export const CSS = `
     overflow-x: auto; overflow-y: hidden;
     scrollbar-width: thin;
   }
-  /* Page-level action launchers (slot="actions"), grouped at the right of the bar. */
+  /* Page-level action launchers (slot="actions"), grouped at the right of the
+     bar. align-self:center keeps them vertically centred in the bar whatever
+     the bar's own align-items is — so an app that bottom-aligns its tabs (the
+     tab-into-content metaphor) doesn't drag the launchers down onto the
+     content below; the tabs stay flush, the launchers stay centred. */
   sol-tabs > .sol-tabs-bar > .sol-tabs-launch {
-    margin-left: auto; flex-shrink: 0;
+    margin-left: auto; flex-shrink: 0; align-self: center;
     display: flex; align-items: center; gap: 6px;
   }
   sol-tabs[orientation="vertical"] > .sol-tabs-bar {
