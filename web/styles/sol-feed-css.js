@@ -418,9 +418,20 @@ export const CSS = `
     flex: 0 0 var(--feed-list-width, 22rem);
     grid-template-columns: 1fr;
     border-radius: 0 0 0 var(--radius-md, 6px);
+    /* Drop the top pad so the first card sits flush with the top of the
+       column, matching the reading pane (which has no top inset) beside it. */
+    padding-top: 0;
   }
-  /* In the column the fixed card width would overflow; let cards fill it. */
-  .reader-inline .feed-reader-split .feed-card { width: auto; }
+  /* In the reader column the card fills the width, but the gallery's 3/2
+     aspect-ratio would then make it very tall — drop the ratio and give the
+     card a compact fixed height (rem, so it doesn't grow with the font), with
+     the title clamped to what fits. */
+  .reader-inline .feed-reader-split .feed-card {
+    width: auto;
+    aspect-ratio: auto;
+    height: 5.5rem;
+  }
+  .reader-inline .feed-reader-split .feed-card-title { -webkit-line-clamp: 3; }
   .feed-article-pane {
     flex: 1 1 auto;
     min-width: 0;
