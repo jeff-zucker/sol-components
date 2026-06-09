@@ -106,7 +106,7 @@ export const CSS = `
   /* ── topics view ─────────────────────────────────────────────────────── */
   /* A "newsstand": one column per topic across the top (each listing its
      sources), with the shared .feed-articles card grid below. The columns
-     band reuses the all-view's darker top-bar tint; together with the
+     band reuses the threePanel view's darker top-bar tint; together with the
      lighter articles strip they read as one two-tone panel. */
   .sol-feed-list.topics { gap: 0; }
   .feed-topic-columns {
@@ -145,7 +145,7 @@ export const CSS = `
 
   /* News cards: shorter boxes; the title tracks the host font size
      (1em = --font-size, set by the text-size setter) rather than the
-     all-view's smaller .88em. Scoped to topics so other views are
+     threePanel view's smaller .88em. Scoped to topics so other views are
      unchanged. */
   .sol-feed-list.topics .feed-card { aspect-ratio: 9 / 4; }
   .sol-feed-list.topics .feed-card-title {
@@ -153,7 +153,7 @@ export const CSS = `
     -webkit-line-clamp: 3;
   }
 
-  /* ── all view ───────────────────────────────────────────────────────── */
+  /* ── threePanel view (legacy name: "all") ───────────────────────────── */
   /* Two-tone defaults: a darker strip behind the top-bar (controls)
      and a lighter strip behind the articles grid, both relative to
      the page --bg via color-mix. Override via
@@ -218,16 +218,16 @@ export const CSS = `
     outline-offset: 2px;
   }
 
-  /* Two-column picker: left = instruction + topic fieldsets; right = the
-     "add topic / add source" forms. */
+  /* Two-column picker: left = the drag palette (instruction + topic groups
+     of chips + trash); right = the add-topic / add-feed forms (editable). */
   .feed-picker {
     flex: 0 0 auto;
     align-self: center;
     width: 100%;
     max-width: 1280px;
     display: grid;
-    /* left column carries the topic fieldsets — give it room so each
-       fieldset can fit several checkboxes side-by-side. */
+    /* left column carries the topic groups — give it room so each group
+       can fit several chips side-by-side. */
     grid-template-columns: 2fr 1fr;
     gap: 1rem;
     margin: 2rem 0 1rem;
@@ -318,15 +318,73 @@ export const CSS = `
     color: var(--text-muted, #7f8c8d);
     padding: 0 .3rem;
   }
-  .feed-topic label {
-    display: inline-flex;
-    align-items: center;
-    gap: .35rem;
+  /* Each source is now a draggable, click-to-toggle chip (no checkbox).
+     .active marks a chip whose feed is currently shown on the bar. */
+  .feed-chip {
+    font: inherit;
     font-size: .82em;
-    cursor: pointer;
-    padding: .1rem 0;
+    line-height: 1.2;
+    padding: .2rem .6rem;
+    border: 1px solid var(--border, #d0d0d0);
+    border-radius: 999px;
+    background: var(--surface, #fff);
+    color: var(--text, #212121);
+    cursor: grab;
+    user-select: none;
+    white-space: nowrap;
+    transition: background .12s, border-color .12s, box-shadow .12s;
   }
-  .feed-topic input { cursor: pointer; }
+  .feed-chip:hover { background: var(--hover, #eaf2fb); }
+  .feed-chip:focus-visible {
+    outline: 2px solid var(--accent, #3498db);
+    outline-offset: 2px;
+  }
+  .feed-chip.active {
+    background: var(--accent, #3498db);
+    border-color: transparent;
+    color: #fff;
+  }
+  .feed-chip.active::before { content: "✓ "; }
+  .feed-chip.dragging { opacity: .45; cursor: grabbing; }
+
+  /* Drop affordances. The bar lights up when a palette chip is dragged onto
+     it (→ show); the palette lights up when a bar pill is dragged back (→
+     hide); a topic group lights up for a cross-topic chip (→ re-file). */
+  .feed-top-bar.drop-target {
+    outline: 2px dashed var(--accent, #3498db);
+    outline-offset: -3px;
+  }
+  .feed-picker-left.drop-deselect {
+    outline: 2px dashed var(--text-muted, #7f8c8d);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  .feed-topic.drop-target {
+    outline: 2px dashed var(--accent, #3498db);
+    outline-offset: -3px;
+    background: var(--hover, #eaf2fb);
+  }
+
+  /* Trash drop target (editable only) — sits at the foot of the palette. */
+  .feed-trash {
+    margin-top: .4rem;
+    padding: .5rem .8rem;
+    border: 1px dashed var(--border, #c0c0c0);
+    border-radius: 8px;
+    text-align: center;
+    font-size: .82em;
+    color: var(--text-muted, #7f8c8d);
+    background: var(--surface, #fff);
+  }
+  .feed-trash.drop-target {
+    border-color: var(--error, #e74c3c);
+    border-style: solid;
+    color: var(--error, #e74c3c);
+    background: color-mix(in srgb, var(--error, #e74c3c) 8%, transparent);
+  }
+
+  /* No add-forms (non-editable): the palette uses the full width. */
+  .feed-picker.palette-only { grid-template-columns: 1fr; }
 
   /* Articles container — a grid of horizontal cards for the active
      feed. Sits flush against the top-bar above; together they form a
@@ -345,6 +403,51 @@ export const CSS = `
     background: var(--feed-articles-bg,
                     color-mix(in srgb, var(--bg, #f5f5f5) 88%, #000));
     border-radius: 0 0 var(--radius-md, 6px) var(--radius-md, 6px);
+  }
+
+  /* Inline reader (reader="inline", or auto under Electron): the top bar
+     stays full-width on top, the article grid collapses to a fixed-width
+     left column, and the reading pane fills the rest beside it. */
+  .reader-inline .feed-reader-split {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: .5rem;
+  }
+  .reader-inline .feed-reader-split .feed-articles {
+    flex: 0 0 var(--feed-list-width, 22rem);
+    grid-template-columns: 1fr;
+    border-radius: 0 0 0 var(--radius-md, 6px);
+  }
+  /* In the column the fixed card width would overflow; let cards fill it. */
+  .reader-inline .feed-reader-split .feed-card { width: auto; }
+  .feed-article-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    overflow: hidden;
+    /* Articles are external pages designed for a light background — keep the
+       reading pane white regardless of the app theme. */
+    background: #fff;
+    border-radius: 0 0 var(--radius-md, 6px) 0;
+  }
+  .feed-article-pane .feed-article-frame {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+  }
+  .feed-article-pane .sol-feed-empty { margin: auto; color: #555; }
+
+  /* The currently-open article in the reader's list. */
+  .reader-inline .feed-card.selected {
+    outline: 2px solid var(--accent, #1F618D);
+    outline-offset: -2px;
+  }
+  .feed-link.selected {
+    background: color-mix(in srgb, var(--accent, #1F618D) 14%, transparent);
+    font-weight: 600;
   }
 
   /* Horizontal card: image on the left, title on the right. The outer

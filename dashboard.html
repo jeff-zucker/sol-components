@@ -158,15 +158,17 @@
   </header>
 
   <main class="feed" aria-label="News feed">
-    <!-- The all-view scopes to the #Feeds topic in data/feeds.ttl and its
-         subtopics (News, SciTech, Culture, …). The proxy matches the
-         localhost CORS proxy used by the rest of the demos; remove the
-         attribute if you don't have one running.
-         `default-selected` controls the auto-check set on first visit
+    <!-- The threePanel view scopes the feed pool to the #Feeds topic in
+         data/feeds.ttl and its subtopics (News, SciTech, Culture, …). The
+         gear opens a drag palette: drag a feed onto the bar (or click it) to
+         show it, drag it back off to hide it. The proxy matches the localhost
+         CORS proxy used by the rest of the demos; remove the attribute if you
+         don't have one running.
+         `default-selected` controls the auto-shown set on first visit
          (localStorage empty). Case-insensitive substring match against
          each feed's label OR URL; once the user touches the picker,
          their selection is remembered and this attribute is ignored. -->
-    <sol-feed view="all"
+    <sol-feed view="threePanel"
               source="data/feeds.ttl#Feeds"
               default-selected="The Guardian, Truthout, NY Times, Smithsonian, Scientific American, Ars Technica, 404 Media, Cory Doctorow, Boing Boing, XKCD"
               proxy="http://localhost:3002/proxy?uri="></sol-feed>

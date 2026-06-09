@@ -42,11 +42,13 @@
           <td>How it looks. <code>feed</code> (the default) shows one feed as a
               list of article links. <code>topic</code> shows a picker of feed
               sources for one topic, with the chosen source's articles below it.
-              <code>all</code> shows a grid of article cards mixed from every
-              feed in a topic, with buttons to switch sources.</td></tr>
+              <code>threePanel</code> shows a bar of chosen-source pills + a gear
+              over a grid of article cards; the gear opens a drag palette where
+              you drag feeds onto the bar to show them (or click to toggle).
+              (<code>all</code> is still accepted as the old name.)</td></tr>
       <tr><td><code>default-selected</code></td>
-          <td>For <code>view="all"</code> only. A comma- or pipe-separated list
-              of feed names (or bits of their web address) to tick on the
+          <td>For <code>view="threePanel"</code> only. A comma- or pipe-separated
+              list of feed names (or bits of their web address) to show on the
               visitor's first visit, e.g. <code>"guardian"</code> matches "The
               Guardian". After that, the visitor's own choices are remembered.</td></tr>
     </tbody>
@@ -54,7 +56,7 @@
   <p>Some attributes here are shared across components — see
   <a href="common-attributes.html">Common attributes</a>. For <code>source</code>:
   with <code>view="feed"</code> it's a feed's web address; with
-  <code>topic</code> and <code>all</code> it points at a settings file plus a
+  <code>topic</code> and <code>threePanel</code> it points at a settings file plus a
   <code>#Topic</code> on the end, e.g. <code>data/feeds.ttl#News</code>.
   Most feeds can't be read directly by a browser, so set <code>proxy</code> to a
   CORS proxy address that the component reads the feed through.</p>
@@ -75,9 +77,9 @@
     proxy="http://localhost:3002/proxy?uri="
 &gt;&lt;/sol-feed&gt;</code></pre>
 
-  <p>A mixed grid of every feed under a topic:</p>
+  <p>A bar + article-card grid with a drag-to-show picker:</p>
   <pre><code>&lt;sol-feed
-    view="all"
+    view="threePanel"
     source="data/feeds.ttl#Feeds"
     proxy="http://localhost:3002/proxy?uri="
 &gt;&lt;/sol-feed&gt;</code></pre>

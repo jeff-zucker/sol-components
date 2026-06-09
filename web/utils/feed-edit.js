@@ -109,6 +109,28 @@ export function mintFeedUri(fileUri, title, existingUris = []) {
   return `${fileUri}#${frag}`;
 }
 
+/** Mint a unique `<fileUri>#<Frag>` topic IRI from a label (alnum + _.-),
+ *  not colliding with `existingUris`. */
+export function mintTopicUri(fileUri, label, existingUris = []) {
+  const taken = new Set(existingUris);
+  const base = String(label).trim().replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_.-]/g, '') || 'Topic';
+  let frag = base, n = 2;
+  while (taken.has(`${fileUri}#${frag}`)) frag = `${base}_${n++}`;
+  return `${fileUri}#${frag}`;
+}
+
+/** Add a new topic as a `skos:Concept` that is a top concept of the scheme
+ *  (`skos:topConceptOf <schemeUri>`), matching the SKOS shape the reader and
+ *  the other editing ops use. `schemeUri` is the focus concept scheme. */
+export function addTopicEdit(topicUri, label, schemeUri) {
+  const tail = schemeUri ? ` ; skos:topConceptOf <${schemeUri}>` : '';
+  return {
+    deletes: [],
+    inserts: [`<${topicUri}> a skos:Concept ; skos:prefLabel ${lit(label)}${tail} .`],
+  };
+}
+
 /* ── serialise + send ────────────────────────────────────────────────────── */
 
 export function patchBody({ deletes = [], inserts = [] }, prefixes = DEFAULT_PREFIXES) {

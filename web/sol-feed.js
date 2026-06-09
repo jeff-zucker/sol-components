@@ -8,27 +8,32 @@
  *   view="topic"  — sources picker scoped to one topic and its
  *                   `bk:subTopicOf` subtree; a side list of feeds, and
  *                   clicking one shows its articles in the content pane.
- *   view="all"    — Google-News-like grid scoped to a root topic and its
- *                   full subtree; tick which sources you want and their
- *                   articles are merged, randomised, and shown as image
- *                   cards with a description that reveals on hover or
- *                   keyboard focus.
+ *   view="threePanel" — a top bar of chosen-source pills + a ⚙ gear over an
+ *                   article-card area (under inline reader: a card list +
+ *                   reading pane, hence "three panel"). The pool of feeds is
+ *                   scoped to a root topic and its full subtree. The gear
+ *                   opens a drag palette of every available feed grouped by
+ *                   topic: drag a feed onto the bar (or click its chip) to
+ *                   show it, drag it back off to hide it, and — with
+ *                   `editable` — drag between topic groups to re-file it or
+ *                   onto the trash to delete it (recoverable bin). The
+ *                   legacy value `view="all"` is still accepted.
  *   view="topics" — a "newsstand": one column per topic in the subtree,
  *                   each listing that topic's sources. Clicking a source
  *                   shows its articles as image cards (same cards as
  *                   `all`) in a grid below the columns.
  *
- * For `topic`, `topics` and `all` the `source` must include a `#TopicName` fragment
+ * For `topic`, `topics` and `threePanel` the `source` must include a `#TopicName` fragment
  * pointing at a `bk:Topic` in an RDF/Turtle bookmark document (see
  * data/feeds.ttl). Feeds whose `bk:hasTopic` is outside the subtree or
  * isn't a defined topic show up under a catch-all "Other" group.
  *
  * Attributes:
- *   view              feed | topic | all   (default: feed)
- *   source            feed URL (feed) or "<rdfFile>#<Topic>" (topic / all)
+ *   view              feed | topic | threePanel | topics   (default: feed)
+ *   source            feed URL (feed) or "<rdfFile>#<Topic>" (topic / threePanel)
  *   proxy             CORS proxy pattern, prepended to cross-origin fetches
- *   default-selected  (view="all" only) comma- or pipe-separated list
- *                     of feed labels / URL substrings to auto-check
+ *   default-selected  (view="threePanel" only) comma- or pipe-separated list
+ *                     of feed labels / URL substrings to auto-show
  *                     on the user's first visit (when localStorage is
  *                     empty). Case-insensitive substring match against
  *                     each feed's label OR URL. Falls back to checking
@@ -39,16 +44,17 @@
  * @element sol-feed
  *
  * @example
- *   <sol-feed view="feed"  source="https://example.org/rss.xml"></sol-feed>
- *   <sol-feed view="topic" source="data/feeds.ttl#News"></sol-feed>
- *   <sol-feed view="all"   source="data/feeds.ttl#Feeds"></sol-feed>
+ *   <sol-feed view="feed"       source="https://example.org/rss.xml"></sol-feed>
+ *   <sol-feed view="topic"      source="data/feeds.ttl#News"></sol-feed>
+ *   <sol-feed view="threePanel" source="data/feeds.ttl#Feeds"></sol-feed>
  */
 import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import { CSS as FEED_CSS, sheet as FEED_SHEET } from './styles/sol-feed-css.js';
 import {
-  renameTopicEdit, recategorizeEdit, addFeedEdit, deleteToBinEdit, restoreEdit,
-  setPositionsEdit, mintFeedUri, patchDoc, purgeFeed, binUriFor,
+  renameTopicEdit, recategorizeEdit, addFeedEdit, addTopicEdit, deleteToBinEdit,
+  restoreEdit, setPositionsEdit, mintFeedUri, mintTopicUri, patchDoc, purgeFeed,
+  binUriFor,
 } from './utils/feed-edit.js';
 import { getFeedItems, parseSourceList } from './utils/feed-fetch.js';
 import { getDefault, onDefaultChange } from '../core/defaults.js';
@@ -75,76 +81,6 @@ function emptyEl(msg) {
   div.className = 'sol-feed-empty';
   div.textContent = msg;
   return div;
-}
-
-/** Sanitise a label into a URI-safe fragment (alnum + _.-). */
-function sanitizeFragment(label) {
-  return label.trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_.-]/g, '') || 'topic';
-}
-
-/** Standard RDF / SKOS / bookmark predicates and types used for writing. */
-const W = {
-  rdfType: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-  bkTopic: 'http://www.w3.org/2002/01/bookmark#Topic',
-  bkSubTopicOf: 'http://www.w3.org/2002/01/bookmark#subTopicOf',
-  bkHasTopic: 'http://www.w3.org/2002/01/bookmark#hasTopic',
-  bkRecalls: 'http://www.w3.org/2002/01/bookmark#recalls',
-  uiLink: 'http://www.w3.org/ns/ui#Link',
-  uiLabel: 'http://www.w3.org/ns/ui#label',
-  skosConcept: 'http://www.w3.org/2004/02/skos/core#Concept',
-  skosBroader: 'http://www.w3.org/2004/02/skos/core#broader',
-  skosPrefLabel: 'http://www.w3.org/2004/02/skos/core#prefLabel',
-  dctTitle: 'http://purl.org/dc/terms/title',
-  dctSubject: 'http://purl.org/dc/terms/subject',
-  rssChannel: 'http://purl.org/rss/1.0/channel',
-};
-
-/**
- * Re-fetch the bookmark/SKOS file, add the supplied (s,p,o) triples to its
- * rdflib store, serialise it back to Turtle, and PUT it to the same URL.
- * Returns true on success, throws on failure (the caller surfaces the
- * error in the UI). For files served read-only (static dev servers, plain
- * GitHub Pages, etc.) the PUT will fail with HTTP 405 and the caller
- * should treat that as expected.
- */
-async function writeRdfAdditions(fileUri, triples) {
-  const { rdf } = await import('../core/rdf.js');
-  if (!rdf.isReady()) throw new Error('rdflib is not available');
-  // Route both the GET and the PUT through solFetch so a protected
-  // source triggers the chrome's login flow + auto-retry instead of
-  // a silent 401.
-  const { solFetch } = await import('../core/auth-fetch.js');
-
-  const resp = await solFetch(fileUri);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching source`);
-  const text = await resp.text();
-
-  const store = rdf.graph();
-  rdf.parse(text, store, fileUri, 'text/turtle');
-
-  for (const [s, p, o] of triples) {
-    store.add(rdf.sym(s), rdf.sym(p), o.literal ? rdf.literal(o.value) : rdf.sym(o));
-  }
-
-  // rdflib.serialize is sync when no callback is supplied; allow async fallback.
-  let serialized;
-  try {
-    serialized = rdf.serialize(null, store, fileUri, 'text/turtle');
-  } catch {
-    serialized = await new Promise((resolve, reject) => {
-      rdf.serialize(null, store, fileUri, 'text/turtle', (err, out) => {
-        if (err) reject(err); else resolve(out);
-      });
-    });
-  }
-
-  const put = await solFetch(fileUri, {
-    method: 'PUT',
-    headers: { 'content-type': 'text/turtle' },
-    body: serialized,
-  });
-  if (!put.ok) throw new Error(`HTTP ${put.status} saving to source`);
-  return true;
 }
 
 /** The shared "reader" window — the object window.open() returns. */
@@ -253,7 +189,8 @@ class SolFeed extends HTMLElement {
       // viewDeleted click) must re-render the BIN, not clobber it with the
       // normal columns — the bin is the user's current view.
       else if (view === 'topics') await (this._view === 'bin' ? this._openBin() : this.renderTopics());
-      else if (view === 'all') await this.renderAll();
+      // `all` is the legacy name for the three-panel view.
+      else if (view === 'threepanel' || view === 'all') await this.renderThreePanel();
       else await this.renderFeed();
     } catch (e) {
       this.setStatus(e.message || String(e), true);
@@ -281,6 +218,66 @@ class SolFeed extends HTMLElement {
     this._status.style.display = msg ? '' : 'none';
     if (isError) this._status.setAttribute('data-error', '');
     else this._status.removeAttribute('data-error');
+  }
+
+  /**
+   * Should articles open in an inline reading pane instead of the pop-out
+   * window? `reader="inline"` forces it on, `reader="window"` forces it off;
+   * with no attribute it is on automatically under Electron — there a native
+   * view renders the pane and cross-origin framing is not refused, whereas on
+   * the plain web most articles refuse to be iframed, so the pop-out is used.
+   */
+  _readerInline() {
+    const v = (this.getAttribute('reader') || '').toLowerCase();
+    if (v === 'inline') return true;
+    if (v === 'window') return false;
+    return /electron/i.test(navigator.userAgent);
+  }
+
+  /**
+   * Open an article. In inline-reader mode (and once a reading pane exists)
+   * the article loads into the pane; otherwise it falls back to the shared
+   * pop-out reader window. Returns true when the click should be suppressed.
+   */
+  openArticle(url, el = null) {
+    if (this._readerInline() && this._articlePane) {
+      this.showInPane(url);
+      this._highlightArticle(el);
+      this._rememberArticle(url);
+      return true;
+    }
+    return openInReader(url);
+  }
+
+  /**
+   * Load an article into the inline reading pane. Cross-origin pages refuse to
+   * be framed directly, so route through the CORS proxy when one is configured
+   * (its response carries no X-Frame-Options and gets an injected <base> so
+   * relative assets resolve). With no proxy, try the bare URL as a last resort.
+   */
+  showInPane(url) {
+    if (!url || url === '#') return;
+    const frame = document.createElement('iframe');
+    frame.className = 'feed-article-frame';
+    frame.setAttribute('title', 'Article');
+    frame.src = this.proxy ? this.proxy + encodeURIComponent(url) : url;
+    this._articlePane.replaceChildren(frame);
+  }
+
+  /** localStorage key for the last-opened article URL (per feed source). */
+  get _articleKey() { return `sol-feed:article:${this.source || location.pathname}`; }
+  /** localStorage key for the active source tab URL (per feed source). */
+  get _activeSourceKey() { return `sol-feed:active-source:${this.source || location.pathname}`; }
+
+  _rememberArticle(url) { try { localStorage.setItem(this._articleKey, url); } catch (_) {} }
+  _rememberedArticle()  { try { return localStorage.getItem(this._articleKey); } catch (_) { return null; } }
+
+  /** Highlight one article card/link as the current one, clearing the rest. */
+  _highlightArticle(el) {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll('.feed-card.selected, .feed-link.selected')
+      .forEach(c => { c.classList.remove('selected'); c.removeAttribute('aria-current'); });
+    if (el) { el.classList.add('selected'); el.setAttribute('aria-current', 'true'); }
   }
 
   /** Resolve the configured feed list from the RDF bookmark source. */
@@ -327,7 +324,7 @@ class SolFeed extends HTMLElement {
       a.className = 'feed-link';
       a.href = it.link || '#';
       a.textContent = it.title || '(untitled)';
-      a.addEventListener('click', ev => { if (openInReader(a.href)) ev.preventDefault(); });
+      a.addEventListener('click', ev => { if (this.openArticle(a.href, a)) ev.preventDefault(); });
 
       const meta = [it.source, formatDate(it.pubDate)].filter(Boolean).join(' · ');
       if (meta) {
@@ -442,16 +439,28 @@ class SolFeed extends HTMLElement {
     selectSource(sources[0], allLinks[0]);
   }
 
-  /* ── view: all ────────────────────────────────────────────────────── */
+  /* ── view: threePanel (legacy name: "all") ──────────────────────────── */
 
-  async renderAll() {
+  async renderThreePanel() {
     this.setStatus('Loading feeds…');
     const sources = await this.resolveSources();
     if (!sources.length) { this.setStatus('No feeds found', true); return; }
 
-    const remembered = this.loadSelection();
+    this._initEditContext(sources);
+    const editable = this.editable;
+    const fileUri = sources.fileUri || this.source.split('#')[0];
+    const focusUri = sources.focusUri || this.source;
 
-    // Top bar: one button per selected source (flush left) + the gear
+    const remembered = this.loadSelection();
+    /** Shown feed URLs — the pills on the bar. Drag-onto-bar / click adds;
+     *  drag-off / click removes. Persisted to localStorage. */
+    const selected = new Set(remembered);
+    /** url → its palette chip, so a selection change can re-mark the chip. */
+    const chipByUrl = new Map();
+    /** url → src record, to resolve a dropped pill/chip back to its source. */
+    const srcByUrl = new Map(sources.map(s => [s.url, s]));
+
+    // Top bar: one button per shown source (flush left) + the gear
     // toggle pushed to the right edge.
     const bar = document.createElement('div');
     bar.className = 'feed-top-bar';
@@ -486,17 +495,29 @@ class SolFeed extends HTMLElement {
     const renderArticles = (items) => {
       if (!items.length) {
         articles.replaceChildren(emptyEl('No articles'));
+        if (this._articlePane) this._articlePane.replaceChildren(emptyEl('No articles'));
         return;
       }
       const sorted = items.slice().sort(
         (a, b) => dateMs(b.pubDate) - dateMs(a.pubDate),
       );
-      articles.replaceChildren(...sorted.map(it => this.newsCard(it)));
+      const cards = sorted.map(it => this.newsCard(it));
+      articles.replaceChildren(...cards);
+      // Inline reader: never leave the pane on a "click an article" prompt —
+      // open the remembered article (if present in this list) or the first,
+      // and highlight its card.
+      if (this._readerInline() && this._articlePane && cards.length) {
+        const remembered = this._rememberedArticle();
+        let i = remembered ? sorted.findIndex(it => (it.link || '') === remembered) : -1;
+        if (i < 0) i = 0;
+        this.openArticle(sorted[i].link || '#', cards[i]);
+      }
     };
 
     /** Make the given source the active tab — highlight its button,
      *  fetch its items if needed, and render them. */
     const selectSource = async (src) => {
+      try { localStorage.setItem(this._activeSourceKey, src.url); } catch (_) {}
       [...sourceButtons.children].forEach(btn => {
         const on = btn.dataset.feedUrl === src.url;
         btn.classList.toggle('selected', on);
@@ -520,21 +541,20 @@ class SolFeed extends HTMLElement {
       btn.dataset.feedUrl = src.url;
       btn.textContent = src.label;
       btn.setAttribute('role', 'tab');
+      btn.title = 'Drag down into the picker to hide this feed';
       btn.addEventListener('click', () => selectSource(src));
+      this._wireFeedDrag(btn, src, 'bar');
       sourceButtons.appendChild(btn);
       return btn;
     };
 
-    /** Currently-checked sources in `bk:hasTopic` order — every group
-     *  from groupByTopic, only the ones with a ticked checkbox. */
+    /** Shown sources in topic order — every group from groupByTopic, keeping
+     *  only those whose URL is in the `selected` set. */
     const chosenInTopicOrder = () => {
-      const checked = new Set(
-        [...picker.querySelectorAll('input:checked')].map(cb => cb.value),
-      );
       const out = [];
       for (const group of this.groupByTopic(sources)) {
         for (const src of group.feeds) {
-          if (checked.has(src.url)) out.push(src);
+          if (selected.has(src.url)) out.push(src);
         }
       }
       return out;
@@ -547,20 +567,24 @@ class SolFeed extends HTMLElement {
       for (const src of chosenInTopicOrder()) addSourceButton(src);
     };
 
-    /** Picker checkbox change — rebuild the top-bar in topic order, then
-     *  point the selection at either the newly-ticked source or the new
-     *  topic-first when the previously-selected one has just been removed. */
-    const onPickerChange = async (src, checked) => {
-      this.saveSelection();
+    /** Show or hide a source, then reflect it: re-mark its chip, rebuild the
+     *  bar in topic order, and move the active tab onto the newly-shown feed
+     *  (or onto a fallback when the active one was just hidden). The shared
+     *  workhorse for drag-onto-bar, drag-off, and click-to-toggle. */
+    const setSelected = async (src, on) => {
       const prevSelectedUrl = sourceButtons.querySelector('.feed-source-btn.selected')
         ?.dataset.feedUrl;
+      if (on) selected.add(src.url); else selected.delete(src.url);
+      const chip = chipByUrl.get(src.url);
+      if (chip) { chip.classList.toggle('active', on); chip.setAttribute('aria-pressed', String(on)); }
       rebuildSourceButtons();
-      if (checked) {
+      this.saveSelection();
+      if (on) {
         await selectSource(src);
       } else if (prevSelectedUrl === src.url) {
         const firstBtn = sourceButtons.querySelector('.feed-source-btn');
         if (firstBtn) {
-          const fallback = sources.find(s => s.url === firstBtn.dataset.feedUrl);
+          const fallback = srcByUrl.get(firstBtn.dataset.feedUrl);
           if (fallback) await selectSource(fallback);
         } else {
           articles.replaceChildren(emptyEl('Select a feed to see articles'));
@@ -573,192 +597,180 @@ class SolFeed extends HTMLElement {
       }
     };
 
-    // Two columns: left is the topic fieldsets the user ticks; right is
-    // the "add topic / add feed" forms that mint new triples (attempted
-    // PUT-back to the RDF source).
+    // Left: a drag palette of every available feed, grouped by topic — drag a
+    // chip onto the bar (or click it) to show that feed, drag it onto another
+    // topic group to re-file it, or onto the trash to delete it. Right: the
+    // add-topic / add-feed forms. Both edits are editable-only.
     const pickerLeft = document.createElement('div');
     pickerLeft.className = 'feed-picker-left';
 
     const pickerRight = document.createElement('div');
     pickerRight.className = 'feed-picker-right';
 
-    let cbIdx = 0;
-    /** fieldset per topic label, keyed by topic label so add-source can
-     *  insert a new checkbox into the right group. */
-    const fieldsetByTopic = new Map();
-    const buildFieldset = (topicLabel) => {
+    // The bar accepts a palette chip dropped on it (→ show that feed); the
+    // palette accepts a bar pill dragged back into it (→ hide that feed).
+    this._wireBarSelectDrop(bar, (src) => setSelected(src, true));
+    this._wirePaletteDeselectDrop(pickerLeft, (src) => setSelected(src, false));
+
+    const instruct = document.createElement('p');
+    instruct.className = 'feed-picker-instruct';
+    instruct.textContent = editable
+      ? 'Drag a feed onto the bar to show it, back here to hide it, onto another topic to re-file it, or onto the trash to remove it. Click a feed to toggle it.'
+      : 'Drag a feed onto the bar to show it, back here to hide it — or just click it.';
+    pickerLeft.appendChild(instruct);
+
+    /** Build one topic group (a fieldset of chips), wired as a re-file drop
+     *  target when editable. */
+    const buildFieldset = (topicLabel, topicUri) => {
       const fieldset = document.createElement('fieldset');
       fieldset.className = 'feed-topic';
       const legend = document.createElement('legend');
       legend.textContent = topicLabel || 'Sources';
       fieldset.appendChild(legend);
-      fieldsetByTopic.set(topicLabel || '', fieldset);
+      if (editable && topicUri) this._wireTopicRefileDrop(fieldset, topicUri);
       pickerLeft.appendChild(fieldset);
       return fieldset;
     };
-    const addCheckbox = (fieldset, src) => {
-      const label = document.createElement('label');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.id = `sol-feed-src-${cbIdx++}`;
-      cb.value = src.url;
-      cb.checked = remembered.includes(src.url);
-      cb.addEventListener('change', () => onPickerChange(src, cb.checked));
-      label.append(cb, document.createTextNode(' ' + src.label));
-      fieldset.appendChild(label);
-      return cb;
+    /** Build one draggable, click-to-toggle feed chip inside a topic group. */
+    const addChip = (fieldset, src) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'feed-chip';
+      chip.dataset.feedUrl = src.url;
+      chip.textContent = src.label;
+      const on = selected.has(src.url);
+      chip.classList.toggle('active', on);
+      chip.setAttribute('aria-pressed', String(on));
+      chip.title = `${src.label} — click to ${on ? 'hide' : 'show'}; drag to the bar, another topic, or the trash`;
+      chip.addEventListener('click', () => setSelected(src, !selected.has(src.url)));
+      this._wireFeedDrag(chip, src, 'palette');
+      fieldset.appendChild(chip);
+      chipByUrl.set(src.url, chip);
+      return chip;
     };
-    for (const group of this.groupByTopic(sources)) {
-      const fieldset = buildFieldset(group.topic);
-      for (const src of group.feeds) addCheckbox(fieldset, src);
+
+    // Editable: one group per topic in the scheme (including empty ones, so
+    // you can re-file into an empty topic). Otherwise: only topics that have
+    // feeds, in first-seen order.
+    let groups;
+    if (editable) {
+      const byUri = new Map();
+      for (const f of sources) {
+        if (!byUri.has(f.topicUri)) byUri.set(f.topicUri, []);
+        byUri.get(f.topicUri).push(f);
+      }
+      groups = this._allTopics.map(t => ({ topic: t.label, topicUri: t.uri, feeds: byUri.get(t.uri) || [] }));
+    } else {
+      groups = this.groupByTopic(sources).map(g => ({ ...g, topicUri: g.feeds[0]?.topicUri }));
+    }
+    for (const group of groups) {
+      const fieldset = buildFieldset(group.topic, group.topicUri);
+      for (const src of group.feeds) addChip(fieldset, src);
     }
 
-    // ── Add-topic / add-source forms ───────────────────────────────────
-    // Topic URIs come from the RDF parse (attached by parseSourceList).
-    /** @type {Array<{uri:string,label:string}>} */
-    const topicList = (sources.topics || []).slice();
-    const ontology = sources.ontology || 'bookmark';
-    const fileUri = sources.fileUri || this.source.split('#')[0];
-    const focusUri = sources.focusUri || this.source;
-    const status = document.createElement('p');
-    status.className = 'feed-picker-note';
-    status.setAttribute('role', 'status');
-    status.setAttribute('aria-live', 'polite');
+    // Editable: a trash drop target that moves a dropped feed to the bin.
+    if (editable) {
+      const trash = document.createElement('div');
+      trash.className = 'feed-trash';
+      trash.textContent = '🗑 Trash';
+      trash.setAttribute('aria-label', 'Drop a feed here to move it to the deleted bin');
+      trash.title = 'Drop a feed here to move it to the deleted bin';
+      this._wireTrashDrop(trash);
+      pickerLeft.appendChild(trash);
+    }
 
-    const refreshTopicSelects = () => {
-      // Feeds (the root concept scheme / focus topic) is never an option —
-      // new feeds attach to a leaf topic.
-      const options = topicList.filter(t => t.uri !== focusUri);
-      for (const sel of pickerRight.querySelectorAll('[data-role="topic-select"]')) {
-        const current = sel.value;
-        sel.replaceChildren(...options.map(t => {
-          const opt = document.createElement('option');
-          opt.value = t.uri;
-          opt.textContent = t.label;
-          return opt;
-        }));
-        if ([...sel.options].some(o => o.value === current)) sel.value = current;
-      }
-    };
+    // ── Add-topic / add-feed forms (editable only) ─────────────────────
+    // Topic IRIs come from the RDF parse (attached by parseSourceList). Each
+    // add PATCHes the SKOS/DCAT source then reloads, so the new topic / feed
+    // re-renders from the saved doc.
+    if (editable) {
+      /** @type {Array<{uri:string,label:string}>} */
+      const topicList = (sources.topics || []).slice();
+      const status = document.createElement('p');
+      status.className = 'feed-picker-note';
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
 
-    const topicForm = document.createElement('form');
-    topicForm.className = 'feed-add-wrap';
-    topicForm.innerHTML = `
-      <fieldset class="feed-add-form">
-        <legend>Add topic</legend>
-        <label>Label
-          <input name="label" required>
-        </label>
-        <button type="submit">Add topic</button>
-      </fieldset>
-    `;
+      const refreshTopicSelects = () => {
+        // The focus concept scheme itself is never an option — feeds attach
+        // to a leaf topic.
+        const options = topicList.filter(t => t.uri !== focusUri);
+        for (const sel of pickerRight.querySelectorAll('[data-role="topic-select"]')) {
+          const current = sel.value;
+          sel.replaceChildren(...options.map(t => {
+            const opt = document.createElement('option');
+            opt.value = t.uri;
+            opt.textContent = t.label;
+            return opt;
+          }));
+          if ([...sel.options].some(o => o.value === current)) sel.value = current;
+        }
+      };
 
-    const sourceForm = document.createElement('form');
-    sourceForm.className = 'feed-add-wrap';
-    sourceForm.innerHTML = `
-      <fieldset class="feed-add-form">
-        <legend>Add feed</legend>
-        <label>Feed URL
-          <input name="url" type="url" required placeholder="https://example.org/rss.xml">
-        </label>
-        <label>Label
-          <input name="label" required>
-        </label>
-        <label>Topic
-          <select name="topic" data-role="topic-select"></select>
-        </label>
-        <button type="submit">Add feed</button>
-      </fieldset>
-    `;
+      const topicForm = document.createElement('form');
+      topicForm.className = 'feed-add-wrap';
+      topicForm.innerHTML = `
+        <fieldset class="feed-add-form">
+          <legend>Add topic</legend>
+          <label>Label
+            <input name="label" required>
+          </label>
+          <button type="submit">Add topic</button>
+        </fieldset>
+      `;
 
-    pickerRight.append(topicForm, sourceForm, status);
-    refreshTopicSelects();
+      const sourceForm = document.createElement('form');
+      sourceForm.className = 'feed-add-wrap';
+      sourceForm.innerHTML = `
+        <fieldset class="feed-add-form">
+          <legend>Add feed</legend>
+          <label>Feed URL
+            <input name="url" type="url" required placeholder="https://example.org/rss.xml">
+          </label>
+          <label>Label
+            <input name="label" required>
+          </label>
+          <label>Topic
+            <select name="topic" data-role="topic-select"></select>
+          </label>
+          <button type="submit">Add feed</button>
+        </fieldset>
+      `;
 
-    /** Apply an addition: update the local DOM immediately, then attempt
-     *  to persist the new triples back to the source file. */
-    const applyAddition = async ({ kind, src, topic, triples }) => {
-      // Local UI update first — the user sees the addition even if
-      // the PUT fails (which is normal for read-only static demos).
-      if (kind === 'topic') {
-        topicList.push(topic);
-        refreshTopicSelects();
-        if (!fieldsetByTopic.has(topic.label)) buildFieldset(topic.label);
-      } else if (kind === 'source' && src) {
-        let fieldset = fieldsetByTopic.get(src.topic);
-        if (!fieldset) fieldset = buildFieldset(src.topic);
-        const cb = addCheckbox(fieldset, src);
-        cb.checked = true;
-        cb.dispatchEvent(new Event('change'));
-      }
-      // Try to persist.
-      status.removeAttribute('data-error');
-      status.textContent = 'Saving…';
-      try {
-        await writeRdfAdditions(fileUri, triples);
-        status.textContent = 'Saved to feed library.';
-      } catch (e) {
-        status.setAttribute('data-error', '');
-        status.textContent = `Added locally; save failed (${e.message}).`;
-      }
-    };
+      pickerRight.append(topicForm, sourceForm, status);
+      refreshTopicSelects();
 
-    topicForm.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const data = new FormData(topicForm);
-      const labelVal = String(data.get('label') || '').trim();
-      // All new topics nest under the focus (Feeds) — no user choice.
-      const parentUri = focusUri;
-      if (!labelVal) return;
-      // Mint a URI for the new topic; ensure uniqueness.
-      let frag = sanitizeFragment(labelVal);
-      let uri = `${fileUri}#${frag}`;
-      let n = 2;
-      while (topicList.some(t => t.uri === uri)) uri = `${fileUri}#${frag}_${n++}`;
-      const lit = { literal: true, value: labelVal };
-      const triples = ontology === 'skos'
-        ? [
-            [uri, W.rdfType, W.skosConcept],
-            [uri, W.skosPrefLabel, lit],
-            [uri, W.skosBroader, parentUri],
-          ]
-        : [
-            [uri, W.rdfType, W.bkTopic],
-            [uri, W.uiLabel, lit],
-            [uri, W.bkSubTopicOf, parentUri],
-          ];
-      await applyAddition({ kind: 'topic', topic: { uri, label: labelVal }, triples });
-      topicForm.reset();
-    });
+      // New topic: mint a skos:Concept under the focus scheme, then reload.
+      topicForm.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const labelVal = String(new FormData(topicForm).get('label') || '').trim();
+        if (!labelVal) return;
+        const existing = [focusUri, ...topicList.map(t => t.uri)];
+        const topicUri = mintTopicUri(fileUri, labelVal, existing);
+        this._edit(addTopicEdit(topicUri, labelVal, focusUri));
+      });
 
-    sourceForm.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const data = new FormData(sourceForm);
-      const url = String(data.get('url') || '').trim();
-      const labelVal = String(data.get('label') || '').trim();
-      const topicUri = String(data.get('topic') || '');
-      if (!url || !labelVal || !topicUri) return;
-      const topicLabel = (topicList.find(t => t.uri === topicUri) || {}).label || '';
-      const lit = { literal: true, value: labelVal };
-      // New feed: add as the URL itself plus an `a rss:channel` typing.
-      const triples = [[url, W.rdfType, W.rssChannel]];
-      if (ontology === 'skos') {
-        triples.push([url, W.dctTitle, lit]);
-        triples.push([url, W.dctSubject, topicUri]);
-      } else {
-        // Bookmark: also create a ui:Link proxy keyed off a derived id.
-        const proxy = `${fileUri}#feed-${sanitizeFragment(labelVal)}-${Date.now().toString(36)}`;
-        triples.push([proxy, W.rdfType, W.uiLink]);
-        triples.push([proxy, W.uiLabel, lit]);
-        triples.push([proxy, W.bkRecalls, url]);
-        triples.push([proxy, W.bkHasTopic, topicUri]);
-      }
-      const newSrc = { label: labelVal, url, topic: topicLabel, topicUri };
-      sources.push(newSrc);
-      await applyAddition({ kind: 'source', src: newSrc, triples });
-      sourceForm.reset();
-    });
+      // New feed: mint a dcat:Dataset under the chosen topic, pre-show it on
+      // the bar, then reload so it appears already selected.
+      sourceForm.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const data = new FormData(sourceForm);
+        const url = String(data.get('url') || '').trim();
+        const labelVal = String(data.get('label') || '').trim();
+        const topicUri = String(data.get('topic') || '');
+        if (!url || !labelVal || !topicUri) return;
+        const feedUri = mintFeedUri(fileUri, labelVal, this._allFeedUris);
+        try {
+          const sel = new Set(this.loadSelection());
+          sel.add(url);
+          localStorage.setItem(this.selectionKey, JSON.stringify([...sel]));
+        } catch (_) {}
+        this._edit(addFeedEdit(feedUri, { title: labelVal, url, topicUri, catalogUri: this._catalogUri }));
+      });
+    }
 
-    picker.append(pickerLeft, pickerRight);
+    if (editable) picker.append(pickerLeft, pickerRight);
+    else { picker.classList.add('palette-only'); picker.append(pickerLeft); }
 
     const setExpanded = open => {
       picker.hidden = !open;
@@ -775,7 +787,7 @@ class SolFeed extends HTMLElement {
       // of a label / URL). Matching is case-insensitive and uses
       // substring containment so "guardian" picks "The Guardian" and
       // "boingboing.net" works just as well. Falls back to the first
-      // checkbox when the attribute is absent or matches nothing.
+      // feed when the attribute is absent or matches nothing.
       const defaults = (this.getAttribute('default-selected') || '')
         .split(/[|,]/)
         .map(s => s.trim().toLowerCase())
@@ -783,23 +795,37 @@ class SolFeed extends HTMLElement {
 
       let matched = false;
       if (defaults.length) {
-        for (const cb of picker.querySelectorAll('input[type=checkbox]')) {
-          const src = sources.find(s => s.url === cb.value);
-          if (!src) continue;
+        for (const src of sources) {
           const hay = `${(src.label || '').toLowerCase()} ${(src.url || '').toLowerCase()}`;
-          if (defaults.some(d => hay.includes(d))) {
-            cb.checked = true;
-            matched = true;
-          }
+          if (defaults.some(d => hay.includes(d))) { selected.add(src.url); matched = true; }
         }
       }
-      if (!matched) {
-        const firstCb = picker.querySelector('input[type=checkbox]');
-        if (firstCb) firstCb.checked = true;
+      if (!matched && sources.length) selected.add(sources[0].url);
+      // Reflect the cold-start selection onto the chips.
+      for (const [url, chip] of chipByUrl) {
+        const on = selected.has(url);
+        chip.classList.toggle('active', on);
+        chip.setAttribute('aria-pressed', String(on));
       }
     }
 
-    this._root.replaceChildren(bar, picker, articles);
+    // Inline reader: top bar stays full-width, the article grid becomes a
+    // left column, and a reading pane fills the rest. Otherwise the grid takes
+    // the whole area and articles open in the pop-out window.
+    if (this._readerInline()) {
+      this._articlePane = document.createElement('div');
+      this._articlePane.className = 'feed-article-pane';
+      this._articlePane.setAttribute('part', 'article-pane');
+      this._articlePane.replaceChildren(emptyEl('Loading…'));
+      const split = document.createElement('div');
+      split.className = 'feed-reader-split';
+      split.append(articles, this._articlePane);
+      this._root.classList.add('reader-inline');
+      this._root.replaceChildren(bar, picker, split);
+    } else {
+      this._articlePane = null;
+      this._root.replaceChildren(bar, picker, articles);
+    }
 
     const chosen = chosenInTopicOrder();
     rebuildSourceButtons();
@@ -808,11 +834,118 @@ class SolFeed extends HTMLElement {
       await Promise.all(chosen.map(s => this.ensureSource(s)));
       articles.setAttribute('aria-busy', 'false');
       this.saveSelection();
-      await selectSource(chosen[0]);
+      let active = chosen[0];
+      try {
+        const r = localStorage.getItem(this._activeSourceKey);
+        const m = r && chosen.find(s => s.url === r);
+        if (m) active = m;
+      } catch (_) {}
+      await selectSource(active);
     } else {
       articles.replaceChildren(emptyEl('Select a feed to see articles'));
       this.setStatus('');
     }
+  }
+
+  /* ── threePanel drag-and-drop helpers ───────────────────────────────────
+   * The palette's chips and the bar's pills are both draggable. A drag
+   * records its `origin` ('palette' = an available feed; 'bar' = a shown
+   * feed) so each drop target can tell "show me" from "hide me". Selection
+   * drops (bar / palette) are always live; the data-edit drops (re-file onto
+   * a topic, delete onto the trash) are wired only when [editable]. */
+
+  /** Cache the editing context (file/catalog/bin URIs + the topic and feed
+   *  lists) shared by the threePanel and topics views. */
+  _initEditContext(sources) {
+    this._fileUri = sources.fileUri;
+    this._catalogUri = sources.catalogUri;
+    this._binUri = binUriFor(sources.fileUri);
+    this._allTopics = (sources.topics || []).filter(t => t.uri !== sources.focusUri);
+    this._allFeedUris = sources.map(f => f.uri).filter(Boolean);
+  }
+
+  /** Make a feed chip (palette) or pill (bar) draggable, tagging the drag
+   *  with where it started so drop targets can act on the direction. */
+  _wireFeedDrag(el, src, origin) {
+    el.draggable = true;
+    el.addEventListener('dragstart', (e) => {
+      this._dragFeed = { uri: src.uri, fromTopicUri: src.topicUri, src, origin };
+      e.dataTransfer.effectAllowed = origin === 'palette' ? 'copyMove' : 'move';
+      try { e.dataTransfer.setData('text/plain', src.url || src.uri || ''); } catch {}
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => { el.classList.remove('dragging'); this._dragFeed = null; });
+  }
+
+  /** The top bar accepts a palette chip dropped on it → show that feed. */
+  _wireBarSelectDrop(bar, onSelect) {
+    bar.addEventListener('dragover', (e) => {
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'palette') return;
+      e.preventDefault(); bar.classList.add('drop-target');
+    });
+    bar.addEventListener('dragleave', (e) => { if (!bar.contains(e.relatedTarget)) bar.classList.remove('drop-target'); });
+    bar.addEventListener('drop', (e) => {
+      bar.classList.remove('drop-target');
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'palette') return;
+      e.preventDefault();
+      onSelect(d.src);
+    });
+  }
+
+  /** The palette accepts a bar pill dragged back into it → hide that feed.
+   *  Topic-group and trash drops stopPropagation, so this only fires for a
+   *  bar-origin drag that lands on the palette's empty space or a chip. */
+  _wirePaletteDeselectDrop(palette, onDeselect) {
+    palette.addEventListener('dragover', (e) => {
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'bar') return;
+      e.preventDefault(); palette.classList.add('drop-deselect');
+    });
+    palette.addEventListener('dragleave', (e) => { if (!palette.contains(e.relatedTarget)) palette.classList.remove('drop-deselect'); });
+    palette.addEventListener('drop', (e) => {
+      palette.classList.remove('drop-deselect');
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'bar') return;
+      e.preventDefault();
+      onDeselect(d.src);
+    });
+  }
+
+  /** A topic group accepts a palette chip from a DIFFERENT topic → re-file it
+   *  (rewrites dcat:theme) and reload. */
+  _wireTopicRefileDrop(fieldset, topicUri) {
+    fieldset.addEventListener('dragover', (e) => {
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'palette' || d.fromTopicUri === topicUri) return;
+      e.preventDefault(); e.stopPropagation(); fieldset.classList.add('drop-target');
+    });
+    fieldset.addEventListener('dragleave', (e) => { if (!fieldset.contains(e.relatedTarget)) fieldset.classList.remove('drop-target'); });
+    fieldset.addEventListener('drop', (e) => {
+      fieldset.classList.remove('drop-target');
+      const d = this._dragFeed;
+      if (!d || d.origin !== 'palette' || d.fromTopicUri === topicUri) return;
+      e.preventDefault(); e.stopPropagation();
+      this._edit(recategorizeEdit(d.uri, d.fromTopicUri, topicUri));
+    });
+  }
+
+  /** The trash accepts a feed from the bar or the palette → move it to the
+   *  deleted bin (recoverable via the chrome's "View deleted"). */
+  _wireTrashDrop(trash) {
+    trash.addEventListener('dragover', (e) => {
+      if (!this._dragFeed) return;
+      e.preventDefault(); e.stopPropagation(); trash.classList.add('drop-target');
+    });
+    trash.addEventListener('dragleave', (e) => { if (!trash.contains(e.relatedTarget)) trash.classList.remove('drop-target'); });
+    trash.addEventListener('drop', (e) => {
+      trash.classList.remove('drop-target');
+      const d = this._dragFeed;
+      if (!d) return;
+      e.preventDefault(); e.stopPropagation();
+      this._edit(deleteToBinEdit(d.uri, d.fromTopicUri, this._binUri));
+    });
   }
 
   /* ── view: topics ─────────────────────────────────────────────────── */
@@ -897,11 +1030,7 @@ class SolFeed extends HTMLElement {
 
     // Editing context (used by the edit helpers below) + the column set.
     const editable = this.editable;
-    this._fileUri = sources.fileUri;
-    this._catalogUri = sources.catalogUri;
-    this._binUri = binUriFor(sources.fileUri);
-    this._allTopics = (sources.topics || []).filter(t => t.uri !== sources.focusUri);
-    this._allFeedUris = sources.map(f => f.uri).filter(Boolean);
+    this._initEditContext(sources);
 
     // Non-editable: one column per topic that HAS feeds (first-seen order).
     // Editable: one column per topic in the scheme — including empty ones —
@@ -1265,7 +1394,7 @@ class SolFeed extends HTMLElement {
     return `sol-feed:topic-source:${this.source || location.pathname}`;
   }
 
-  /** localStorage key for this element's all-view source selection. */
+  /** localStorage key for this element's threePanel-view source selection. */
   get selectionKey() {
     return `sol-feed:selected:${this.source || location.pathname}`;
   }
@@ -1279,10 +1408,11 @@ class SolFeed extends HTMLElement {
     } catch { return []; }
   }
 
-  /** Persist the currently-checked feed URLs to localStorage. */
+  /** Persist the shown feed URLs (the bar's pills, left→right) to localStorage. */
   saveSelection() {
-    const urls = Array.from(this.shadowRoot.querySelectorAll('.feed-picker input:checked'))
-      .map(cb => cb.value);
+    const urls = Array.from(
+      this.shadowRoot.querySelectorAll('.feed-source-buttons .feed-source-btn'),
+    ).map(b => b.dataset.feedUrl).filter(Boolean);
     try { localStorage.setItem(this.selectionKey, JSON.stringify(urls)); }
     catch { /* storage unavailable / full — selection just won't persist */ }
   }
@@ -1303,7 +1433,7 @@ class SolFeed extends HTMLElement {
     const a = document.createElement('a');
     a.className = 'feed-card';
     a.href = it.link || '#';
-    a.addEventListener('click', ev => { if (openInReader(a.href)) ev.preventDefault(); });
+    a.addEventListener('click', ev => { if (this.openArticle(a.href, a)) ev.preventDefault(); });
     // The visible title + overlay would make a very long accessible name;
     // pin the link's name to the article title instead.
     a.setAttribute('aria-label', it.title);
