@@ -62,10 +62,15 @@ class SolDefault extends HTMLElement {
     });
     this._observer.observe(this, { attributes: true, attributeOldValue: true });
 
+    // Attributes present in the HTML *before* the source is applied are
+    // explicit overrides — the source (and later reload()) must never clobber
+    // them. Everything else is source-derived and may be refreshed on reload.
+    this._htmlOverrides = new Set(this.getAttributeNames());
+
     // RDF source: pulls each predicate's value into a matching HTML
-    // attribute (only when not already set explicitly on the element,
-    // so an inline override wins). camelCase predicates kebab-case
-    // their attribute name (`ui:defaultIssuers` → `default-issuers`).
+    // attribute (skipping explicit HTML overrides, so an inline value wins).
+    // camelCase predicates kebab-case their attribute name
+    // (`ui:defaultIssuers` → `default-issuers`).
     const source = this.getAttribute('source');
     if (source) await this._applySource(source);
   }
@@ -76,8 +81,9 @@ class SolDefault extends HTMLElement {
       for (const [predUri, value] of Object.entries(cfg)) {
         const attr = attrFromPredicate(predUri);
         if (!attr) continue;
-        if (this.hasAttribute(attr)) continue;   // HTML override wins
-        this.setAttribute(attr, Array.isArray(value) ? value.join(' ') : String(value));
+        if (this._htmlOverrides && this._htmlOverrides.has(attr)) continue;   // explicit HTML override wins
+        const next = Array.isArray(value) ? value.join(' ') : String(value);
+        if (this.getAttribute(attr) !== next) this.setAttribute(attr, next);   // update (incl. on reload); MutationObserver fires sol-default-change
       }
     } catch (err) {
       console.warn(`[sol-default] source ${source}: ${err.message}`);

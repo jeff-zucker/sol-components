@@ -29,7 +29,16 @@ import { displayItem, contentForHref } from './display-target.js';
  */
 export function isCommandName(name) {
   if (!name) return false;
-  return !name.includes('-') && !customElements.get(name);
+  if (name.includes('-')) return false;          // hyphenated → custom element
+  if (customElements.get(name)) return false;     // registered custom element
+  // A real built-in HTML element (iframe, video, img, …) is content to render,
+  // not a command. document.createElement returns an HTMLUnknownElement only
+  // for names that aren't valid elements — those are the command keys.
+  try {
+    if (typeof document !== 'undefined'
+        && !(document.createElement(name) instanceof HTMLUnknownElement)) return false;
+  } catch (_) { /* invalid element name → treat as a command */ }
+  return true;
 }
 
 /** ui:attribute/ui:parameter pairs [[k,v],…] → { k: v, … } command args. */
