@@ -1,0 +1,247 @@
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix rss:    <http://purl.org/rss/1.0/> .
+@prefix schema: <http://schema.org/> .
+
+# Editable DCAT catalog of feeds — the shape <sol-feed> reads AND writes
+# (view="threePanel"/"topics" with [editable]). Topics are skos:Concept under
+# the <#Feeds> scheme; each feed is a dcat:Dataset (dct:title + dcat:theme),
+# and <#catalog> lists them all so add / delete can keep membership in sync.
+# Generated from help/data/feeds-skos.ttl (which keeps the read-only dct:subject form).
+
+<#Feeds>   a skos:ConceptScheme ; skos:prefLabel "Feeds" .
+
+<#News>    a skos:Concept ; skos:prefLabel "News"     ; skos:topConceptOf <#Feeds> .
+<#SciTech> a skos:Concept ; skos:prefLabel "Sci/Tech" ; skos:topConceptOf <#Feeds> .
+<#Culture> a skos:Concept ; skos:prefLabel "Culture"  ; skos:topConceptOf <#Feeds> .
+
+###
+# NEWS
+###
+
+<https://www.opb.org/arc/outboundfeeds/rss/?outputType=xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "OPB" ; dcat:theme <#News> .
+
+<http://www.aljazeera.com/xml/rss/all.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Al Jazeera" ; dcat:theme <#News> .
+
+<https://rss.nytimes.com/services/xml/rss/nyt/World.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "NY Times" ; dcat:theme <#News> .
+
+<https://www.democracynow.org/democracynow.rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Democracy Now" ; dcat:theme <#News> .
+
+<https://www.truth-out.org/feed?format=feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Truthout" ; dcat:theme <#News> .
+
+<https://theintercept.com/feed/?lang=en>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Intercept" ; dcat:theme <#News> .
+
+<https://fair.org/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Counterspin" ; dcat:theme <#News> .
+
+<http://feeds.propublica.org/propublica/main>
+  a dcat:Dataset, rss:channel ;
+  dct:title "ProPublica" ; dcat:theme <#News> .
+
+<https://therealnews.com/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Real News" ; dcat:theme <#News> .
+
+<https://www.theguardian.com/us-news/rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Guardian" ; dcat:theme <#News> .
+
+<https://www.motherjones.com/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Mother Jones" ; dcat:theme <#News> .
+
+<https://labornotes.org/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Labor Notes" ; dcat:theme <#News> .
+
+<https://www.telesurenglish.net/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Telesur English" ; dcat:theme <#News> .
+
+<https://www.theroot.com/rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Root" ; dcat:theme <#News> .
+
+<https://thegrio.com/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Grio" ; dcat:theme <#News> .
+
+<https://blackagendareport.com/rss.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Black Agenda Report" ; dcat:theme <#News> .
+
+<https://www.culturalsurvival.org/rss.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Cultural Survival" ; dcat:theme <#News> .
+
+
+###
+# SCI/TECH
+###
+
+<https://www.smithsonianmag.com/rss/latest_articles/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Smithsonian" ; dcat:theme <#SciTech> .
+
+<http://rss.sciam.com/ScientificAmerican-Global>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Scientific American" ; dcat:theme <#SciTech> .
+
+<https://www.wired.com/feed/rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Wired" ; dcat:theme <#SciTech> .
+
+<https://www.engadget.com/rss.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Engadget" ; dcat:theme <#SciTech> .
+
+<https://www.theverge.com/rss/index.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Verge" ; dcat:theme <#SciTech> .
+
+<https://feeds.arstechnica.com/arstechnica/index>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Ars Technica" ; dcat:theme <#SciTech> .
+
+<https://www.404media.co/rss/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "404 Media" ; dcat:theme <#SciTech> .
+
+<https://wedistribute.org/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Wedistribute" ; dcat:theme <#SciTech> .
+
+<https://www.eff.org/rss/updates.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Electronic Freedom Foundation" ; dcat:theme <#SciTech> .
+
+<https://techcrunch.com/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "TechCrunch" ; dcat:theme <#SciTech> .
+
+<https://www.theregister.com/headlines.atom>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Register" ; dcat:theme <#SciTech> .
+
+<https://news.ycombinator.com/rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Hacker News" ; dcat:theme <#SciTech> .
+
+<https://www.nature.com/nature.rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Nature" ; dcat:theme <#SciTech> .
+
+<https://itsfoss.com/rss/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "It's FOSS" ; dcat:theme <#SciTech> .
+
+<https://opensource.com/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Open Source .com" ; dcat:theme <#SciTech> .
+
+
+###
+# CULTURE
+###
+
+<https://slate.com/feeds/all.rss>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Slate" ; dcat:theme <#Culture> .
+
+<https://doctorow.medium.com/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Cory Doctorow" ; dcat:theme <#Culture> .
+
+<https://www.openculture.com/feed/rss2>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Open Culture" ; dcat:theme <#Culture> .
+
+<https://theconversation.com/us/articles.atom>
+  a dcat:Dataset, rss:channel ;
+  dct:title "The Conversation" ; dcat:theme <#Culture> .
+
+<https://www.thisamericanlife.org/podcast/rss.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "This American Life" ; dcat:theme <#Culture> .
+
+<https://jacobin.com/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Jacobin" ; dcat:theme <#Culture> .
+
+<https://www.salon.com/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Salon" ; dcat:theme <#Culture> .
+
+<https://www.vox.com/rss/index.xml>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Vox" ; dcat:theme <#Culture> .
+
+<https://boingboing.net/feed>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Boing Boing" ; dcat:theme <#Culture> .
+
+<https://www.vice.com/en/feed/>
+  a dcat:Dataset, rss:channel ;
+  dct:title "Vice" ; dcat:theme <#Culture> .
+
+###
+# Catalog — every feed above, so add-feed / delete-forever stay in sync.
+###
+<#catalog> a dcat:Catalog ;
+  dcat:dataset
+    <https://www.opb.org/arc/outboundfeeds/rss/?outputType=xml> ,
+    <http://www.aljazeera.com/xml/rss/all.xml> ,
+    <https://rss.nytimes.com/services/xml/rss/nyt/World.xml> ,
+    <https://www.democracynow.org/democracynow.rss> ,
+    <https://www.truth-out.org/feed?format=feed> ,
+    <https://theintercept.com/feed/?lang=en> ,
+    <https://fair.org/feed/> ,
+    <http://feeds.propublica.org/propublica/main> ,
+    <https://therealnews.com/feed> ,
+    <https://www.theguardian.com/us-news/rss> ,
+    <https://www.motherjones.com/feed/> ,
+    <https://labornotes.org/feed> ,
+    <https://www.telesurenglish.net/feed/> ,
+    <https://www.theroot.com/rss> ,
+    <https://thegrio.com/feed/> ,
+    <https://blackagendareport.com/rss.xml> ,
+    <https://www.culturalsurvival.org/rss.xml> ,
+    <https://www.smithsonianmag.com/rss/latest_articles/> ,
+    <http://rss.sciam.com/ScientificAmerican-Global> ,
+    <https://www.wired.com/feed/rss> ,
+    <https://www.engadget.com/rss.xml> ,
+    <https://www.theverge.com/rss/index.xml> ,
+    <https://feeds.arstechnica.com/arstechnica/index> ,
+    <https://www.404media.co/rss/> ,
+    <https://wedistribute.org/feed/> ,
+    <https://www.eff.org/rss/updates.xml> ,
+    <https://techcrunch.com/feed/> ,
+    <https://www.theregister.com/headlines.atom> ,
+    <https://news.ycombinator.com/rss> ,
+    <https://www.nature.com/nature.rss> ,
+    <https://itsfoss.com/rss/> ,
+    <https://opensource.com/feed> ,
+    <https://slate.com/feeds/all.rss> ,
+    <https://doctorow.medium.com/feed> ,
+    <https://www.openculture.com/feed/rss2> ,
+    <https://theconversation.com/us/articles.atom> ,
+    <https://www.thisamericanlife.org/podcast/rss.xml> ,
+    <https://jacobin.com/feed/> ,
+    <https://www.salon.com/feed> ,
+    <https://www.vox.com/rss/index.xml> ,
+    <https://boingboing.net/feed> ,
+    <https://www.vice.com/en/feed/> .
