@@ -70,13 +70,16 @@ export const CSS = `
     border-bottom: 3px solid transparent;
     border-radius: 0;
     padding: 1rem;
-    font-size: 105%;
+    font-size: max(16px, 105%);
     color: var(--text-muted, #666);
     cursor: pointer; margin-bottom: -1px; font-family: inherit;
     white-space: nowrap; flex-shrink: 0;
   }
   sol-tabs[variant="sub"] > .sol-tabs-bar > button {
-    padding: 8px 14px; font-size: 18px;
+    /* Scales with the host's text-size choice (was a fixed 18px, which
+       ignored it); .9em keeps the sub strip a step smaller than the main
+       tabs, floored at 16px — no text below 16px. */
+    padding: 8px 14px; font-size: max(16px, .9em);
     border-bottom-width: 2px;
   }
   sol-tabs > .sol-tabs-bar > button:hover { color: var(--accent-dark, #1976d2); }
