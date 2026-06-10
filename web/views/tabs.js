@@ -13,10 +13,10 @@ import { siblingUrl } from '../../core/here.js';
  * so <sol-tabs> can pass them through to the panel component. e.g. a query
  * with `?link ?label ?view` lets the `view` value land on the panel element.
  *
- * The handler attribute on <sol-query view="tabs"> is forwarded onto the
+ * The data-handler attribute on <sol-query view="tabs"> is forwarded onto the
  * <sol-tabs> element, so authors can choose the component each tab wraps
  * around:
- *   <sol-query view="tabs" handler="sol-live-edit" …>
+ *   <sol-query view="tabs" data-handler="sol-live-edit" …>
  *
  * Usage: <sol-query view="tabs" endpoint="…" sparql="SELECT ?link ?label …">
  */
@@ -35,9 +35,9 @@ export async function render(container, data, host) {
 
   const tabs = document.createElement('sol-tabs');
 
-  // Forward a handler from the host sol-query (if any) to the new tabs.
-  const handler = host?.getAttribute?.('handler');
-  if (handler) tabs.setAttribute('handler', handler);
+  // Forward a data-handler from the host sol-query (if any) to the new tabs.
+  const handler = host?.getAttribute?.('data-handler');
+  if (handler) tabs.setAttribute('data-handler', handler);
 
   for (const row of bindings) {
     const url   = row[linkVar]?.value;

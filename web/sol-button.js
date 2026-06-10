@@ -12,7 +12,7 @@
  * tearing it down and rebuilding.
  *
  * Reserved attributes (consumed by sol-button itself):
- *   handler  — tag name of the component to mount (optional; when absent,
+ *   data-handler — tag name of the component to mount (optional; when absent,
  *              inferred from `source`: same-origin → sol-include, external
  *              → iframe)
  *   region   — where the content surfaces. A CSS selector (a pane the page
@@ -27,8 +27,8 @@
  *   for      — (inline only) explicit host selector, overriding the cascade;
  *              defaults to the button's own parent when nothing resolves.
  *
- * `handler` names what the button does — a component OR an action, treated the
- * same way. A custom-element tag (has a "-", e.g. sol-include) is mounted; a
+ * `data-handler` names what the button does — a component OR an action, treated
+ * the same way. A custom-element tag (has a "-", e.g. sol-include) is mounted; a
  * bare name that isn't a registered element (e.g. "installPod") is an action:
  * it dispatches `sol-command` (detail.command = the handler) for the host app's
  * registry to resolve, with `params` (JSON or a bare string) as detail.params.
@@ -41,7 +41,7 @@
  * Every OTHER attribute on sol-button is forwarded as-is to the handler
  * element, so authoring is just like inlining the handler:
  *
- *   <sol-button handler="sol-include" source="pages/settings.html"
+ *   <sol-button data-handler="sol-include" source="pages/settings.html"
  *               target="#dk-content" name="Settings" trusted>
  *     ⚙
  *   </sol-button>
@@ -50,7 +50,7 @@
  *              gets mounted inside #dk-content > [data-menu-item="Settings"]
  *
  *   <sol-default region="#main"></sol-default>
- *   <sol-button handler="sol-include" inline source="help.html">?</sol-button>
+ *   <sol-button data-handler="sol-include" inline source="help.html">?</sol-button>
  *
  *   click → toggles <sol-include source="help.html"> inside #main (the host
  *           from the region cascade; a .sol-inline-panel wrapper); click again
@@ -68,7 +68,7 @@ import { define } from '../core/define.js';
 import { ensureHandler, dispatchCommand, isCommandName } from '../core/rdf-render.js';
 import { displayItem, isExternal, resolveRegion } from '../core/display-target.js';
 
-const RESERVED = new Set(['handler', 'region', 'name', 'replace', 'inline', 'for', 'params', 'class', 'style']);
+const RESERVED = new Set(['data-handler', 'region', 'name', 'replace', 'inline', 'for', 'params', 'class', 'style']);
 
 class SolButton extends HTMLElement {
   constructor() {
@@ -109,16 +109,16 @@ class SolButton extends HTMLElement {
   _resolveName() {
     return this.getAttribute('name')
         || this.id
-        || (this.getAttribute('source') || this.getAttribute('handler') || '').split(/[\/#?]/).filter(Boolean).pop()
-        || this.getAttribute('handler');
+        || (this.getAttribute('source') || this.getAttribute('data-handler') || '').split(/[\/#?]/).filter(Boolean).pop()
+        || this.getAttribute('data-handler');
   }
 
-  /** Compute the content element to mount: explicit `handler` wins; else infer
-   *  from the href origin (same-origin → trusted sol-include, external → iframe).
-   *  Returns { tag, attrs, href, replace }. */
+  /** Compute the content element to mount: explicit `data-handler` wins; else
+   *  infer from the href origin (same-origin → trusted sol-include, external →
+   *  iframe). Returns { tag, attrs, href, replace }. */
   _handlerSpec() {
     const href = this.getAttribute('source') || null;
-    const explicit = this.getAttribute('handler');
+    const explicit = this.getAttribute('data-handler');
     const attrs = [];
     for (const a of this.attributes) {
       if (RESERVED.has(a.name)) continue;
@@ -140,11 +140,11 @@ class SolButton extends HTMLElement {
   }
 
   _activate() {
-    // `handler` names what the button does — a component (a custom-element tag,
-    // mounted) OR an action (a bare name that isn't a registered element →
+    // `data-handler` names what the button does — a component (a custom-element
+    // tag, mounted) OR an action (a bare name that isn't a registered element →
     // dispatch `sol-command` for the app's registry, same allow-list as sol-menu
     // command items). isCommandName() draws the line (custom elements need a -).
-    const handler = this.getAttribute('handler');
+    const handler = this.getAttribute('data-handler');
     if (handler && isCommandName(handler)) {
       const raw = this.getAttribute('params');
       let params;

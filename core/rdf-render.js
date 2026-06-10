@@ -7,7 +7,7 @@
 //
 //   { host, baseUrl, sourceName, embedClass }
 //
-//   host        — element used for getAttribute('handler') and sol-error
+//   host        — element used for getAttribute('data-handler') and sol-error
 //   baseUrl     — the host module's import.meta.url, for handler resolution
 //   sourceName  — host tag name, used in error messages / event detail
 //   embedClass  — CSS class added to each embedded element
@@ -48,7 +48,7 @@ export function paramsToObject(params) {
 
 /**
  * Dispatch a menu/button/tab command. `command` is the registry key (from a
- * ui:Component `ui:name` or a bare `data-handler`/`handler`); `params` is the
+ * ui:Component `ui:name` or a bare `data-handler`); `params` is the
  * args object. Bubbling + composed so one document-level listener in the host
  * app catches it.
  *

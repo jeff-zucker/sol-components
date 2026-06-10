@@ -368,9 +368,9 @@ describe('SolTabs — declarative and imperative APIs', () => {
     expect(embed.hasAttribute('data-src')).toBe(false);        // no stale data-* left on the element
   });
 
-  test('plain (non-data) anchor attrs still forward (back-compat)', () => {
+  test('non-reserved anchor attrs (no data- prefix) forward verbatim', () => {
     const el = document.createElement('sol-tabs');
-    el.innerHTML = '<a href="x.md" handler="sol-include" foo="bar">X</a>';
+    el.innerHTML = '<a href="x.md" data-handler="sol-include" foo="bar">X</a>';
     attached(el);
     el.switchTab('X');
     const embed = content(el).querySelector('.sol-tab-embed');
@@ -405,7 +405,7 @@ describe('SolTabs — slot="actions" launchers', () => {
   test('relocates slot="actions" children to the bar launch group, not as tabs', () => {
     const el = document.createElement('sol-tabs');
     el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
-      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+      + '<sol-button slot="actions" inline data-handler="sol-include" source="help.html">?</sol-button>';
     attached(el);
     expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);   // launcher is NOT a tab
     const launch = el.querySelector(LAUNCH);
@@ -416,7 +416,7 @@ describe('SolTabs — slot="actions" launchers', () => {
   test('infers a non-anchor child as an action — no slot="actions" marker needed', () => {
     const el = document.createElement('sol-tabs');
     el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
-      + '<sol-button inline handler="sol-include" source="help.html">?</sol-button>';   // no slot=
+      + '<sol-button inline data-handler="sol-include" source="help.html">?</sol-button>';   // no slot=
     attached(el);
     expect(tabBtns(el).map(b => b.textContent)).toEqual(['Alpha', 'Beta']);   // still only the anchors are tabs
     const launch = el.querySelector(LAUNCH);
@@ -436,7 +436,7 @@ describe('SolTabs — slot="actions" launchers', () => {
   test('survives a tab switch (persistent, unlike the per-tab actions row)', () => {
     const el = document.createElement('sol-tabs');
     el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
-      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+      + '<sol-button slot="actions" inline data-handler="sol-include" source="help.html">?</sol-button>';
     attached(el);
     el.switchTab('Beta');
     expect(el.querySelector(LAUNCH)).toBeTruthy();   // still there after switching tabs
@@ -446,7 +446,7 @@ describe('SolTabs — slot="actions" launchers', () => {
     const el = document.createElement('sol-tabs');
     el.id = 'mytabs';
     el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
-      + '<sol-button slot="actions" inline handler="sol-include" source="help.html">?</sol-button>';
+      + '<sol-button slot="actions" inline data-handler="sol-include" source="help.html">?</sol-button>';
     attached(el);
     expect(el.querySelector(LAUNCH).getAttribute('for')).toBe('#mytabs > .sol-tabs-content');
   });
@@ -454,14 +454,14 @@ describe('SolTabs — slot="actions" launchers', () => {
   test('mints an id when missing; keeps an explicit for=', () => {
     const a = document.createElement('sol-tabs');   // no id
     a.innerHTML = '<a href="a.html">A</a><a href="b.html">B</a>'
-      + '<sol-button slot="actions" inline handler="sol-include" source="h">?</sol-button>';
+      + '<sol-button slot="actions" inline data-handler="sol-include" source="h">?</sol-button>';
     attached(a);
     expect(a.id).toMatch(/^sol-tabs-\d+$/);
     expect(a.querySelector(LAUNCH).getAttribute('for')).toBe(`#${a.id} > .sol-tabs-content`);
 
     const b = document.createElement('sol-tabs');
     b.innerHTML = '<a href="a.html">A</a><a href="b.html">B</a>'
-      + '<sol-button slot="actions" inline for="#elsewhere" handler="sol-include" source="h">?</sol-button>';
+      + '<sol-button slot="actions" inline for="#elsewhere" data-handler="sol-include" source="h">?</sol-button>';
     attached(b);
     expect(b.querySelector(LAUNCH).getAttribute('for')).toBe('#elsewhere');
   });

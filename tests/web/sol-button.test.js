@@ -33,7 +33,7 @@ async function settle() { await new Promise(r => setTimeout(r, 20)); }
 function mountButton(extra = '') {
   document.body.innerHTML = `
     <div id="host"></div>
-    <sol-button id="b" handler="sol-include" inline for="#host"
+    <sol-button id="b" data-handler="sol-include" inline for="#host"
                 source="help.html" trusted ${extra}>?</sol-button>`;
   return document.getElementById('b');
 }
@@ -103,7 +103,7 @@ describe('inline region', () => {
   test('defaults to the button\'s parent when no for= and no cascade', async () => {
     document.body.innerHTML = `
       <div id="wrap">
-        <sol-button id="b2" handler="sol-include" inline
+        <sol-button id="b2" data-handler="sol-include" inline
                     source="help.html" trusted>?</sol-button>
       </div>`;
     const b = document.getElementById('b2');
@@ -116,7 +116,7 @@ describe('inline region', () => {
     document.body.innerHTML = `
       <div id="host"></div>
       <sol-default region="#host"></sol-default>
-      <sol-button id="b3" handler="sol-include" inline source="help.html" trusted>?</sol-button>`;
+      <sol-button id="b3" data-handler="sol-include" inline source="help.html" trusted>?</sol-button>`;
     const b = document.getElementById('b3');
     await settle();
     trigger(b).click(); await settle();
@@ -127,7 +127,7 @@ describe('inline region', () => {
     document.body.innerHTML = `
       <div id="host"></div>
       <div region="#host">
-        <sol-button id="b4" handler="sol-include" inline source="help.html" trusted>?</sol-button>
+        <sol-button id="b4" data-handler="sol-include" inline source="help.html" trusted>?</sol-button>
       </div>`;
     const b = document.getElementById('b4');
     await settle();
@@ -136,11 +136,11 @@ describe('inline region', () => {
   });
 });
 
-describe('<sol-button handler="<action>">', () => {
+describe('<sol-button data-handler="<action>">', () => {
   test('a bare-name handler dispatches sol-command (with parsed params) instead of mounting', async () => {
     document.body.innerHTML = `
       <div id="host"></div>
-      <sol-button id="c" handler="cycleFontSize" params='{"step":1}'>A</sol-button>`;
+      <sol-button id="c" data-handler="cycleFontSize" params='{"step":1}'>A</sol-button>`;
     const b = document.getElementById('c');
     await settle();
     const seen = [];
@@ -155,7 +155,7 @@ describe('<sol-button handler="<action>">', () => {
   });
 
   test('params left as a bare string when not JSON', async () => {
-    document.body.innerHTML = `<sol-button id="c2" handler="go" params="left">x</sol-button>`;
+    document.body.innerHTML = `<sol-button id="c2" data-handler="go" params="left">x</sol-button>`;
     const b = document.getElementById('c2');
     await settle();
     let detail;

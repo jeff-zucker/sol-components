@@ -161,7 +161,7 @@ describe('SolModal — declarative trigger', () => {
   test('handler attribute resolves a global function', () => {
     window.__modalHandler = (body) => { body.textContent = 'from-global'; };
     const m = document.createElement('sol-modal');
-    m.setAttribute('handler', '__modalHandler');
+    m.setAttribute('data-handler', '__modalHandler');
     document.body.appendChild(m);
 
     let ready = null;

@@ -27,7 +27,7 @@
  *   <sol-modal source="foo.ttl" component="sol-live-edit" format="turtle">
  *     edit foo
  *   </sol-modal>
- *   <sol-modal source="foo.ttl" handler="myHandler">edit foo</sol-modal>
+ *   <sol-modal source="foo.ttl" data-handler="myHandler">edit foo</sol-modal>
  *
  * When `component` is set, sol-modal creates that element inside the modal
  * body and forwards all attributes (except title/size/component/content/handler)
@@ -51,7 +51,7 @@ import { adopt } from '../core/adopt.js';
 import { define } from '../core/define.js';
 import './sol-include.js'; // source mode renders content through <sol-include>
 
-const OWN_ATTRS = new Set(['title', 'size', 'component', 'content', 'source', 'handler']);
+const OWN_ATTRS = new Set(['title', 'size', 'component', 'content', 'source', 'data-handler']);
 
 /**
  * Generic modal dialog web component.
@@ -60,7 +60,7 @@ const OWN_ATTRS = new Set(['title', 'size', 'component', 'content', 'source', 'h
  * then call `open()`. The handler receives `(body, footer, actions)` to
  * populate the modal content.
  *
- * Declarative trigger usage: any of `source`/`content`/`component`/`handler`
+ * Declarative trigger usage: any of `source`/`content`/`component`/`data-handler`
  * attributes turns the element into an inline button; clicking opens the modal.
  *
  * @class SolModal
@@ -70,7 +70,7 @@ const OWN_ATTRS = new Set(['title', 'size', 'component', 'content', 'source', 'h
  * @attr {string} source - URL to fetch and display (declarative trigger mode)
  * @attr {string} content - inline HTML string to display (declarative trigger mode)
  * @attr {string} component - sol-* tag name to create inside the modal body
- * @attr {string} handler - global function name or Function for custom rendering
+ * @attr {string} data-handler - global function name for custom rendering (declarative trigger)
  * @property {Function} handler - render callback: fn(body, footer, actions, { source, host })
  * @property {Element[]} headerActions - extra buttons for the modal header
  * @property {Function} onClose - callback invoked when the modal closes
@@ -101,7 +101,7 @@ class SolModal extends HTMLElement {
     return this.hasAttribute('source')
         || this.hasAttribute('content')
         || this.hasAttribute('component')
-        || this.hasAttribute('handler');
+        || this.hasAttribute('data-handler');
   }
 
   get modalTitle() { return this.getAttribute('title') || ''; }
@@ -145,7 +145,7 @@ class SolModal extends HTMLElement {
   }
 
   _resolveAttrHandler() {
-    const name = this.getAttribute('handler');
+    const name = this.getAttribute('data-handler');
     if (!name) return null;
     const fn = (typeof window !== 'undefined' && window[name]) || null;
     return typeof fn === 'function' ? fn : null;

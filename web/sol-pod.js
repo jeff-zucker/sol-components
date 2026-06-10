@@ -43,7 +43,7 @@ import './sol-login.js';   // built-in login button in the pod header
  * @attr {string} issuers - comma-separated OIDC issuer origins, forwarded to the built-in sol-login
  * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / double-click)
- * @attr {string} handler - default sol-* component for file viewing
+ * @attr {string} data-handler - default sol-* component for file viewing
  * @attr {string} gear-icon - icon for BOTH the per-item action button and
  *                 the breadcrumb (current-container) gear. Treated as a URL
  *                 when it contains '/' or ends in svg/png/jpg/gif/webp;
@@ -85,7 +85,7 @@ import './sol-login.js';   // built-in login button in the pod header
  *                 a host listener should treat it idempotently.
  */
 class SolPod extends HTMLElement {
-  static get observedAttributes() { return ['source', 'login', 'pod-click-action', 'handler', 'side']; }
+  static get observedAttributes() { return ['source', 'login', 'pod-click-action', 'data-handler', 'side']; }
 
   constructor() {
     super();
@@ -209,7 +209,7 @@ class SolPod extends HTMLElement {
       if (loginAttr) this.login = loginAttr;
       const sideAttr = this.getAttribute('side');
       if (sideAttr) this._side = sideAttr;
-      const clickAttr = this.getAttribute('pod-click-action') || this.getAttribute('handler');
+      const clickAttr = this.getAttribute('pod-click-action') || this.getAttribute('data-handler');
       if (clickAttr) this.podClickAction = clickAttr;
 
       // The header carries a built-in <sol-login>. An external login=
@@ -289,7 +289,7 @@ class SolPod extends HTMLElement {
     if (name === 'login' && this._initialized) {
       this.login = newV;
     }
-    if (name === 'pod-click-action' || name === 'handler') {
+    if (name === 'pod-click-action' || name === 'data-handler') {
       this.podClickAction = newV;
     }
     if (name === 'side') {

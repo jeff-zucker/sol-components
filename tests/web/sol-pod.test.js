@@ -53,7 +53,7 @@ afterEach(() => { document.body.innerHTML = ''; _resetRegistries(); });
 describe('SolPod — scaffold', () => {
   test('observes source, login, pod-click-action, handler, side', () => {
     expect(SolPod.observedAttributes).toEqual(
-      ['source', 'login', 'pod-click-action', 'handler', 'side']);
+      ['source', 'login', 'pod-click-action', 'data-handler', 'side']);
   });
 
   test('embeds a sol-login button in the header row', () => {

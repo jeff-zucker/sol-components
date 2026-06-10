@@ -15,13 +15,13 @@
  *   m.select('Overview');
  *
  * Declarative usage: like <sol-tabs>. Handler lookup per anchor, falling
- * back to <sol-menu>'s `handler` attribute, then to <sol-include>. The
+ * back to <sol-menu>'s `data-handler` attribute, then to <sol-include>. The
  * href is forwarded as both `source` and `endpoint`, and other anchor
  * attributes pass through.
  *
  *   <sol-menu>
  *     <a href="intro.md">Intro</a>
- *     <a href="data.ttl" handler="sol-query" pattern="?s ?p ?o">Triples</a>
+ *     <a href="data.ttl" data-handler="sol-query" pattern="?s ?p ?o">Triples</a>
  *   </sol-menu>
  *
  * Submenus: nest <submenu> elements to create collapsible groups. The
@@ -43,7 +43,7 @@
  *
  * Attributes:
  *   orientation="horizontal"  — lay the nav bar on top instead of the side
- *   handler="sol-*"           — default component for rendering each item
+ *   data-handler="sol-*"      — default component for rendering each item
  *   from-rdf="menu.ttl#Name"  — build the menu from a ui:Menu RDF document
  *                               instead of light-DOM children. OPT-IN: inert
  *                               until `web/menu-from-rdf.js` is imported (the
@@ -70,7 +70,7 @@ import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, para
  * @class SolMenu
  * @extends HTMLElement
  * @attr {string} orientation - "horizontal" to lay nav on top (default: sidebar)
- * @attr {string} handler - default sol-* component tag for anchors
+ * @attr {string} data-handler - default sol-* component tag for anchors
  * @fires sol-menu-change - detail: { name }
  *
  * CSS Shadow Parts (outside theming hooks):
@@ -299,8 +299,8 @@ class SolMenu extends HTMLElement {
   }
 
   _harvestItems(root) {
-    const parentHandler = (this.getAttribute('handler') || '').trim();
-    const SKIP = new Set(['href', 'handler', 'params', 'requires-write', 'if-logged-in', 'icon',
+    const parentHandler = (this.getAttribute('data-handler') || '').trim();
+    const SKIP = new Set(['href', 'data-handler', 'params', 'requires-write', 'if-logged-in', 'icon',
                           'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
     // A menu item is owner-gated by `requires-write` (≙ acl:mode acl:Write) or
     // the friendlier `if-logged-in` boolean — same meaning, surfaced as
@@ -316,9 +316,9 @@ class SolMenu extends HTMLElement {
     const nodes = Array.from(container.children)
       .flatMap(n => n.tagName === 'LI' ? Array.from(n.children) : [n]);
     for (const node of nodes) {
-      const handler = node.getAttribute('handler');
+      const handler = node.getAttribute('data-handler');
       if (handler && isCommandName(handler)) {
-        // An action item: `handler` is a bare name (not a custom element), so it
+        // An action item: `data-handler` is a bare name (not a custom element), so it
         // dispatches sol-command (no content mounted), gated by requires-write
         // (→ part="requires-write") just like the RDF form.
         const label = (node.textContent || '').trim() || `Item ${++i}`;
@@ -335,7 +335,7 @@ class SolMenu extends HTMLElement {
       } else if (node.tagName === 'A' && node.hasAttribute('href')) {
         const label = (node.textContent || '').trim() || `Item ${++i}`;
         const url = node.getAttribute('href');
-        const handlerTag = (node.getAttribute('handler') || parentHandler || 'sol-include').trim();
+        const handlerTag = (node.getAttribute('data-handler') || parentHandler || 'sol-include').trim();
         out.push({
           name: label,
           requiresWrite: isGated(node),

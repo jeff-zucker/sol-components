@@ -9,14 +9,14 @@
  *
  *   <sol-dropdown-button source="./menu.ttl#More" label="⋮"></sol-dropdown-button>
  *
- * Or declare the menu inline (no source) with a <menu> of items — `handler`
+ * Or declare the menu inline (no source) with a <menu> of items — `data-handler`
  * names what each does (a bare action name dispatches sol-command; a
  * custom-element tag / <a href> mounts a component); owner-gated items add
  * `requires-write`:
  *
  *   <sol-dropdown-button label="⋮">
  *     <menu>
- *       <button handler="installPod" requires-write>Install on my Pod…</button>
+ *       <button data-handler="installPod" requires-write>Install on my Pod…</button>
  *       <a href="about.html">About</a>
  *     </menu>
  *   </sol-dropdown-button>

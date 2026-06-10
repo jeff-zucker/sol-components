@@ -17,23 +17,23 @@
  *
  * Declarative usage: fill the element with <a href="...">Label</a> anchors.
  * Each anchor becomes a tab — label = text, content URL = href. Contents
- * render lazily on first switch. Set `handler="sol-*"` on the anchor (or
+ * render lazily on first switch. Set `data-handler="sol-*"` on the anchor (or
  * on <sol-tabs> as a default) to wrap the URL in that component; otherwise
  * <sol-include> is used. The href is forwarded as both `source` and
  * `endpoint`, and all other anchor attributes pass through — so e.g.
- * `wanted="? ? ?"` on an anchor with `handler="sol-query"` just works.
+ * `wanted="? ? ?"` on an anchor with `data-handler="sol-query"` just works.
  *
- * `handler` and the forwarded attributes may be written `data-*` to keep a
- * standard <a> HTML-valid; the `data-` prefix is stripped when forwarding
+ * The picker and the forwarded attributes are written `data-*` so a standard
+ * <a> stays HTML-valid; the `data-` prefix is stripped when forwarding
  * (`data-handler` picks the tag, `data-src` → `src`, `data-view` → `view`, …).
  *
  *   <sol-tabs>
  *     <a href="notes.md">Notes</a>
- *     <a href="data.ttl" handler="sol-query" wanted="? ? ?">Table</a>
+ *     <a href="data.ttl" data-handler="sol-query" wanted="? ? ?">Table</a>
  *     <a href="lib.ttl" data-handler="ia-player" data-src="lib.ttl">Music</a>
  *   </sol-tabs>
  *
- *   <sol-tabs handler="sol-live-edit">
+ *   <sol-tabs data-handler="sol-live-edit">
  *     <a href="readme.md">Readme</a>
  *   </sol-tabs>
  *
@@ -46,7 +46,7 @@
  *
  *   <sol-tabs>
  *     <a href="a.html">A</a>
- *     <sol-button inline handler="sol-include" source="help.html">?</sol-button>
+ *     <sol-button inline data-handler="sol-include" source="help.html">?</sol-button>
  *   </sol-tabs>
  *
  * RDF usage (opt-in): point `from-rdf` at a ui:Menu document — the same RDF
@@ -275,7 +275,7 @@ class SolTabs extends HTMLElement {
     }).filter(Boolean);
   }
 
-  // Parse <a href="url" [handler="tag"] [attr=val ...]>Label</a> children
+  // Parse <a href="url" [data-handler="tag"] [data-attr=val ...]>Label</a> children
   // into tab descriptors. Each tab's render() creates the component named
   // by the anchor's `handler` attribute (falling back to the sol-tabs-level
   // `handler` attribute, finally to <sol-include>). The href is passed to
@@ -296,14 +296,14 @@ class SolTabs extends HTMLElement {
     // Anchors marked slot="actions" are launchers, not tabs — skip them here.
     const anchors = Array.from(this.querySelectorAll(':scope > a[href]:not([slot="actions"])'));
     if (!anchors.length) return [];
-    // `handler` may be written plain or as `data-handler` (the latter keeps a
-    // standard <a> HTML-valid). Same for the forwarded attributes below.
-    const parentHandler = (this.getAttribute('data-handler') || this.getAttribute('handler') || '').trim();
-    const SKIP = new Set(['href', 'handler', 'data-handler', 'data-tab-id', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
+    // The picker is `data-handler` (keeps a standard <a> HTML-valid); the
+    // `data-` prefix is stripped from the forwarded attributes below.
+    const parentHandler = (this.getAttribute('data-handler') || '').trim();
+    const SKIP = new Set(['href', 'data-handler', 'data-tab-id', 'target', 'rel', 'download', 'hreflang', 'type', 'referrerpolicy']);
     return anchors.map((a, i) => {
       const label = (a.textContent || '').trim() || `Tab ${i + 1}`;
       const url = a.getAttribute('href');
-      const handlerTag = (a.getAttribute('data-handler') || a.getAttribute('handler') || parentHandler || 'sol-include').trim();
+      const handlerTag = (a.getAttribute('data-handler') || parentHandler || 'sol-include').trim();
       return {
         name: label,
         // The tab id (→ button data-tab-id, for styling/selection) can be set

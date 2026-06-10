@@ -26,9 +26,9 @@
   <div class="demo-area" style="align-items:center; gap:1rem;">
     <sol-dropdown-button label="⋮ Actions">
       <menu>
-        <button handler="newItem">New…</button>
-        <button handler="duplicate">Duplicate</button>
-        <button handler="remove">Delete</button>
+        <button data-handler="newItem">New…</button>
+        <button data-handler="duplicate">Duplicate</button>
+        <button data-handler="remove">Delete</button>
       </menu>
     </sol-dropdown-button>
     <span>Last command: <code id="dd-status">—</code></span>
@@ -52,7 +52,7 @@
   <code>&lt;a href&gt;</code> (opens a page or file):</p>
   <pre><code>&lt;sol-dropdown-button label="⋮ Actions"&gt;
   &lt;menu&gt;
-    &lt;button handler="rename"&gt;Rename&lt;/button&gt;
+    &lt;button data-handler="rename"&gt;Rename&lt;/button&gt;
     &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
   &lt;/menu&gt;
 &lt;/sol-dropdown-button&gt;</code></pre>
@@ -83,8 +83,8 @@
   <pre><code>&lt;!-- a menu of actions your page handles --&gt;
 &lt;sol-dropdown-button label="⋮ More"&gt;
   &lt;menu&gt;
-    &lt;button handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
-    &lt;button handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
+    &lt;button data-handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
+    &lt;button data-handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
     &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
   &lt;/menu&gt;
 &lt;/sol-dropdown-button&gt;</code></pre>

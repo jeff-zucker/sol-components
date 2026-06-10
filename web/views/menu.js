@@ -12,9 +12,9 @@ import { siblingUrl } from '../../core/here.js';
  * Any additional result columns are forwarded as attributes on the anchor,
  * so <sol-menu> can pass them through to the panel component.
  *
- * A `handler` attribute on the host <sol-query> is forwarded to the
+ * A `data-handler` attribute on the host <sol-query> is forwarded to the
  * <sol-menu> element so authors can choose the component each item wraps:
- *   <sol-query view="menu" handler="sol-live-edit" …>
+ *   <sol-query view="menu" data-handler="sol-live-edit" …>
  *
  * Usage: <sol-query view="menu" endpoint="…" sparql="SELECT ?link ?label …">
  */
@@ -33,8 +33,8 @@ export async function render(container, data, host) {
 
   const menu = document.createElement('sol-menu');
 
-  const handler = host?.getAttribute?.('handler');
-  if (handler) menu.setAttribute('handler', handler);
+  const handler = host?.getAttribute?.('data-handler');
+  if (handler) menu.setAttribute('data-handler', handler);
   const orientation = host?.getAttribute?.('orientation');
   if (orientation) menu.setAttribute('orientation', orientation);
 

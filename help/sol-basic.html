@@ -53,7 +53,7 @@
   <p>One example using each attribute:</p>
   <pre><code>&lt;sol-button source="settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
 &lt;sol-button source="reports.ttl" region="modal" name="Reports"&gt;Reports&lt;/sol-button&gt;
-&lt;sol-button source="report.html" handler="sol-query" replace&gt;Run query&lt;/sol-button&gt;
+&lt;sol-button source="report.html" data-handler="sol-query" replace&gt;Run query&lt;/sol-button&gt;
 &lt;sol-button source="help.html" inline&gt;?&lt;/sol-button&gt;
 &lt;sol-button source="notes.txt" raw trusted&gt;Notes&lt;/sol-button&gt;</code></pre>
 
@@ -79,9 +79,9 @@
   <p>Write the button with a <code>&lt;menu&gt;</code> of choices inside it:</p>
   <pre><code>&lt;sol-dropdown-button label="⋮ Actions"&gt;
   &lt;menu&gt;
-    &lt;button handler="rename"&gt;Rename&lt;/button&gt;
-    &lt;button handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
-    &lt;button handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
+    &lt;button data-handler="rename"&gt;Rename&lt;/button&gt;
+    &lt;button data-handler="export" params='{"format":"csv"}'&gt;Export&lt;/button&gt;
+    &lt;button data-handler="install" requires-write&gt;Install on my Pod…&lt;/button&gt;
     &lt;a href="about.html" region="modal"&gt;About&lt;/a&gt;
   &lt;/menu&gt;
 &lt;/sol-dropdown-button&gt;</code></pre>
@@ -137,7 +137,7 @@
   <p>A horizontal menu whose links show off the per-link attributes:</p>
   <pre><code>&lt;sol-menu orientation="horizontal"&gt;
   &lt;a href="home.html" icon="home.svg"&gt;Home&lt;/a&gt;
-  &lt;a href="data.ttl" handler="sol-query"&gt;Data&lt;/a&gt;
+  &lt;a href="data.ttl" data-handler="sol-query"&gt;Data&lt;/a&gt;
   &lt;a href="private.ttl" if-logged-in&gt;My private data&lt;/a&gt;
   &lt;submenu&gt;
     &lt;label&gt;Docs&lt;/label&gt;
@@ -170,7 +170,7 @@
   <p>A vertical, kept-alive tab set; a nested set uses <code>variant="sub"</code>:</p>
   <pre><code>&lt;sol-tabs keep-alive orientation="vertical"&gt;
   &lt;a href="overview.html"&gt;Overview&lt;/a&gt;
-  &lt;a href="data.ttl" handler="sol-query"&gt;Data&lt;/a&gt;
+  &lt;a href="data.ttl" data-handler="sol-query"&gt;Data&lt;/a&gt;
   &lt;a href="about.html"&gt;About&lt;/a&gt;
   &lt;sol-tabs variant="sub"&gt;
     &lt;a href="a.html"&gt;A&lt;/a&gt;

@@ -100,7 +100,7 @@
 &lt;sol-button source="settings.html" region="#main"&gt;Settings&lt;/sol-button&gt;
 
 &lt;!-- pop a query up in a dialog --&gt;
-&lt;sol-button handler="sol-query" source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;</code></pre>
+&lt;sol-button data-handler="sol-query" source="data/reports.ttl" region="modal"&gt;Reports&lt;/sol-button&gt;</code></pre>
   <p>You don't have to repeat <code>region</code> on every launcher. Put it once
   on a wrapping element with <code>data-region="…"</code>, or on
   <code>&lt;sol-default&gt;</code> (below), and the launchers inside use it.</p>

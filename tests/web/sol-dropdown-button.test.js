@@ -182,8 +182,8 @@ describe('SolDropdownButton — inline <menu>', () => {
   test('harvests a <menu> of command items; dispatches + gates like the RDF form', async () => {
     const el = mountMenu(`
       <menu>
-        <button handler="guestView">View as guest</button>
-        <button handler="installPod" requires-write>Install on my Pod…</button>
+        <button data-handler="guestView">View as guest</button>
+        <button data-handler="installPod" requires-write>Install on my Pod…</button>
       </menu>`);
     await flush();
 
@@ -204,7 +204,7 @@ describe('SolDropdownButton — inline <menu>', () => {
   });
 
   test('parses a JSON params attribute', async () => {
-    const el = mountMenu(`<menu><button handler="go" params='{"to":"x"}'>Go</button></menu>`);
+    const el = mountMenu(`<menu><button data-handler="go" params='{"to":"x"}'>Go</button></menu>`);
     await flush();
     trigger(el).click();
     let detail = null;

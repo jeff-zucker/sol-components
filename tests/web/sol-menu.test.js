@@ -639,7 +639,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
 
   test('uses handler attribute as default component tag', () => {
     const el = document.createElement('sol-menu');
-    el.setAttribute('handler', 'sol-query');
+    el.setAttribute('data-handler', 'sol-query');
     el.innerHTML = '<a href="data.ttl">Data</a>';
     attached(el);
 
@@ -652,8 +652,8 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
 
   test('per-anchor handler overrides element handler', () => {
     const el = document.createElement('sol-menu');
-    el.setAttribute('handler', 'sol-include');
-    el.innerHTML = '<a href="data.ttl" handler="sol-query">Data</a>';
+    el.setAttribute('data-handler', 'sol-include');
+    el.innerHTML = '<a href="data.ttl" data-handler="sol-query">Data</a>';
     attached(el);
 
     el.select('Data');
