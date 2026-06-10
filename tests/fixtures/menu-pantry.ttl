@@ -1,0 +1,40 @@
+@prefix ui:     <http://www.w3.org/ns/ui#> .
+@prefix schema: <http://schema.org/> .
+@prefix acl:    <http://www.w3.org/ns/auth/acl#> .
+
+# Fixture for scripts/verify-menu-serialize.mjs — a copy of data-kitchen's
+# real menu shape: a menu with components, a nested submenu, an acl-gated
+# item, and PANTRY subjects (#Forum, #Chat) defined but referenced from no
+# ui:parts list. The pantry must survive every rewrite.
+
+<#MainMenu> a ui:Menu ; ui:label "data-kitchen" ;
+  ui:orientation ui:Horizontal ;
+  ui:parts ( <#Home> <#Podz> <#SolidResources> ) .
+
+<#Home> a ui:Component ; ui:label "Home" ;
+  ui:name "sol-include" ;
+  ui:attribute
+    [ schema:name "source"  ; schema:value "pages/home.html" ] ,
+    [ schema:name "trusted" ; schema:value "true" ] .
+
+<#Podz> a ui:Component ; ui:label "Podz" ;
+  ui:name "dk-podz" ;
+  acl:mode acl:Write .
+
+<#SolidResources> a ui:Menu ; ui:label "SolidResources" ;
+  ui:parts ( <#Website> <#Faq> ) .
+
+<#Website> a ui:Component ; ui:label "Website" ;
+  ui:name "iframe" ;
+  ui:attribute [ schema:name "src" ; schema:value "https://solidproject.org" ] .
+
+<#Faq> a ui:Link ; ui:label "FAQ" ;
+  ui:href "https://solidproject.org/FAQ" .
+
+<#Forum> a ui:Component ; ui:label "Forum" ;
+  ui:name "iframe" ;
+  ui:attribute [ schema:name "src" ; schema:value "https://forum.solidproject.org" ] .
+
+<#Chat> a ui:Component ; ui:label "Chat" ;
+  ui:name "iframe" ;
+  ui:attribute [ schema:name "src" ; schema:value "https://matrix.to/#/#solid-practitioners:matrix.org/" ] .
