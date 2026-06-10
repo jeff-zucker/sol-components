@@ -92,16 +92,21 @@ class SolDropdownButton extends SolMenu {
   }
 
   connectedCallback() {
-    if (this._rendered) return;
-    this._initShell();
-    const uri = this._menuUri();
-    if (uri) {
-      this._loadFromRdf(uri);                // wrap items + _renderNav (no auto-select)
-    } else {
-      const declared = this._items.length === 0 ? this._harvestItems(this) : null;
-      if (declared?.length) this._items = declared;
-      this._renderNav();
+    if (!this._rendered) {
+      this._initShell();
+      const uri = this._menuUri();
+      if (uri) {
+        this._loadFromRdf(uri);                // wrap items + _renderNav (no auto-select)
+      } else {
+        const declared = this._items.length === 0 ? this._harvestItems(this) : null;
+        if (declared?.length) this._items = declared;
+        this._renderNav();
+      }
     }
+    // Re-establish dismiss listeners on EVERY connect: a host (e.g. sol-tabs)
+    // may re-home this button (detach + re-append), and the inherited
+    // disconnectedCallback tears these down — so reconnect must restore them.
+    this._wireDismiss();
   }
 
   async reload() {
@@ -137,16 +142,28 @@ class SolDropdownButton extends SolMenu {
     const a11y = this.getAttribute('aria-label') || this.getAttribute('title');
     if (a11y) trigger.setAttribute('aria-label', a11y);
     trigger.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(); });
+    // Dismiss listeners (document outside-click + Escape) are wired in
+    // _wireDismiss, re-run on every connect so they survive re-homing.
+  }
 
-    this._onDocClick = (e) => {
-      if (!this.contains(e.target) && !root.contains(e.target)) this._close();
-    };
+  // (Re)attach the dismiss listeners — outside-click on the document and Escape
+  // on the shadow root. Idempotent: same handler refs (adding a listener twice
+  // is a no-op); the handlers are recreated only when the inherited
+  // disconnectedCallback has nulled them after a detach.
+  _wireDismiss() {
+    const root = this.shadowRoot;
+    if (!this._onDocClick) {
+      this._onDocClick = (e) => {
+        if (!this.contains(e.target) && !root.contains(e.target)) this._close();
+      };
+    }
     document.addEventListener('click', this._onDocClick);
-
-    this._onKeyDown = (e) => {
-      if (e.key === 'Escape') { this._close(); trigger.focus(); return; }
-      this._handleKeyDown(e);
-    };
+    if (!this._onKeyDown) {
+      this._onKeyDown = (e) => {
+        if (e.key === 'Escape') { this._close(); this._trigger?.focus(); return; }
+        this._handleKeyDown(e);
+      };
+    }
     root.addEventListener('keydown', this._onKeyDown);
   }
 

@@ -489,7 +489,7 @@ class SolMenu extends HTMLElement {
           btn.textContent = item.name;
         }
         if (item.command) {
-          btn.onclick = () => { dispatchCommand(this, item.command, item.params); this._closeAllPopups(); };
+          btn.onclick = () => { dispatchCommand(this, item.command, item.params, { id: item.id || null }); this._closeAllPopups(); };
         } else {
           btn.onclick = () => { this.select(item.name); this._closeAllPopups(); };
         }

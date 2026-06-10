@@ -144,6 +144,38 @@ function mountInElement(element, { tag, attrs, name, replace, contents, embedCla
   return mountInTarget({ target: element, name, tag, attrs, embedClass, replace });
 }
 
+/**
+ * Place a command/script's OUTPUT into the launcher's resolved region — the
+ * command analogue of displayItem (which mounts a component). The region is
+ * resolved the same way (resolveRegion: data-for / region= cascade / fallback),
+ * so a button, menu item, or tab pane all target their region uniformly. Lazy
+ * by construction: callers invoke this only when the script actually produces
+ * output, so a fire-and-forget command never resolves or conjures a surface.
+ *
+ * @param {object} o
+ * @param {Element|null} o.launcher    element initiating (for the region cascade)
+ * @param {string|null}  o.id          item id (for data-for routing)
+ * @param {Element|null} o.fallbackEl  region when none is declared (e.g. a tab pane)
+ * @param {string}       o.name        surface title (modal / window)
+ * @param {Element|DocumentFragment|string} o.output  content to mount
+ * @param {(tag:string)=>void} [o.ensure] lazy-load hook for conjured surfaces
+ * @returns {Element|null}             the host the output was mounted into
+ */
+export function placeOutput({ launcher = null, id = null, fallbackEl = null, name = '', output = null, ensure = null }) {
+  if (output == null) return null;
+  const region = resolveRegion(launcher, id, fallbackEl);
+  const mount = (host) => {
+    if (typeof output === 'string') host.insertAdjacentHTML('beforeend', output);
+    else host.appendChild(output);
+  };
+  switch (region.kind) {
+    case 'modal':    return conjure('sol-modal',  name, mount, ensure);
+    case 'floating': return conjure('sol-window', name, mount, ensure);
+    case 'element':  mount(region.element); return region.element;
+    default:         return null;   // tab/window (URL openers) or no region
+  }
+}
+
 // Conjure an ephemeral host (sol-modal / sol-window) with no author element.
 // Deferred via whenDefined so open()/body exist once the module upgrades.
 function conjure(hostTag, name, mount, ensure) {

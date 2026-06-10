@@ -377,6 +377,26 @@ describe('SolTabs — declarative and imperative APIs', () => {
     expect(embed.tagName.toLowerCase()).toBe('sol-include');
     expect(embed.getAttribute('foo')).toBe('bar');
   });
+
+  test('declarative bare data-handler is a command: dispatches sol-command into the pane', () => {
+    const el = document.createElement('sol-tabs');
+    // href is required for the anchor to be a tab; it rides along as params.href.
+    el.innerHTML = '<a href="shell.html" id="panel-ws" data-handler="podz" data-foo="bar">Workspaces</a>';
+    attached(el);
+    let detail = null;
+    el.addEventListener('sol-command', (e) => { detail = e.detail; });
+    el.switchTab('Workspaces');
+    // No component element was created for a command handler.
+    expect(content(el).querySelector('.sol-tab-embed')).toBeNull();
+    expect(detail).toBeTruthy();
+    expect(detail.command).toBe('podz');
+    expect(detail.params.href).toBe('shell.html');   // href forwarded as a param
+    expect(detail.params.foo).toBe('bar');            // data-* forwarded, prefix stripped
+    // place() mounts the script's output into the pane (its region).
+    const out = document.createElement('section');
+    const host = detail.place(out);
+    expect(host.contains(out)).toBe(true);
+  });
 });
 
 describe('SolTabs — slot="actions" launchers', () => {
@@ -492,10 +512,10 @@ describe('SolTabs — keep-alive', () => {
   });
 });
 
-// ── command items are skipped (they belong in sol-menu, not tabs) ────────────
+// ── command items render as tabs that dispatch sol-command into their pane ────
 
 describe('SolTabs — command items', () => {
-  test('a bare-name ui:Component is not rendered as a tab', async () => {
+  test('a bare-name ui:Component renders as a tab that dispatches sol-command', async () => {
     const store = rdflib.graph();
     const s = (v) => rdflib.sym(v);
     const l = (v) => rdflib.literal(v);
@@ -519,6 +539,19 @@ describe('SolTabs — command items', () => {
     el.setAttribute('from-rdf', BASE + '#M');
     await flush();
 
-    expect(el.tabs.map(t => t.name)).toEqual(['Table']);   // 'Run' command filtered out
+    // The command part is now a tab too (no longer filtered out).
+    expect(el.tabs.map(t => t.name)).toEqual(['Table', 'Run']);
+
+    // Activating it dispatches sol-command; detail.place mounts output into the
+    // tab's pane (its resolved region).
+    let detail = null;
+    el.addEventListener('sol-command', (e) => { detail = e.detail; });
+    el.switchTab('Run');
+    expect(detail).toBeTruthy();
+    expect(detail.command).toBe('installPod');
+    const out = document.createElement('p');
+    const host = detail.place(out);
+    expect(host).toBeTruthy();
+    expect(host.contains(out)).toBe(true);
   });
 });

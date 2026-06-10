@@ -149,7 +149,7 @@ class SolButton extends HTMLElement {
       const raw = this.getAttribute('params');
       let params;
       if (raw != null) { try { params = JSON.parse(raw); } catch { params = raw; } }
-      dispatchCommand(this, handler, params);
+      dispatchCommand(this, handler, params, { id: this.id || null });
       return;
     }
     if (this.hasAttribute('inline')) { this.toggleInline(); return; }

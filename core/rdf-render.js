@@ -14,7 +14,7 @@
 //                 ('sol-menu-embed' / 'sol-tab-embed')
 
 import { siblingUrl } from './here.js';
-import { displayItem, contentForHref } from './display-target.js';
+import { displayItem, contentForHref, placeOutput } from './display-target.js';
 
 /**
  * A ui:Component's `ui:name` is either a custom-element tag (render that
@@ -47,18 +47,35 @@ export function paramsToObject(params) {
 }
 
 /**
- * Dispatch a menu command. `command` is the registry key (from a ui:Component
- * `ui:name`); `params` is the args object. Bubbling + composed so one
- * document-level listener in the host app catches it.
+ * Dispatch a menu/button/tab command. `command` is the registry key (from a
+ * ui:Component `ui:name` or a bare `data-handler`/`handler`); `params` is the
+ * args object. Bubbling + composed so one document-level listener in the host
+ * app catches it.
+ *
+ * The detail carries `place(output)` — a lazy helper the app's handler calls
+ * ONLY if its script produces output: it mounts `output` (Element / fragment /
+ * HTML string) into the launcher's resolved region (`regionCtx`), reusing the
+ * same region cascade as components, and returns the host element. A
+ * fire-and-forget command simply never calls it, so nothing is resolved or
+ * conjured. A button's region is its own `region=`/`data-for`; a tab's is its
+ * pane (passed as `regionCtx.fallbackEl`).
  *
  * @param {HTMLElement} host
  * @param {string} command
  * @param {object} [params]
+ * @param {{id?:string|null, fallbackEl?:Element|null, name?:string}} [regionCtx]
  */
-export function dispatchCommand(host, command, params) {
+export function dispatchCommand(host, command, params, regionCtx = {}) {
+  const place = (output) => placeOutput({
+    launcher: host,
+    id: regionCtx.id ?? null,
+    fallbackEl: regionCtx.fallbackEl ?? null,
+    name: regionCtx.name ?? command,
+    output,
+  });
   host.dispatchEvent(new CustomEvent('sol-command', {
     bubbles: true, composed: true,
-    detail: { command, params: params || {}, source: host },
+    detail: { command, params: params || {}, source: host, place },
   }));
 }
 

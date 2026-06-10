@@ -73,7 +73,7 @@ import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { registerMenuConsumer, deferUntilLoader } from '../core/menu-consumer.js';
-import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName } from '../core/rdf-render.js';
+import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, dispatchCommand, paramsToObject } from '../core/rdf-render.js';
 
 // For auto-wiring an inline action launcher to this tabs' content area we need
 // a stable selector; mint an id for any <sol-tabs> that lacks one.
@@ -260,9 +260,15 @@ class SolTabs extends HTMLElement {
         };
       }
       if (desc.type === 'component') {
-        // Command items (ui:name is a registry key, not a tag) are a menu
-        // affordance, not content — a tab can't "run" something. Skip them.
-        if (isCommandName(desc.tag)) return null;
+        // A command part (ui:name is a registry key, not a tag) renders by
+        // dispatching sol-command; the app's handler may render output into this
+        // tab's pane (its region). Fire-and-forget commands leave the pane empty.
+        if (isCommandName(desc.tag)) {
+          return {
+            name: desc.name, id: desc.id,
+            render: (body) => dispatchCommand(this, desc.tag, paramsToObject(desc.params), { id: desc.id, fallbackEl: body }),
+          };
+        }
         return { name: desc.name, id: desc.id, render: renderComponentItem(desc, ctx) };
       }
       return { name: desc.name, id: desc.id, render: renderLinkItem(desc, ctx) };
@@ -305,6 +311,20 @@ class SolTabs extends HTMLElement {
         // latter is forwarded to become the content element's id.
         id: a.dataset.tabId || a.id || undefined,
         render: (body) => {
+          // A bare handler (no hyphen, not an element) is a command, not a
+          // component: dispatch sol-command and let the app render output into
+          // this pane (its region). The forwarded attrs become the params.
+          if (isCommandName(handlerTag)) {
+            const params = {};
+            if (url != null) params.href = url;
+            for (const attr of a.attributes) {
+              if (SKIP.has(attr.name)) continue;
+              const name = attr.name.startsWith('data-') ? attr.name.slice(5) : attr.name;
+              params[name] = attr.value;
+            }
+            dispatchCommand(this, handlerTag, params, { id: a.id || undefined, fallbackEl: body });
+            return;
+          }
           ensureHandler(handlerTag, this, import.meta.url, 'sol-tabs');
           const el = document.createElement(handlerTag);
           el.setAttribute('source', url);
