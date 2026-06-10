@@ -133,48 +133,8 @@ class SolDropdownButton extends SolMenu {
     else this._renderNav();   // harvest path: refresh the context section
   }
 
-  // After the standard items render, append the context section: the
-  // context-source ui:Menu's items below a separator. Stale-load guarded
-  // (rapid context switches), and context items join this._items so
-  // keyboard nav / select() / command dispatch treat them like any other.
-  _renderNav() {
-    if (this._ctxCount) {                 // drop the previous context items
-      this._items = this._items.slice(0, -this._ctxCount);
-      this._ctxCount = 0;
-    }
-    super._renderNav();
-    this._appendContextItems();
-  }
-
-  async _appendContextItems() {
-    const uri = this.getAttribute('context-source');
-    const token = (this._ctxToken = {});
-    if (!uri) return;
-    const load = this.constructor.fromRdfLoader;
-    if (!load) return;                    // needs the menu-from-rdf add-on, like source=
-    let result;
-    try {
-      result = await load(uri, document.baseURI);
-    } catch (err) {
-      console.warn('<sol-dropdown-button> context-source load failed:', err.message);
-      return;
-    }
-    if (!result || token !== this._ctxToken) return;   // superseded or gone
-    const items = this._wrapRdfItems(result.items);
-    if (!items.length) return;
-    const nav = this.shadowRoot.querySelector('.sol-menu-nav');
-    if (!nav) return;
-    nav.style.display = '';               // context items alone justify the menu
-    const sep = document.createElement('div');
-    sep.className = 'sol-dd-separator';
-    sep.setAttribute('role', 'separator');
-    nav.appendChild(sep);
-    this._renderNavLevel(nav, items, 0);
-    this._items = [...this._items, ...items];
-    this._ctxCount = items.length;
-    const allBtns = nav.querySelectorAll('button');
-    allBtns.forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
-  }
+  // Context items (context-source=) append below a separator after the
+  // standard items — see _renderNav below and _appendContextItems.
 
   _initShell() {
     // A dropdown is always a vertical list — pin it before _loadFromRdf can
@@ -231,15 +191,53 @@ class SolDropdownButton extends SolMenu {
 
   // Build the item buttons into the popup (reuses the shared nav-level renderer
   // — commands, links, components, submenus). No single-item hide; visibility
-  // is the trigger's job.
+  // is the trigger's job. Context items (context-source=) re-append after
+  // every rebuild.
   _renderNav() {
     const pop = this.shadowRoot.querySelector('.sol-dd-popup');
     if (!pop) return;
     pop.innerHTML = '';
     this._btns = {};
+    if (this._ctxItems) {   // drop previous context items from the model —
+      // by IDENTITY, since _loadFromRdf may have replaced _items already
+      this._items = this._items.filter((i) => !this._ctxItems.includes(i));
+      this._ctxItems = null;
+    }
     // Render every item; items needing write declare it (part="requires-write")
     // for the host app to gate — the dropdown takes no policy itself.
     this._renderNavLevel(pop, this._items, 0);
+    pop.querySelectorAll('button').forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
+    this._appendContextItems();
+  }
+
+  // Load the context-source ui:Menu and append its items below a separator.
+  // Stale-load guarded (rapid context switches); context items join _items so
+  // keyboard nav / select() / command dispatch treat them like any other.
+  async _appendContextItems() {
+    const uri = this.getAttribute('context-source');
+    const token = (this._ctxToken = {});
+    if (!uri) return;
+    const load = this.constructor.fromRdfLoader;
+    if (!load) return;                    // needs the menu-from-rdf add-on, like source=
+    let result;
+    try {
+      result = await load(uri, document.baseURI);
+    } catch (err) {
+      console.warn('<sol-dropdown-button> context-source load failed:', err.message);
+      return;
+    }
+    if (!result || token !== this._ctxToken) return;   // superseded or gone
+    const items = this._wrapRdfItems(result.items);
+    if (!items.length) return;
+    const pop = this.shadowRoot.querySelector('.sol-dd-popup');
+    if (!pop) return;
+    const sep = document.createElement('div');
+    sep.className = 'sol-dd-separator';
+    sep.setAttribute('role', 'separator');
+    pop.appendChild(sep);
+    this._renderNavLevel(pop, items, 0);
+    this._items = [...this._items, ...items];
+    this._ctxItems = items;
     pop.querySelectorAll('button').forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
   }
 
