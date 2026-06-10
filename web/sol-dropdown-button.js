@@ -37,6 +37,10 @@
  *              OPT-IN: building from RDF is inert until `web/menu-from-rdf.js`
  *              is imported; with neither attribute the inline <menu> is used and
  *              no rdflib is needed.
+ *   context-source — URL of a SECOND ui:Menu rendered below a separator
+ *              (context items, e.g. the host app's active plugin). Update it
+ *              (and call reload()) as the context changes; absent/empty ⇒ no
+ *              separator, standard menu only. Same menu-from-rdf opt-in.
  *   label    — trigger text (default "⋮")
  *
  * Parts: `trigger` (the button), `requires-write` (items needing write access).
@@ -68,6 +72,12 @@ const DD_CSS = `
     box-shadow: var(--shadow-popup, 0 8px 24px rgba(0,0,0,0.28));
   }
   .sol-dd-popup[hidden] { display: none; }
+  /* Context section (context-source=): plugin-contributed items render under
+     the standard items, separated by a rule. */
+  .sol-dd-separator {
+    margin: 4px 10px;
+    border-top: 1px solid var(--border, #e0e0e0);
+  }
   /* A dropdown has no inline content panel; items use the region= cascade. The
      authored <menu> (and content panel) is a declaration, not UI — its items
      are harvested into the popup, so keep the slotted source hidden. */
@@ -77,7 +87,7 @@ const DD_CSS = `
 const DD_SHEET = sheetFrom(MENU_CSS + DD_CSS);
 
 class SolDropdownButton extends SolMenu {
-  static get observedAttributes() { return ['source', 'from-rdf']; }
+  static get observedAttributes() { return ['source', 'from-rdf', 'context-source']; }
 
   // Where the menu data lives. `source` is canonical (sol-* launcher parity);
   // `from-rdf` is accepted for <sol-menu> parity. With neither, the inline
@@ -88,6 +98,14 @@ class SolDropdownButton extends SolMenu {
     if ((name === 'source' || name === 'from-rdf') && oldValue !== newValue && this._rendered) {
       const uri = this._menuUri();
       if (uri) this._loadFromRdf(uri);
+    }
+    // context-source: a SECOND ui:Menu (e.g. the active plugin's items)
+    // rendered below a separator. Changing it re-renders; removing it drops
+    // the section. The host app updates this as its context changes.
+    if (name === 'context-source' && oldValue !== newValue && this._rendered) {
+      const uri = this._menuUri();
+      if (uri) this._loadFromRdf(uri);   // resets _items, then re-appends context
+      else this._renderNav();
     }
   }
 
@@ -112,6 +130,50 @@ class SolDropdownButton extends SolMenu {
   async reload() {
     const uri = this._menuUri();
     if (uri) await this._loadFromRdf(uri);
+    else this._renderNav();   // harvest path: refresh the context section
+  }
+
+  // After the standard items render, append the context section: the
+  // context-source ui:Menu's items below a separator. Stale-load guarded
+  // (rapid context switches), and context items join this._items so
+  // keyboard nav / select() / command dispatch treat them like any other.
+  _renderNav() {
+    if (this._ctxCount) {                 // drop the previous context items
+      this._items = this._items.slice(0, -this._ctxCount);
+      this._ctxCount = 0;
+    }
+    super._renderNav();
+    this._appendContextItems();
+  }
+
+  async _appendContextItems() {
+    const uri = this.getAttribute('context-source');
+    const token = (this._ctxToken = {});
+    if (!uri) return;
+    const load = this.constructor.fromRdfLoader;
+    if (!load) return;                    // needs the menu-from-rdf add-on, like source=
+    let result;
+    try {
+      result = await load(uri, document.baseURI);
+    } catch (err) {
+      console.warn('<sol-dropdown-button> context-source load failed:', err.message);
+      return;
+    }
+    if (!result || token !== this._ctxToken) return;   // superseded or gone
+    const items = this._wrapRdfItems(result.items);
+    if (!items.length) return;
+    const nav = this.shadowRoot.querySelector('.sol-menu-nav');
+    if (!nav) return;
+    nav.style.display = '';               // context items alone justify the menu
+    const sep = document.createElement('div');
+    sep.className = 'sol-dd-separator';
+    sep.setAttribute('role', 'separator');
+    nav.appendChild(sep);
+    this._renderNavLevel(nav, items, 0);
+    this._items = [...this._items, ...items];
+    this._ctxCount = items.length;
+    const allBtns = nav.querySelectorAll('button');
+    allBtns.forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
   }
 
   _initShell() {
