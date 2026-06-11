@@ -454,6 +454,39 @@ class SolTabs extends HTMLElement {
     if (uri) await this._loadFromRdf(uri);
   }
 
+  /**
+   * Merge an updated set of tabs (the plain item descriptions from
+   * core/menu-rdf.js `parseMenuItems`) into the live tab bar IN PLACE, without
+   * tearing down the element. Existing tabs are matched by id (falling back to
+   * name) and REUSED so their keep-alive panes survive; new tabs are added and
+   * removed tabs have their pane dropped. The launchers (bar/chrome) and this
+   * element's event listeners are untouched. Used by an external editor — dk's
+   * Customize save — to reflect a tabs-RDF change immediately, the surgical
+   * alternative to a full reload.
+   *
+   * @param {object[]} items  parseMenuItems output for the tab menu (#Tabs)
+   */
+  applyTabs(items) {
+    const wrapped = this._wrapRdfItems(items || []);
+    if (!this._rendered) { this._tabs = wrapped; return; }
+    const key = (t) => t.id || t.name;
+    const prev = new Map((this._tabs || []).map((t) => [key(t), t]));
+    const next = wrapped.map((w) => {
+      const old = prev.get(key(w));
+      if (old) { old.name = w.name; return old; }   // reuse descriptor + its pane
+      return w;
+    });
+    const keep = new Set(next.map(key));
+    for (const [k, t] of prev) {
+      if (!keep.has(k) && t._pane) { t._pane.remove(); t._pane = null; }
+    }
+    this._tabs = next;
+    this._renderBar();
+    if (this._keepAlive) for (const t of this._tabs) this._ensurePane(t);
+    const active = this._tabs.find((t) => t.name === this._active) || this._tabs[0];
+    if (active) this.switchTab(active.name);
+  }
+
   disconnectedCallback() {
     if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
   }
