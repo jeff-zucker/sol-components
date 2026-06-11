@@ -91,16 +91,25 @@ export function extractShell(tabsEl) {
   const tabs = [];
   const bar = [];
   if (!tabsEl) return { tabs, bar };
+  let pendingComment = null;   // a leading comment documents the element after it
   for (const node of tabsEl.childNodes) {
-    if (node.nodeType === 8 && /chrome:begin/.test(node.textContent || '')) break;  // comment
-    if (node.nodeType !== 1) continue;                                              // element only
+    if (node.nodeType === 8) {                                  // comment node
+      const text = (node.textContent || '').trim();
+      if (/chrome:begin/.test(text)) break;                     // chrome block handled separately
+      pendingComment = pendingComment ? `${pendingComment}\n${text}` : text;
+      continue;
+    }
+    if (node.nodeType !== 1) continue;                          // element only
     const el = /** @type {Element} */ (node);
+    let item = null;
     if (el.tagName.toLowerCase() === 'a' && el.hasAttribute('href')
         && el.getAttribute('slot') !== 'actions') {
-      tabs.push(extractTab(el));
+      item = extractTab(el); tabs.push(item);
     } else if (el.tagName.toLowerCase() !== 'a') {
-      bar.push(extractBarItem(el));
+      item = extractBarItem(el); bar.push(item);
     }
+    if (item && pendingComment) item.comment = pendingComment;
+    pendingComment = null;
   }
   return { tabs, bar };
 }

@@ -20,12 +20,14 @@ import { rdf } from './rdf.js';
 
 const UI     = 'http://www.w3.org/ns/ui#';
 const RDF    = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+const RDFS   = 'http://www.w3.org/2000/01/rdf-schema#';
 const SCHEMA = 'http://schema.org/';
 const ACL    = 'http://www.w3.org/ns/auth/acl#';
 
-const ui  = (l) => rdf.sym(UI + l);
-const acl = (l) => rdf.sym(ACL + l);
-const sch = (l) => rdf.sym(SCHEMA + l);
+const ui   = (l) => rdf.sym(UI + l);
+const rdfs = (l) => rdf.sym(RDFS + l);
+const acl  = (l) => rdf.sym(ACL + l);
+const sch  = (l) => rdf.sym(SCHEMA + l);
 const a   = rdf.sym(RDF + 'type');
 
 /** Fragment → full IRI node in `docUrl`. */
@@ -99,12 +101,13 @@ function emitItem(store, docUrl, doc, item, taken) {
 
   if (item.type === 'submenu') {
     emitMenu(store, docUrl, doc, node, {
-      label: item.name, items: item.children, requiresWrite: item.requiresWrite,
+      label: item.name, items: item.children, requiresWrite: item.requiresWrite, comment: item.comment,
     }, taken);
     return node;
   }
 
   if (item.name != null) store.add(node, ui('label'), rdf.literal(String(item.name)), doc);
+  if (item.comment) store.add(node, rdfs('comment'), rdf.literal(String(item.comment)), doc);
   if (item.icon) store.add(node, ui('icon'), rdf.literal(String(item.icon)), doc);
   if (item.region) {
     const local = item.region[0].toUpperCase() + item.region.slice(1).toLowerCase();
@@ -130,9 +133,10 @@ function emitItem(store, docUrl, doc, item, taken) {
   return node;
 }
 
-function emitMenu(store, docUrl, doc, menuNode, { label, orientation, items, requiresWrite }, taken) {
+function emitMenu(store, docUrl, doc, menuNode, { label, orientation, items, requiresWrite, comment }, taken) {
   store.add(menuNode, a, ui('Menu'), doc);
   if (label != null) store.add(menuNode, ui('label'), rdf.literal(String(label)), doc);
+  if (comment) store.add(menuNode, rdfs('comment'), rdf.literal(String(comment)), doc);
   if (orientation) {
     const local = orientation[0].toUpperCase() + orientation.slice(1).toLowerCase();
     store.add(menuNode, ui('orientation'), ui(local), doc);

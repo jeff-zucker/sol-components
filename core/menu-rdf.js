@@ -7,8 +7,16 @@ import { loadRdfStore } from './rdf-utils.js';
 
 const UI     = 'http://www.w3.org/ns/ui#';
 const RDF    = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+const RDFS   = 'http://www.w3.org/2000/01/rdf-schema#';
 const SCHEMA = 'http://schema.org/';
 const ACL    = 'http://www.w3.org/ns/auth/acl#';
+
+// A documentary comment carried on an item as rdfs:comment — used to round-trip
+// the HTML comments that document menu/chrome items (generator re-emits them).
+function rdfsComment(store, subject) {
+  const node = store.any(subject, rdf.sym(RDFS + 'comment'));
+  return node ? node.value : null;
+}
 
 // An item may declare the access mode it needs via the standard WAC vocab,
 // e.g. `acl:mode acl:Write`. We surface a `requiresWrite` flag; the host app
@@ -111,22 +119,23 @@ export function parseMenuItems(store, menuNode) {
     const label    = rdfVal(store, part, 'label') || part.value;
     const icon     = rdfVal(store, part, 'icon');
     const region   = regionToken(rdfVal(store, part, 'region'));
+    const comment  = rdfsComment(store, part);
     const requiresWrite = requiresWriteMode(store, part);
 
     if (partType && partType.value === menuType.value) {
-      items.push({ type: 'submenu', id, name: label, requiresWrite, children: parseMenuItems(store, part) });
+      items.push({ type: 'submenu', id, name: label, comment, requiresWrite, children: parseMenuItems(store, part) });
       continue;
     }
 
     if (partType && partType.value === componentType.value) {
       const { tag, params } = rdfComponent(store, part);
-      items.push({ type: 'component', id, name: label, icon, region, requiresWrite, tag, params });
+      items.push({ type: 'component', id, name: label, icon, region, comment, requiresWrite, tag, params });
       continue;
     }
 
     const href     = rdfVal(store, part, 'href');
     const contents = rdfVal(store, part, 'contents');
-    items.push({ type: 'link', id, name: label, icon, region, requiresWrite, href, contents });
+    items.push({ type: 'link', id, name: label, icon, region, comment, requiresWrite, href, contents });
   }
   return items;
 }
