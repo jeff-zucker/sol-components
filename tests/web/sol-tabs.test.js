@@ -465,6 +465,40 @@ describe('SolTabs — slot="actions" launchers', () => {
     attached(b);
     expect(b.querySelector(LAUNCH).getAttribute('for')).toBe('#elsewhere');
   });
+
+  test('applyLaunchers rebuilds bar items in place but keeps chrome (by predicate)', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a><a href="b.html">Beta</a>'
+      + '<sol-search class="omp-search" title="Search"></sol-search>'    // bar item
+      + '<sol-button class="omp-help-launch">?</sol-button>';            // chrome
+    attached(el);
+    const chromeBefore = el.querySelector('.omp-help-launch');
+    expect(el.querySelector('.omp-search')).toBeTruthy();
+
+    const isChrome = (n) => /\bomp-help-launch\b/.test(n.className || '');
+    el.applyLaunchers([
+      { type: 'component', tag: 'dk-calendar-popout', name: 'Calendar',
+        params: [['class', 'omp-calendar'], ['title', 'Calendar']] },
+    ], isChrome);
+
+    expect(el.querySelector('.omp-search')).toBeFalsy();       // old bar item gone
+    expect(el.querySelector('.omp-calendar')).toBeTruthy();    // new bar item present
+    expect(el.querySelector('.omp-help-launch')).toBe(chromeBefore);   // chrome kept (same node)
+    const group = el.querySelector(':scope > .sol-tabs-bar > .sol-tabs-launch');
+    expect(Array.from(group.children).map((c) => c.className)).toEqual(['omp-calendar', 'omp-help-launch']);
+  });
+
+  test('applyLaunchers sets text only on a sol-button, not on other launchers', () => {
+    const el = document.createElement('sol-tabs');
+    el.innerHTML = '<a href="a.html">Alpha</a>';
+    attached(el);
+    el.applyLaunchers([
+      { type: 'component', tag: 'sol-search', name: 'Search', params: [['class', 'omp-search']] },
+      { type: 'component', tag: 'sol-button', name: 'A', params: [['class', 'omp-x']] },
+    ]);
+    expect(el.querySelector('.omp-search').textContent).toBe('');   // no stray "Search"
+    expect(el.querySelector('.omp-x').textContent).toBe('A');       // button keeps its label
+  });
 });
 
 // ── keep-alive ──────────────────────────────────────────────────────────────

@@ -227,11 +227,14 @@ class SolTabs extends HTMLElement {
   // is dropped). Mirrors an inline non-anchor launcher.
   _buildLauncher(desc) {
     const el = document.createElement(desc.tag);
+    if (desc.region) el.setAttribute('region', desc.region);
     for (const [k, v] of desc.params || []) {
       if (k === 'slot' && v === 'actions') continue;
       el.setAttribute(k, v);
     }
-    if (desc.name) el.textContent = desc.name;   // ?, A, 🌙 — empty for login/dropdown
+    // Only a button carries its label as text (?, A, 🌙); search / login /
+    // dropdown render themselves, so a text node would show as a bare word.
+    if (desc.name && desc.tag === 'sol-button') el.textContent = desc.name;
     return el;
   }
 
@@ -485,6 +488,25 @@ class SolTabs extends HTMLElement {
     if (this._keepAlive) for (const t of this._tabs) this._ensurePane(t);
     const active = this._tabs.find((t) => t.name === this._active) || this._tabs[0];
     if (active) this.switchTab(active.name);
+  }
+
+  /**
+   * Rebuild the page-level launchers from `items` (parseMenuItems output for a
+   * bar/actions menu) IN PLACE, KEEPING any existing launcher the `keep`
+   * predicate matches (e.g. dk's chrome) rather than re-creating it — so a bar
+   * edit doesn't disturb chrome state (re-init a sol-login, reload the ☰ menu).
+   * Fresh launchers go first, kept ones after (bar, then chrome). The surgical
+   * alternative to a reload for a #Bar change.
+   *
+   * @param {object[]} items             parseMenuItems output for the bar menu
+   * @param {(el:Element)=>boolean} keep predicate marking launchers to preserve
+   */
+  applyLaunchers(items, keep = () => false) {
+    const kept = (this._launchers || []).filter(keep);
+    const fresh = (items || []).map((d) => this._buildLauncher(d));
+    for (const el of fresh) this._wireInlineAction(el);
+    this._launchers = [...fresh, ...kept];
+    if (this._rendered) this._renderBar();
   }
 
   disconnectedCallback() {
