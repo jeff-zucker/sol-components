@@ -1,10 +1,12 @@
 // menu-serialize — the write half of core/menu-rdf.js: turn an edited tree of
 // plain item descriptions back into a complete Turtle document.
 //
-// Contract (mirrors parseMenuItems exactly — no new vocabulary):
+// Contract (mirrors parseMenuItems exactly):
 //   { type: 'submenu',   id, name, children: [...] }
-//   { type: 'component', id, name, icon, requiresWrite, tag, params }
-//   { type: 'link',      id, name, icon, requiresWrite, href, contents }
+//   { type: 'component', id, name, icon, region, requiresWrite, tag, params }
+//   { type: 'link',      id, name, icon, region, requiresWrite, href, contents }
+// `region` is the lowercase ui:Region token (e.g. "modal"), written as
+// ui:region ui:Modal — the one display property stored in the RDF.
 //
 // The WHOLE document is rewritten on save (rdf:Lists are miserable to PATCH
 // in place), with one preservation rule: every subject in the original store
@@ -58,7 +60,7 @@ function usedFragments(store, docUrl) {
  *  (removeMatches, not remove(st)-in-a-loop — rdflib's remove() skips entries
  *  when several statements share a subject.) */
 function removeSubject(store, node) {
-  const blanks = [...store.each(node, ui('attribute'), null), ...store.each(node, ui('parameter'), null)];
+  const blanks = store.each(node, ui('attribute'), null);
   for (const blank of blanks) store.removeMatches(blank, null, null);
   store.removeMatches(node, null, null);
 }
@@ -104,6 +106,10 @@ function emitItem(store, docUrl, doc, item, taken) {
 
   if (item.name != null) store.add(node, ui('label'), rdf.literal(String(item.name)), doc);
   if (item.icon) store.add(node, ui('icon'), rdf.literal(String(item.icon)), doc);
+  if (item.region) {
+    const local = item.region[0].toUpperCase() + item.region.slice(1).toLowerCase();
+    store.add(node, ui('region'), ui(local), doc);
+  }
   if (item.requiresWrite) store.add(node, acl('mode'), acl('Write'), doc);
 
   if (item.type === 'component') {

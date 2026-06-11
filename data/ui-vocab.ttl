@@ -3,9 +3,9 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-##########################
-# Configuration Settings #
-##########################
+#######################
+# Configuration Terms #
+#######################
 
 ui:proxy a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "proxy" ;
@@ -31,11 +31,6 @@ ui:temperatureUnit a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:label   "temperature unit" ;
   rdfs:comment "Display unit for temperature; the value is one a ui:TemperatureUnit instance, e.g. ui:Celcius." ;
   rdfs:range   ui:TemperatureUnit .
-
-ui:sortedBy a rdf:Property ; rdfs:isDefinedBy <> ;
-  rdfs:label   "sorted by" ;
-  rdfs:comment "The field to sort on when using numbers to order, e.g schema:position for data like `<#item> schema:position 3.`" ;
-  rdfs:range   rdf:Property .
 
 ui:ColorScheme a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Color scheme" .
 ui:FontSize a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Font size" .
@@ -63,13 +58,34 @@ ui:orientation a rdf:Property ; rdfs:isDefinedBy <> ;
   rdfs:comment "Menu layout direction; the value is a ui:Orientation instance (ui:Horizontal default, or ui:Vertical)." ;
   rdfs:range   ui:Orientation .
 
+###################
+# ???             #
+###################
+ui:sortedBy a rdf:Property ; rdfs:isDefinedBy <> ;
+  rdfs:label   "sorted by" ;
+  rdfs:comment "The field to sort on when using numbers to order, e.g schema:position for data like `<#item> schema:position 3.`" ;
+  rdfs:range   rdf:Property .
+
 ui:Orientation a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Orientation" .
 ui:Horizontal a ui:Orientation ; rdfs:label "Horizontal" .
 ui:Vertical   a ui:Orientation ; rdfs:label "Vertical"   .
 
-###################
-# MENU DEFINITION #
-###################
+ui:region a rdf:Property ; rdfs:isDefinedBy <> ;
+  rdfs:label   "region" ;
+  rdfs:comment "Where an item's rendered content is placed; the value is a ui:Region instance (ui:Inline default; ui:Element, ui:Modal, ui:Floating, ui:Window, ui:Tab)." ;
+  rdfs:range   ui:Region .
+
+ui:Region a rdfs:Class ; rdfs:isDefinedBy <> ; rdfs:label "Region" .
+ui:Inline   a ui:Region ; rdfs:label "Inline"   .
+ui:Element  a ui:Region ; rdfs:label "Element"  .
+ui:Modal    a ui:Region ; rdfs:label "Modal"    .
+ui:Floating a ui:Region ; rdfs:label "Floating" .
+ui:Window   a ui:Region ; rdfs:label "Window"   .
+ui:Tab      a ui:Region ; rdfs:label "Tab"      .
+
+##############
+# MENU TERMS #
+##############
 
 ui:Menu a rdfs:Class ; rdfs:label "Menu" ; rdfs:isDefinedBy <> ;
   rdfs:comment "A navigable menu or tab set consisting of ui:Links, ui:Menus, ui:Components" .
@@ -86,12 +102,7 @@ ui:href a rdf:Property ; rdfs:label "href" ; rdfs:isDefinedBy <> ;
 ui:icon a rdf:Property ; rdfs:label "icon" ; rdfs:isDefinedBy <> ;
   rdfs:comment "Optional icon URL shown for a menu item." .
 
-
 ui:attribute a rdf:Property ; rdfs:label "attribute" ; rdfs:isDefinedBy <> ;
   rdfs:comment "An attribute passed to a ui:Component's element, given as a schema:PropertyValue (schema:name + schema:value)." .
-ui:parameter a rdf:Property ; rdfs:label "parameter" ; rdfs:isDefinedBy <> ;
-  rdfs:comment "Alternate to ui:attribute for passing element parameters." .
 
-ui:view a rdf:Property ; rdfs:label "view" ; rdfs:isDefinedBy <> ;
-  rdfs:comment "A component's display mode, e.g. sol-calendar's \"agenda\" / \"month\" / \"week\" / \"day\"." .
 

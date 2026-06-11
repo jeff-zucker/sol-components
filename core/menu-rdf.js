@@ -41,13 +41,12 @@ export function rdfListElements(store, listNode) {
 }
 
 // Read a ui:Component (or handler) node into { tag, params } where
-// params is [[name, value], ...] from ui:attribute / ui:parameter blanks.
+// params is [[name, value], ...] from ui:attribute blanks.
 export function rdfComponent(store, node) {
   if (!node) return { tag: null, params: [] };
   const tag = rdfVal(store, node, 'name') || rdfVal(store, node, 'label');
-  const attrNodes  = store.each(node, rdf.sym(UI + 'attribute'),  null);
-  const paramNodes = store.each(node, rdf.sym(UI + 'parameter'),  null);
-  const params = [...attrNodes, ...paramNodes].map(p => [
+  const attrNodes = store.each(node, rdf.sym(UI + 'attribute'), null);
+  const params = attrNodes.map(p => [
     (store.any(p, rdf.sym(SCHEMA + 'name'))  || {}).value || '',
     (store.any(p, rdf.sym(SCHEMA + 'value')) || {}).value || '',
   ]).filter(([k]) => k);
@@ -71,18 +70,31 @@ function orientationToken(v) {
   return local.toLowerCase();
 }
 
+// Normalize a ui:region value to the lowercase token the HTML `region=`
+// attribute uses. Accepts a ui:Region instance IRI (ui:Modal → "modal") or a
+// literal. region is the ONE display property carried in RDF: it is the stored
+// form of placement. At render time placement is still resolved from HTML —
+// the generator emits `region=` from this token and display-target.js reads it
+// there — so the "display lives in HTML" runtime model is unchanged.
+function regionToken(v) {
+  if (!v) return null;
+  const local = v.includes('#') ? v.slice(v.indexOf('#') + 1) : v;
+  return local.toLowerCase();
+}
+
 /**
  * Parse a ui:Menu's parts into a tree of plain item descriptions.
  *
  * Each description has one of these shapes (no functions, no DOM):
  *
  *   { type: 'submenu',   id, name, children: [...] }
- *   { type: 'component', id, name, icon, tag, params }
- *   { type: 'link',      id, name, icon, href, contents }
+ *   { type: 'component', id, name, icon, region, tag, params }
+ *   { type: 'link',      id, name, icon, region, href, contents }
  *
- * No display info lives in the RDF — `where/how/lifetime` are resolved from
- * the HTML at render time (region= cascade, data-for, surface keywords). `id`
- * is the item's IRI fragment, the join key an HTML region uses to claim it.
+ * The only display info in the RDF is `region` (ui:region, the stored placement
+ * token). `how/lifetime` and the resolution of `region` are still done from the
+ * HTML at render time (region= cascade, data-for, surface keywords). `id` is the
+ * item's IRI fragment, the join key an HTML region uses to claim it.
  */
 export function parseMenuItems(store, menuNode) {
   const partsNode = store.any(menuNode, rdf.sym(UI + 'parts'));
@@ -98,6 +110,7 @@ export function parseMenuItems(store, menuNode) {
     const id       = fragmentOf(part);
     const label    = rdfVal(store, part, 'label') || part.value;
     const icon     = rdfVal(store, part, 'icon');
+    const region   = regionToken(rdfVal(store, part, 'region'));
     const requiresWrite = requiresWriteMode(store, part);
 
     if (partType && partType.value === menuType.value) {
@@ -107,13 +120,13 @@ export function parseMenuItems(store, menuNode) {
 
     if (partType && partType.value === componentType.value) {
       const { tag, params } = rdfComponent(store, part);
-      items.push({ type: 'component', id, name: label, icon, requiresWrite, tag, params });
+      items.push({ type: 'component', id, name: label, icon, region, requiresWrite, tag, params });
       continue;
     }
 
     const href     = rdfVal(store, part, 'href');
     const contents = rdfVal(store, part, 'contents');
-    items.push({ type: 'link', id, name: label, icon, requiresWrite, href, contents });
+    items.push({ type: 'link', id, name: label, icon, region, requiresWrite, href, contents });
   }
   return items;
 }

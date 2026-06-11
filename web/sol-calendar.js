@@ -60,15 +60,14 @@ import { attachEditorSelfGear } from '../core/editor-self.js';
 
 /** Predicate URI → HTML attribute name. After the vocab migration
  *  (see swc/claude/plans/PLAN-vocab-migration.md) calendar settings
- *  use direct predicates from Dublin Core / Schema.org / OWL-Time / UI.
- *  `dct:source` is multi-valued; everything else is single. */
+ *  use direct predicates from Dublin Core / Schema.org / OWL-Time.
+ *  `dct:source` is multi-valued; everything else is single. (`view` is a
+ *  plain element attribute — default "agenda" — not a settings-doc predicate.) */
 const DCT       = 'http://purl.org/dc/terms/';
 const SCHEMA    = 'http://schema.org/';
 const TIME_NS   = 'http://www.w3.org/2006/time#';
-const UI_NS     = 'http://www.w3.org/ns/ui#';
 const CONFIG_MAP = [
   [DCT    + 'format',          'provider'],
-  [UI_NS  + 'view',             'view'],
   [TIME_NS + 'days',            'window-days'],
   [SCHEMA + 'numberOfItems',    'max-events'],
 ];
