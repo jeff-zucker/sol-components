@@ -127,7 +127,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav).toBeTruthy();
     const topItems = nav.querySelectorAll(':scope > button[role="menuitem"]');
     const groupBtns = nav.querySelectorAll('.sol-menu-group-btn');
@@ -141,7 +141,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const homeBtn = nav.querySelector(':scope > button[role="menuitem"]');
     // An image icon now renders BEFORE the label (icon + label), not in place
     // of it — so the accessible name comes from the visible text, and the
@@ -156,7 +156,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const homeBtn = el.shadowRoot.querySelector('.sol-menu-nav > button[role="menuitem"]');
+    const homeBtn = el.querySelector('.sol-menu-nav > button[role="menuitem"]');
     const iconSpan = homeBtn.querySelector('.sol-menu-icon');
     expect(iconSpan.getAttribute('aria-hidden')).toBe('true');
     const img = iconSpan.querySelector('img');
@@ -168,7 +168,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const img = el.shadowRoot.querySelector('.sol-menu-nav > button[role="menuitem"] .sol-menu-icon img');
+    const img = el.querySelector('.sol-menu-nav > button[role="menuitem"] .sol-menu-icon img');
     expect(img).toBeTruthy();
     expect(img.src).toBe('http://example.org/house.svg');
   });
@@ -184,7 +184,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const svg = el.shadowRoot.querySelector('.sol-menu-nav > button[role="menuitem"] .sol-menu-icon svg');
+    const svg = el.querySelector('.sol-menu-nav > button[role="menuitem"] .sol-menu-icon svg');
     expect(svg).toBeTruthy();
   });
 
@@ -193,7 +193,7 @@ describe('SolMenu — from-rdf loading', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const group = el.shadowRoot.querySelector('.sol-menu-group');
+    const group = el.querySelector('.sol-menu-group');
     expect(group).toBeTruthy();
     const popup = group.querySelector('.sol-menu-popup');
     const innerBtn = popup.querySelector('button[role="menuitem"]');
@@ -266,7 +266,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav.getAttribute('role')).toBe('menubar');
     expect(nav.getAttribute('aria-orientation')).toBe('horizontal');
   });
@@ -286,8 +286,8 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const leaves = el.shadowRoot.querySelectorAll('.sol-menu-nav > button[role="menuitem"]');
-    const groupBtns = el.shadowRoot.querySelectorAll('.sol-menu-group-btn[role="menuitem"]');
+    const leaves = el.querySelectorAll('.sol-menu-nav > button[role="menuitem"]');
+    const groupBtns = el.querySelectorAll('.sol-menu-group-btn[role="menuitem"]');
     expect(leaves.length).toBeGreaterThan(0);
     expect(groupBtns.length).toBeGreaterThan(0);
   });
@@ -297,10 +297,10 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const activeBtn = el.shadowRoot.querySelector('.sol-menu-nav button.active');
+    const activeBtn = el.querySelector('.sol-menu-nav button.active');
     expect(activeBtn.getAttribute('aria-current')).toBe('page');
 
-    const inactive = el.shadowRoot.querySelectorAll('.sol-menu-nav > button[role="menuitem"]:not(.active)');
+    const inactive = el.querySelectorAll('.sol-menu-nav > button[role="menuitem"]:not(.active)');
     inactive.forEach(b => expect(b.hasAttribute('aria-current')).toBe(false));
   });
 
@@ -318,7 +318,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const popup = el.shadowRoot.querySelector('.sol-menu-popup');
+    const popup = el.querySelector('.sol-menu-popup');
     expect(popup.getAttribute('role')).toBe('menu');
     expect(popup.getAttribute('aria-label')).toBe('Settings');
   });
@@ -328,7 +328,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const menuitem = el.shadowRoot.querySelector('.sol-menu-popup button[role="menuitem"]');
+    const menuitem = el.querySelector('.sol-menu-popup button[role="menuitem"]');
     expect(menuitem).toBeTruthy();
     expect(menuitem.textContent).toBe('Light');
   });
@@ -338,7 +338,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const groupBtn = el.shadowRoot.querySelector('.sol-menu-group-btn');
+    const groupBtn = el.querySelector('.sol-menu-group-btn');
     expect(groupBtn.getAttribute('role')).toBe('menuitem');
     expect(groupBtn.getAttribute('aria-haspopup')).toBe('menu');
     expect(groupBtn.getAttribute('aria-expanded')).toBe('false');
@@ -349,7 +349,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const focused = nav.querySelectorAll('button[tabindex="0"]');
     expect(focused.length).toBe(1);
     const rest = nav.querySelectorAll('button[tabindex="-1"]');
@@ -366,7 +366,7 @@ describe('SolMenu — ARIA', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav.getAttribute('aria-orientation')).toBe('vertical');
   });
 });
@@ -381,12 +381,12 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[0].focus();
     press(btns[0], 'ArrowRight');
     expect(btns[1].getAttribute('tabindex')).toBe('0');
-    expect(el.shadowRoot.activeElement).toBe(btns[1]);
+    expect(document.activeElement).toBe(btns[1]);
   });
 
   test('ArrowLeft moves focus to previous button (horizontal)', async () => {
@@ -394,13 +394,13 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[1].focus();
     btns[1].setAttribute('tabindex', '0');
     press(btns[1], 'ArrowLeft');
     expect(btns[0].getAttribute('tabindex')).toBe('0');
-    expect(el.shadowRoot.activeElement).toBe(btns[0]);
+    expect(document.activeElement).toBe(btns[0]);
   });
 
   test('ArrowRight wraps from last to first', async () => {
@@ -408,13 +408,13 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     const last = btns[btns.length - 1];
     last.focus();
     last.setAttribute('tabindex', '0');
     press(last, 'ArrowRight');
-    expect(el.shadowRoot.activeElement).toBe(btns[0]);
+    expect(document.activeElement).toBe(btns[0]);
   });
 
   test('Home moves focus to first button', async () => {
@@ -422,12 +422,12 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[2].focus();
     btns[2].setAttribute('tabindex', '0');
     press(btns[2], 'Home');
-    expect(el.shadowRoot.activeElement).toBe(btns[0]);
+    expect(document.activeElement).toBe(btns[0]);
   });
 
   test('End moves focus to last button', async () => {
@@ -435,11 +435,11 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[0].focus();
     press(btns[0], 'End');
-    expect(el.shadowRoot.activeElement).toBe(btns[btns.length - 1]);
+    expect(document.activeElement).toBe(btns[btns.length - 1]);
   });
 
   test('Escape closes open popup and returns focus to group button', async () => {
@@ -447,7 +447,7 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const group = el.shadowRoot.querySelector('.sol-menu-group');
+    const group = el.querySelector('.sol-menu-group');
     const groupBtn = group.querySelector('.sol-menu-group-btn');
     groupBtn.click();
     expect(group.classList.contains('open')).toBe(true);
@@ -458,7 +458,7 @@ describe('SolMenu — keyboard navigation', () => {
     press(popupBtn, 'Escape');
     expect(group.classList.contains('open')).toBe(false);
     expect(groupBtn.getAttribute('aria-expanded')).toBe('false');
-    expect(el.shadowRoot.activeElement).toBe(groupBtn);
+    expect(document.activeElement).toBe(groupBtn);
   });
 
   test('ArrowDown/ArrowUp navigate in vertical orientation', async () => {
@@ -471,14 +471,14 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[0].focus();
     press(btns[0], 'ArrowDown');
-    expect(el.shadowRoot.activeElement).toBe(btns[1]);
+    expect(document.activeElement).toBe(btns[1]);
 
     press(btns[1], 'ArrowUp');
-    expect(el.shadowRoot.activeElement).toBe(btns[0]);
+    expect(document.activeElement).toBe(btns[0]);
   });
 
   test('ArrowRight/Left ignored in vertical orientation', async () => {
@@ -491,11 +491,11 @@ describe('SolMenu — keyboard navigation', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const btns = Array.from(nav.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
     btns[0].focus();
     press(btns[0], 'ArrowRight');
-    expect(el.shadowRoot.activeElement).toBe(btns[0]);
+    expect(document.activeElement).toBe(btns[0]);
   });
 });
 
@@ -560,7 +560,7 @@ describe('SolMenu — from-rdf without fragment', () => {
     await flush();
 
     expect(el.activeItem).toBe('Home');
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const topBtns = nav.querySelectorAll(':scope > button[role="menuitem"], :scope > .sol-menu-group > .sol-menu-group-btn');
     expect(topBtns.length).toBe(3);
   });
@@ -609,7 +609,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     `;
     attached(el);
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const items = nav.querySelectorAll(':scope > button[role="menuitem"]');
     expect(items.length).toBe(2);
     expect(items[0].textContent).toBe('Page 1');
@@ -628,7 +628,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     `;
     attached(el);
 
-    const group = el.shadowRoot.querySelector('.sol-menu-group');
+    const group = el.querySelector('.sol-menu-group');
     expect(group).toBeTruthy();
     const groupBtn = group.querySelector('.sol-menu-group-btn');
     expect(groupBtn.textContent).toBe('Docs');
@@ -687,7 +687,7 @@ describe('SolMenu — declarative HTML (anchor children)', () => {
     el.innerHTML = '<a href="only.html">Only</a>';
     attached(el);
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav.style.display).toBe('none');
   });
 });
@@ -703,7 +703,7 @@ describe('SolMenu — imperative items setter', () => {
       { name: 'Bar', render: jest.fn() },
     ];
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     const items = nav.querySelectorAll(':scope > button[role="menuitem"]');
     expect(items.length).toBe(2);
     expect(items[0].textContent).toBe('Foo');
@@ -815,7 +815,7 @@ describe('SolMenu — edge cases', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav.innerHTML).toBe('');
   });
 
@@ -831,7 +831,7 @@ describe('SolMenu — edge cases', () => {
     el.setAttribute('from-rdf', BASE + '#M');
     await flush();
 
-    const nav = el.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = el.querySelector('.sol-menu-nav');
     expect(nav.querySelectorAll('button').length).toBe(0);
   });
 
@@ -885,7 +885,7 @@ describe('SolMenu — submenu toggle', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const group = el.shadowRoot.querySelector('.sol-menu-group');
+    const group = el.querySelector('.sol-menu-group');
     const groupBtn = group.querySelector('.sol-menu-group-btn');
     expect(group.classList.contains('open')).toBe(false);
     expect(groupBtn.getAttribute('aria-expanded')).toBe('false');
@@ -900,10 +900,10 @@ describe('SolMenu — submenu toggle', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const groupBtn = el.shadowRoot.querySelector('.sol-menu-group-btn');
+    const groupBtn = el.querySelector('.sol-menu-group-btn');
     groupBtn.click();
     groupBtn.click();
-    const group = el.shadowRoot.querySelector('.sol-menu-group');
+    const group = el.querySelector('.sol-menu-group');
     expect(group.classList.contains('open')).toBe(false);
     expect(groupBtn.getAttribute('aria-expanded')).toBe('false');
   });
@@ -913,12 +913,12 @@ describe('SolMenu — submenu toggle', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const groupBtn = el.shadowRoot.querySelector('.sol-menu-group-btn');
+    const groupBtn = el.querySelector('.sol-menu-group-btn');
     groupBtn.click();
-    expect(el.shadowRoot.querySelector('.sol-menu-group.open')).toBeTruthy();
+    expect(el.querySelector('.sol-menu-group.open')).toBeTruthy();
 
     document.body.click();
-    expect(el.shadowRoot.querySelector('.sol-menu-group.open')).toBeFalsy();
+    expect(el.querySelector('.sol-menu-group.open')).toBeFalsy();
   });
 
   test('selecting item inside popup closes all popups', async () => {
@@ -926,12 +926,12 @@ describe('SolMenu — submenu toggle', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const groupBtn = el.shadowRoot.querySelector('.sol-menu-group-btn');
+    const groupBtn = el.querySelector('.sol-menu-group-btn');
     groupBtn.click();
 
-    const popupBtn = el.shadowRoot.querySelector('.sol-menu-popup button');
+    const popupBtn = el.querySelector('.sol-menu-popup button');
     popupBtn.click();
-    expect(el.shadowRoot.querySelector('.sol-menu-group.open')).toBeFalsy();
+    expect(el.querySelector('.sol-menu-group.open')).toBeFalsy();
     expect(el.activeItem).toBe('Light');
   });
 });
@@ -965,9 +965,9 @@ describe('SolMenu — disconnectedCallback', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const groupBtn = el.shadowRoot.querySelector('.sol-menu-group-btn');
+    const groupBtn = el.querySelector('.sol-menu-group-btn');
     groupBtn.click();
-    expect(el.shadowRoot.querySelector('.sol-menu-group.open')).toBeTruthy();
+    expect(el.querySelector('.sol-menu-group.open')).toBeTruthy();
 
     el.remove();
     // After disconnect, clicking document should not throw
@@ -996,7 +996,7 @@ describe('SolMenu — ARIA state updates on re-select', () => {
     el.setAttribute('from-rdf', BASE + '#Main');
     await flush();
 
-    const items = el.shadowRoot.querySelectorAll('.sol-menu-nav > button[role="menuitem"]');
+    const items = el.querySelectorAll('.sol-menu-nav > button[role="menuitem"]');
     expect(items[0].getAttribute('aria-current')).toBe('page');
     expect(items[0].getAttribute('tabindex')).toBe('0');
 
@@ -1053,7 +1053,7 @@ function buildCommandStore() {
 }
 
 const cmdBtn = (el) =>
-  [...el.shadowRoot.querySelectorAll('.sol-menu-nav > button[role="menuitem"]')]
+  [...el.querySelectorAll('.sol-menu-nav > button[role="menuitem"]')]
     .find(b => b.textContent === 'Install on my Pod');
 
 describe('SolMenu — command items', () => {
@@ -1084,5 +1084,165 @@ describe('SolMenu — command items', () => {
     expect(detail.params).toEqual({ target: 'pod' });
     expect(el.activeItem).toBe('Home');              // unchanged — not a selection
     expect(el.querySelector('.sol-menu-content').querySelector('installpod')).toBeNull();
+  });
+});
+
+// ── Keep-alive strip mode (the Menubar renderer) ────────────────────────────
+// A <sol-menu keep-alive> is the strip dk's shell runs on: one persistent
+// pane per TOP-LEVEL item (submenus included), switched by visibility;
+// popup leaf picks mount into their parent submenu's pane.
+describe('SolMenu — keep-alive strip mode', () => {
+  beforeEach(() => { mockStore = buildStore(); });
+
+  const strip = async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('keep-alive', '');
+    el.setAttribute('orientation', 'horizontal');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+    await flush();
+    return el;
+  };
+  const panes = (el) => [...el.querySelectorAll(':scope > .sol-menu-content > .sol-menu-pane')];
+
+  test('every top-level item gets a persistent pane up front; the first shows', async () => {
+    const el = await strip();
+    const ps = panes(el);
+    expect(ps.map((p) => p.dataset.tabName)).toEqual(['Home', 'Settings', 'About']);
+    expect(ps.map((p) => p.hidden)).toEqual([false, true, true]);
+    expect(el.activeItem).toBe('Home');
+  });
+
+  test('switching parks panes without teardown (same nodes survive)', async () => {
+    const el = await strip();
+    const home = panes(el)[0];
+    home.dataset.probe = 'kept';
+    el.select('About');
+    expect(panes(el)[2].hidden).toBe(false);
+    el.select('Home');
+    const again = panes(el)[0];
+    expect(again).toBe(home);
+    expect(again.dataset.probe).toBe('kept');
+    expect(again.hidden).toBe(false);
+  });
+
+  test('a submenu is a group head on the bar; a popup pick mounts into ITS pane', async () => {
+    const el = await strip();
+    const head = el.querySelector('.sol-menu-nav .sol-menu-group-btn');
+    expect(head).toBeTruthy();
+    const events = [];
+    el.addEventListener('sol-menu-change', (e) => events.push(e.detail.name));
+    // open the popup, pick the Light leaf
+    head.click();
+    const leaf = [...el.querySelectorAll('.sol-menu-popup button')]
+      .find((b) => b.textContent === 'Light');
+    leaf.click();
+    await flush();
+    const sub = panes(el).find((p) => p.dataset.tabName === 'Settings');
+    expect(sub.hidden).toBe(false);
+    expect(sub.textContent).toContain('light content');
+    // the group head reads as the active strip button
+    expect(head.classList.contains('active')).toBe(true);
+    expect(head.getAttribute('aria-current')).toBe('page');
+    // the pick surfaced the submenu — one change event, named for the parent
+    expect(events).toEqual(['Settings']);
+  });
+
+  test('select({silent}) suppresses sol-menu-change', async () => {
+    const el = await strip();
+    const events = [];
+    el.addEventListener('sol-menu-change', (e) => events.push(e.detail.name));
+    el.select('About', { silent: true });
+    expect(el.activeItem).toBe('About');
+    expect(events).toEqual([]);
+  });
+
+  test('applyItems merges in place: unchanged items keep their panes, removed ones drop', async () => {
+    const el = await strip();
+    const { parseMenuItems } = await import('../../core/menu-rdf.js');
+    const items = parseMenuItems(mockStore, rdflib.sym(BASE + '#Main'));
+    const home = panes(el)[0];
+    el.applyItems(items);                       // same definitions → same panes
+    expect(panes(el)[0]).toBe(home);
+    el.applyItems(items.filter((d) => d.name !== 'About'));
+    expect(panes(el).map((p) => p.dataset.tabName)).toEqual(['Home', 'Settings']);
+  });
+});
+
+describe('SolMenu — phone navigator (coarse pointer, keep-alive only)', () => {
+  beforeEach(() => {
+    mockStore = buildStore();
+    // jsdom has no matchMedia; stub a coarse/touch device for these tests only.
+    window.matchMedia = (q) => ({
+      matches: /coarse/.test(q),
+      media: q,
+      addEventListener() {}, removeEventListener() {},
+      addListener() {}, removeListener() {},
+    });
+  });
+  afterEach(() => { delete window.matchMedia; });
+
+  test('a keep-alive strip grows the trigger + sheet; groups mirror submenus', async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('keep-alive', '');
+    el.setAttribute('orientation', 'horizontal');
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+    await flush();
+    expect(el.querySelector('.sol-menu-nav > .sol-menu-navtrigger')).toBeTruthy();
+    const sheet = document.body.querySelector('sol-sheet.sol-menu-sheet');
+    expect(sheet).toBeTruthy();
+    expect([...sheet.querySelectorAll('.sol-menu-sheet-grouplabel')].map((g) => g.textContent))
+      .toEqual(['Settings']);
+    // picking a leaf row drives the group head's select → the submenu pane
+    const row = [...sheet.querySelectorAll('.sol-menu-sheet-item .sol-menu-sheet-label')]
+      .find((s) => s.textContent === 'Light');
+    row.closest('.sol-menu-sheet-item').click();
+    await flush();
+    const sub = el.querySelector('.sol-menu-pane[data-tab-name="Settings"]');
+    expect(sub.hidden).toBe(false);
+    expect(sub.textContent).toContain('light content');
+    // the trigger names the picked LEAF
+    expect(el.querySelector('.sol-menu-navtrigger-label').textContent).toBe('Light');
+  });
+
+  test('a legacy menu (no keep-alive) builds no trigger and no sheet', async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+    await flush();
+    expect(el.querySelector('.sol-menu-navtrigger')).toBeNull();
+    expect(document.body.querySelector('sol-sheet.sol-menu-sheet')).toBeNull();
+  });
+});
+
+// ── Tree view (ui:Tree): submenus as inline collapse/expand branches ───────
+describe('SolMenu — ui:Tree view', () => {
+  beforeEach(() => {
+    mockStore = buildStore();
+    mockStore.add(rdflib.sym(BASE + '#Main'), rdflib.sym(UI + 'view'), rdflib.sym(UI + 'Tree'));
+  });
+
+  test('a submenu renders as an inline branch, collapsed, toggling open in place', async () => {
+    const el = attached(document.createElement('sol-menu'));
+    el.setAttribute('from-rdf', BASE + '#Main');
+    await flush();
+    // no floating popup groups — the submenu is a branch with an inline subtree
+    expect(el.querySelector('.sol-menu-nav .sol-menu-group')).toBeNull();
+    const head = el.querySelector('.sol-menu-nav .sol-menu-branch > .sol-menu-group-btn');
+    expect(head.textContent).toBe('Settings');
+    expect(head.getAttribute('aria-expanded')).toBe('false');
+    const sub = el.querySelector('.sol-menu-branch > .sol-menu-subtree');
+    expect(sub.hidden).toBe(true);
+    head.click();
+    expect(sub.hidden).toBe(false);
+    expect(head.getAttribute('aria-expanded')).toBe('true');
+    // a branch leaf selects like any menu leaf — content mounts in the body
+    [...sub.querySelectorAll('button')].find((b) => b.textContent === 'Light').click();
+    await flush();
+    expect(el.querySelector('.sol-menu-content').textContent).toContain('light content');
+    // toggling closed collapses in place (no popups involved)
+    head.click();
+    expect(sub.hidden).toBe(true);
   });
 });

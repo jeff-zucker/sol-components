@@ -72,41 +72,18 @@ import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as TABS_CSS } from './styles/sol-tabs-css.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
-import { registerMenuConsumer, deferUntilLoader } from '../core/menu-consumer.js';
+import { registerMenuConsumer } from '../core/menu-consumer.js';
+import { loadMenuInto } from '../core/menu-load.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, dispatchCommand, paramsToObject } from '../core/rdf-render.js';
 import { renderIcon } from '../core/utils.js';
-import { emitTab } from '../core/menu-generate.js';
+import { tabSig, ensurePane, activateInitial, applyMenuItems } from '../core/menu-panes.js';
+import { coarseMql, isCoarsePointer, renderNavSheet, removeSheet, syncNav } from '../core/nav-sheet.js';
 import { extractTab, extractSubmenu } from '../core/menu-html.js';
 import './sol-sheet.js';   // the shared bottom-sheet surface the phone nav slots into
 
 // For auto-wiring an inline action launcher to this tabs' content area we need
 // a stable selector; mint an id for any <sol-tabs> that lacks one.
 let _solTabsUid = 0;
-
-// Canonical change-signature of a tab DEFINITION, for applyTabs' merge: the
-// generator's emission is round-trip stable (emitTab ∘ extractTab is the
-// identity on its own output), so an UNCHANGED tab gets the same signature
-// whether it was harvested from the shell's anchors at load or parsed from
-// the RDF on a Customize save. The tab's own label is excluded — a pure
-// rename keeps its pane — but submenu children (names included) are in, so
-// any structural change re-renders. Params are SORTED first: attribute order
-// carries no meaning, and the builder's document rewrite is free to reorder
-// schema:additionalProperty entries on every save. Items emitTab skips (links,
-// unassigned) fall back to a JSON shape of the same normalized fields.
-const sigNorm = (item, top) => ({
-  ...item,
-  ...(top ? { name: '' } : {}),
-  comment: undefined,
-  params: [...(item.params || [])].sort((a, b) =>
-    a[0] === b[0] ? (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0) : (a[0] < b[0] ? -1 : 1)),
-  children: (item.children || []).map((c) => sigNorm(c, false)),
-});
-const tabSig = (item) => {
-  const n = sigNorm(item, true);
-  return emitTab(n, () => {})
-    || JSON.stringify([n.type, n.tag || '', n.href || '', n.region || '', n.params,
-                       n.children.map((c) => [c.name, c.tag || '', c.href || '', c.params])]);
-};
 
 
 /**
@@ -240,36 +217,26 @@ class SolTabs extends HTMLElement {
   // becomes a tab whose body holds a slimmer <sol-tabs variant="sub"> strip
   // of its children.
   async _loadFromRdf(uri) {
-    const load = this.constructor.fromRdfLoader;
-    if (!load) { deferUntilLoader(this); return; }   // wait for the menu-from-rdf add-on
-    try {
-      const result = await load(uri, document.baseURI);
-      if (!result) return;
-      if (result.orientation && !this.hasAttribute('orientation')) {
-        this.setAttribute('orientation', result.orientation);
-      }
-      // A part marked slot="actions" is a toolbar launcher, not a tab — build it
-      // as an element on the bar's action row (mirrors the inline non-anchor
-      // launchers). In RDF mode these REPLACE any inline launchers (the
-      // completeness principle: everything comes from RDF).
-      const isAction = (d) => d.type === 'component'
-        && (d.params || []).some(([k, v]) => k === 'slot' && v === 'actions');
-      const items = result.items || [];
-      const actionItems = items.filter(isAction);
-      this._tabs = this._wrapRdfItems(items.filter((d) => !isAction(d)));
-      if (actionItems.length) {
-        this._launchers = actionItems.map((d) => this._buildLauncher(d));
-        for (const el of this._launchers) this._wireInlineAction(el);
-      }
-      this._renderBar();
-      if (this._tabs.length) this._activateInitial();
-    } catch (err) {
-      console.error('<sol-tabs> from-rdf load failed:', err);
-      this.dispatchEvent(new CustomEvent('sol-error', {
-        bubbles: true, composed: true,
-        detail: { source: 'sol-tabs', kind: 'rdf-load', uri, message: err.message },
-      }));
-    }
+    await loadMenuInto(this, uri, {
+      sourceName: 'sol-tabs',
+      apply: (result) => {
+        // A part marked slot="actions" is a toolbar launcher, not a tab — build it
+        // as an element on the bar's action row (mirrors the inline non-anchor
+        // launchers). In RDF mode these REPLACE any inline launchers (the
+        // completeness principle: everything comes from RDF).
+        const isAction = (d) => d.type === 'component'
+          && (d.params || []).some(([k, v]) => k === 'slot' && v === 'actions');
+        const items = result.items || [];
+        const actionItems = items.filter(isAction);
+        this._tabs = this._wrapRdfItems(items.filter((d) => !isAction(d)));
+        if (actionItems.length) {
+          this._launchers = actionItems.map((d) => this._buildLauncher(d));
+          for (const el of this._launchers) this._wireInlineAction(el);
+        }
+        this._renderBar();
+        if (this._tabs.length) this._activateInitial();
+      },
+    });
   }
 
   // Build a toolbar launcher element from an RDF action descriptor (tag =
@@ -535,6 +502,11 @@ class SolTabs extends HTMLElement {
     if (this._rendered) this._renderBar();
   }
 
+  // Alias for the generic name the other menu components expose (sol-menu's
+  // .items), so a consumer probing either element reads the same property.
+  get items() { return this._tabs; }
+  set items(arr) { this.tabs = arr; }
+
   get footerEl() { return this._footerEl; }
   set footerEl(el) { this._footerEl = el; }
 
@@ -660,187 +632,13 @@ class SolTabs extends HTMLElement {
     else this._removeSheet();   // a flip back to fine pointer drops the body-mounted sheet
   }
 
-  // The phone media — built lazily, kept so the change listener (wired in
-  // connectedCallback) can re-render the bar when the pointer type flips
-  // (e.g. DevTools device emulation toggling on/off).
-  _coarseMql() {
-    if (this._mqlCoarse === undefined) {
-      this._mqlCoarse = (typeof matchMedia === 'function')
-        ? matchMedia('(hover: none) and (pointer: coarse)') : null;
-    }
-    return this._mqlCoarse;
-  }
-
-  _isCoarsePointer() { return !!this._coarseMql()?.matches; }
-
-  // Build the mobile navigator: a full-width trigger button on the bar plus a
-  // bottom SHEET (mounted on <body> so it overlays everything and escapes any
-  // clipping ancestor). Top tabs are rows; a submenu becomes a section of its
-  // leaves; link launchers gather under a "Launch" section so they leave the
-  // dock. Picking a row drives the SAME machinery the bar uses — switchTab for a
-  // tab, the submenu dropdown's .select() for a leaf, the chip's own click for a
-  // launcher — so there's no parallel render path.
-  _renderNavSheet(bar) {
-    const trig = document.createElement('button');
-    trig.type = 'button';
-    trig.className = 'sol-tabs-navtrigger';
-    trig.setAttribute('aria-haspopup', 'dialog');
-    trig.setAttribute('aria-expanded', 'false');
-    trig.innerHTML =
-      '<span class="sol-tabs-navtrigger-dot" aria-hidden="true"></span>'
-      + '<span class="sol-tabs-navtrigger-label"></span>'
-      + '<span class="sol-tabs-navtrigger-chev" aria-hidden="true"></span>';
-    trig.addEventListener('click', () => this._openSheet());
-    this._navTrigger = trig;
-    bar.appendChild(trig);
-    this._buildSheet();
-    this._syncNav();
-  }
-
-  // (Re)build the bottom sheet from the current tab model, mounted on <body>.
-  // The surface (scrim, panel, grip, focus trap, Escape, back gesture) is the
-  // shared <sol-sheet> primitive; sol-tabs owns only the LIST it slots in.
-  _buildSheet() {
-    this._removeSheet();
-    const sheet = document.createElement('sol-sheet');
-    sheet.className = 'sol-tabs-sheet';
-    sheet.setAttribute('label', 'Go to');
-    sheet.addEventListener('sol-close', () => this._navTrigger?.setAttribute('aria-expanded', 'false'));
-
-    const list = document.createElement('div');
-    list.className = 'sol-tabs-sheet-list';
-    sheet.appendChild(list);
-
-    this._navItems = [];   // { el, meta, key, groupKey } for active-state sync
-    this._groups = [];     // { key, head, group } for accordion expand/collapse
-    this._openGroup = null;
-
-    // A navigable destination row. `parent` is the list (direct rooms) or a
-    // group's inner wrapper (submenu leaves).
-    const row = (parent, label, meta, tabId, key, groupKey) => {
-      const it = document.createElement('button');
-      it.type = 'button';
-      it.className = 'sol-tabs-sheet-item';
-      if (tabId) it.dataset.tabId = tabId;   // reuses the existing attribute; dk maps a room colour
-      it.innerHTML =
-        '<span class="sol-tabs-sheet-bar" aria-hidden="true"></span>'
-        + '<span class="sol-tabs-sheet-label"></span>'
-        + '<span class="sol-tabs-sheet-check" aria-hidden="true"></span>';
-      it.querySelector('.sol-tabs-sheet-label').textContent = label;
-      it.addEventListener('click', () => { this._navigateTo(meta); this._closeSheet(); });
-      parent.appendChild(it);
-      this._navItems.push({ el: it, meta, key, groupKey });
-    };
-
-    // A collapsible group (submenu / Launch): a header row + a hidden wrapper of
-    // leaf rows. Returns the inner wrapper to fill. Header toggles the accordion.
-    const group = (label, groupKey) => {
-      const head = document.createElement('button');
-      head.type = 'button';
-      head.className = 'sol-tabs-sheet-grouphead';
-      head.setAttribute('aria-expanded', 'false');
-      head.innerHTML =
-        '<span class="sol-tabs-sheet-grouplabel"></span>'
-        + '<span class="sol-tabs-sheet-groupchev" aria-hidden="true"></span>';
-      head.querySelector('.sol-tabs-sheet-grouplabel').textContent = label;
-      head.addEventListener('click', () => this._toggleGroup(groupKey));
-      const wrap = document.createElement('div');
-      wrap.className = 'sol-tabs-sheet-group';
-      const inner = document.createElement('div');
-      inner.className = 'sol-tabs-sheet-group-inner';
-      wrap.appendChild(inner);
-      list.appendChild(head);
-      list.appendChild(wrap);
-      this._groups.push({ key: groupKey, head, group: wrap });
-      return inner;
-    };
-
-    for (const tab of this._tabs) {
-      if (tab.isSubmenu && Array.isArray(tab.children) && tab.children.length) {
-        const gk = `g:${tab.name}`;
-        const inner = group(tab.name, gk);
-        for (const child of tab.children) {
-          // THE ARTIFACT RULE (mirrors _renderSubmenu): a child whose name
-          // repeats the submenu's own is the conversion artifact — skip it.
-          if (!child?.name || child.name.trim() === tab.name.trim()) continue;
-          row(inner, child.name, { kind: 'child', parent: tab.name, child: child.name, link: child.type === 'link' && !!child.href, href: child.href },
-              child.id, `c:${tab.name}${child.name}`, gk);
-        }
-      } else {
-        row(list, tab.name, { kind: 'tab', name: tab.name }, tab.id, `t:${tab.name}`, null);
-      }
-    }
-    // Link launchers (.sol-bar-link) → a "Launch" section; chrome controls
-    // (search, calendar, ☰, sign-in, …) stay in the slim dock.
-    const links = (this._launchers || []).filter(
-      (el) => el.classList && el.classList.contains('sol-bar-link'));
-    if (links.length) {
-      const inner = group('Launch', 'g:Launch');
-      links.forEach((el, i) => row(
-        inner, (el.getAttribute('aria-label') || el.title || el.textContent || 'Open').trim(),
-        { kind: 'launch', el }, null, `l:${i}`, 'g:Launch'));
-    }
-
-    document.body.appendChild(sheet);
-    this._sheet = sheet;
-  }
-
-  // Accordion: open `key` (collapsing any other), or collapse if already open.
-  _toggleGroup(key) { this._setOpenGroup(this._openGroup === key ? null : key); }
-
-  _setOpenGroup(key) {
-    this._openGroup = key;
-    for (const g of (this._groups || [])) {
-      const on = g.key === key;
-      g.group.classList.toggle('expanded', on);
-      g.head.classList.toggle('expanded', on);
-      g.head.setAttribute('aria-expanded', on ? 'true' : 'false');
-    }
-  }
-
-  _openSheet() {
-    if (!this._sheet) return;
-    this._syncNav();
-    // Pre-expand the group holding the current destination, so the sheet opens
-    // showing where you are (a leaf's group; a direct room opens all-collapsed).
-    const active = (this._navItems || []).find((i) => i.key === this._navKey);
-    this._setOpenGroup(active?.groupKey || null);
-    // sol-sheet owns focus (trap + restore-to-opener), Escape, the scrim,
-    // and the back-gesture contract.
-    this._sheet.show();
-    this._navTrigger?.setAttribute('aria-expanded', 'true');
-  }
-
-  _closeSheet() { this._sheet?.hide(); }   // aria-expanded resets on sol-close
-
-  _removeSheet() {
-    if (this._sheet) { this._sheet.remove(); this._sheet = null; }
-  }
-
-  // Reflect the active destination on the trigger (label + room dot) and the
-  // sheet rows (highlight). `_navKey` is set by _navigateTo for a submenu leaf
-  // (which switchTab alone can't identify); otherwise the active top tab wins.
-  _syncNav() {
-    if (!this._navTrigger) return;
-    // A host-set override (setNavLabel) names a screen that is NOT one of
-    // the rooms (e.g. Settings opened from the ☰ menu) — the trigger shows
-    // it and no sheet row highlights until real tab navigation clears it.
-    let active = this._navLabelOverride
-      ? null
-      : (this._navKey ? this._navItems?.find((i) => i.key === this._navKey) : null);
-    if (!active && !this._navLabelOverride) {
-      active = this._navItems?.find((i) => i.meta.kind === 'tab' && i.meta.name === this._active);
-    }
-    const label = this._navTrigger.querySelector('.sol-tabs-navtrigger-label');
-    if (label) {
-      label.textContent = this._navLabelOverride
-        || (active ? active.el.querySelector('.sol-tabs-sheet-label').textContent : (this._active || ''));
-    }
-    // Carry the active room's id onto the trigger so dk can colour its dot.
-    const id = active?.el.dataset.tabId;
-    if (id) this._navTrigger.dataset.tabId = id; else delete this._navTrigger.dataset.tabId;
-    for (const i of (this._navItems || [])) i.el.classList.toggle('is-active', i === active);
-  }
+  // The phone navigator (trigger + bottom sheet) — shared machinery in
+  // core/nav-sheet.js, keyed to this element's class prefix and state.
+  _coarseMql() { return coarseMql(this); }
+  _isCoarsePointer() { return isCoarsePointer(this); }
+  _renderNavSheet(bar) { renderNavSheet(this, bar); }
+  _removeSheet() { removeSheet(this); }
+  _syncNav() { syncNav(this); }
 
   /**
    * Name a non-room screen on the phone navigator trigger (e.g. the host
@@ -855,70 +653,9 @@ class SolTabs extends HTMLElement {
     this._syncNav();
   }
 
-  // Act on a sheet pick, reusing the bar's own machinery.
-  _navigateTo(meta) {
-    if (meta.kind === 'launch') { meta.el?.click(); return; }
-    if (meta.kind === 'tab') { this._navKey = `t:${meta.name}`; this.switchTab(meta.name); return; }
-    if (meta.kind === 'child') {
-      if (meta.link) {
-        // External link leaf — open it (→ the host's dismissible overlay / new
-        // tab) and leave the CURRENT room active. A link-only submenu (e.g. Apps)
-        // thus never becomes the active tab, so its empty pane is never shown.
-        if (meta.href) window.open(meta.href, '_blank');
-        return;
-      }
-      // Remember the leaf (switchTab only knows the parent), surface the pane,
-      // then mount the chosen leaf into it.
-      this._navKey = `c:${meta.parent}${meta.child}`;
-      this.switchTab(meta.parent);
-      const dd = this._btns[meta.parent];
-      if (dd && typeof dd.select === 'function') {
-        dd.select(meta.child);            // the dropdown's proven region-cascade mount
-      } else {
-        this._revealChild(meta.parent, meta.child);   // inline-submenu fallback
-      }
-      this._syncNav();
-    }
-  }
-
-  // Fallback leaf reveal when a submenu rendered inline (_renderSubmenu) rather
-  // than as a bar dropdown: a nested <sol-tabs> switches to the child; a stacked
-  // submenu scrolls the child's slot into view.
-  _revealChild(parentName, childName) {
-    const tab = this._tabs.find((t) => t.name === parentName);
-    const pane = tab?._pane;
-    if (!pane) return;
-    const sub = pane.querySelector(':scope sol-tabs');
-    if (sub && typeof sub.switchTab === 'function') { sub.switchTab(childName); return; }
-    const item = pane.querySelector(`[data-tab-name="${(window.CSS && CSS.escape) ? CSS.escape(childName) : childName}"]`);
-    if (item) item.scrollIntoView({ block: 'start' });
-  }
-
-  // Render every tab once (keep-alive) then show the first, else just
-  // show the first (lazy default path).
-  _activateInitial() {
-    if (!this._tabs.length) return;
-    if (this._keepAlive) {
-      this.body.innerHTML = '';   // drop any panes from a prior load (reload)
-      for (const t of this._tabs) this._ensurePane(t);
-    }
-    this.switchTab(this._tabs[0].name);
-  }
-
-  // Build (once) a persistent pane for a tab and render its content into it.
-  _ensurePane(tab) {
-    if (tab._pane) return tab._pane;
-    const pane = document.createElement('div');
-    pane.className = 'sol-tabs-pane';
-    if (tab.id) pane.dataset.tabId = tab.id;
-    if (tab._paneId) pane.id = tab._paneId;   // a submenu dropdown's region= target
-    pane.dataset.tabName = tab.name;
-    pane.hidden = true;
-    this.body.appendChild(pane);
-    tab._pane = pane;
-    tab.render(pane, this._footerEl, this._actionsEl);
-    return pane;
-  }
+  // Keep-alive pane lifecycle — shared machinery in core/menu-panes.js.
+  _activateInitial() { activateInitial(this); }
+  _ensurePane(tab) { return ensurePane(this, tab); }
 
   // Arrow-key navigation across the tablist (ARIA tab pattern, automatic
   // activation): Left/Up ↔ Right/Down move to the adjacent tab, Home/End to the
@@ -986,7 +723,7 @@ class SolTabs extends HTMLElement {
       this._navLabelOverride = null;
       if (this._navItems?.some((i) => i.meta.kind === 'tab' && i.meta.name === tab.name)) {
         this._navKey = `t:${tab.name}`;
-      } else if (!(this._navKey || '').startsWith(`c:${tab.name}`)) {
+      } else if (!(this._navKey || '').startsWith(`c:${tab.name}`)) {
         // Switched to a submenu parent by some path OTHER than a known leaf pick
         // (e.g. a restore) — drop the stale key so the trigger shows the parent's
         // own name, not a leftover room.
@@ -1027,39 +764,7 @@ class SolTabs extends HTMLElement {
    *
    * @param {object[]} items  parseMenuItems output for the tab menu (#Tabs)
    */
-  applyTabs(items) {
-    const wrapped = this._wrapRdfItems(items || []);
-    if (!this._rendered) { this._tabs = wrapped; return; }
-    // Track the active tab by KEY (it survives the merge even when renamed
-    // OR rebuilt) so re-asserting it below is recognized as "same tab".
-    const key = (t) => t.id || t.name;
-    const prevActive = (this._tabs || []).find((t) => t.name === this._active) || null;
-    const activeKey = prevActive ? key(prevActive) : null;
-    const prev = new Map((this._tabs || []).map((t) => [key(t), t]));
-    const next = wrapped.map((w) => {
-      const old = prev.get(key(w));
-      // Reuse the old descriptor (and its keep-alive pane) ONLY when the
-      // tab's DEFINITION is unchanged — then this is a pure rename/reorder.
-      // An EDITED definition (plugin swapped, submenu added, children
-      // changed) must win: take the fresh render and drop the stale pane so
-      // the tab re-mounts showing what was saved.
-      if (old && old.sig === w.sig) { old.name = w.name; return old; }
-      if (old && old._pane) { old._pane.remove(); old._pane = null; }
-      return w;
-    });
-    const keep = new Set(next.map(key));
-    for (const [k, t] of prev) {
-      if (!keep.has(k) && t._pane) { t._pane.remove(); t._pane = null; }
-    }
-    this._tabs = next;
-    this._renderBar();
-    if (this._keepAlive) for (const t of this._tabs) this._ensurePane(t);
-    // Re-assert the selection. Same tab as before (even if rebuilt) →
-    // SILENT: this is a live refresh, not a user pick, and must not fire
-    // sol-tab-change.
-    const active = (activeKey != null && next.find((t) => key(t) === activeKey)) || this._tabs[0];
-    if (active) this.switchTab(active.name, { silent: activeKey != null && key(active) === activeKey });
-  }
+  applyTabs(items) { applyMenuItems(this, items); }
 
   /**
    * Rebuild the page-level launchers from `items` (parseMenuItems output for a

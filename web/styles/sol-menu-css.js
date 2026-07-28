@@ -1,7 +1,7 @@
 import { sheetFrom } from '../../core/adopt.js';
 
 export const CSS = `
-  :host {
+  sol-menu {
     display: flex; flex-direction: row;
     flex: 1; min-height: 0; min-width: 0;
     max-width: 100%; height: 100%;
@@ -10,7 +10,7 @@ export const CSS = `
     font-family:var(--font-ui) !important;
     font-size: var(--font-size, var(--medium-font, 20px));
   }
-  :host([orientation="horizontal"]) {
+  sol-menu[orientation="horizontal"] {
     flex-direction: column;
   }
   .sol-menu-embed {
@@ -32,7 +32,7 @@ export const CSS = `
     scrollbar-width: thin;
     box-sizing: border-box;
   }
-  :host([orientation="horizontal"]) > .sol-menu-nav {
+  sol-menu[orientation="horizontal"] > .sol-menu-nav {
     flex-direction: row;
     flex-wrap: wrap;
     min-width: 0; max-width: 100%;
@@ -58,8 +58,8 @@ export const CSS = `
     overflow: hidden; text-overflow: ellipsis;
     font-size: var(--font-size, var(--medium-font, 20px)) !important;
   }
-  :host([orientation="horizontal"]) > .sol-menu-nav > button,
-  :host([orientation="horizontal"]) > .sol-menu-nav > .sol-menu-group {
+  sol-menu[orientation="horizontal"] > .sol-menu-nav > button,
+  sol-menu[orientation="horizontal"] > .sol-menu-nav > .sol-menu-group {
     flex-shrink: 0;
   }
   .sol-menu-nav button .sol-menu-icon {
@@ -104,7 +104,7 @@ export const CSS = `
     font-size: var(--small-font, 16px);
     opacity: 0.7;
   }
-  :host([orientation="horizontal"]) .sol-menu-nav > .sol-menu-group > .sol-menu-group-btn::after {
+  sol-menu[orientation="horizontal"] .sol-menu-nav > .sol-menu-group > .sol-menu-group-btn::after {
     content: '▾';
     margin-left: var(--space-sm, 4px);
   }
@@ -125,14 +125,28 @@ export const CSS = `
     display: flex;
   }
 
-  /* The content area is a light-DOM child of <sol-menu>, projected through
-     the shadow slot, so menu-click results land in light DOM and are
-     reachable by page CSS and document queries. Style it directly with
-     sol-menu > .sol-menu-content { ... } — there is no part() hook.
+  /* ── Tree view (ui:Tree): submenus as inline collapse/expand branches ── */
+  .sol-menu-branch { display: block; }
+  .sol-menu-branch > .sol-menu-group-btn::after {
+    display: inline-block;
+    transition: transform .15s ease;
+  }
+  .sol-menu-branch > .sol-menu-group-btn.open::after { transform: rotate(90deg); }
+  .sol-menu-subtree {
+    display: flex; flex-direction: column;
+    gap: var(--space-xs, 2px);
+    padding-left: var(--menu-tree-indent, var(--space-xl, 16px));
+  }
+  .sol-menu-subtree[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .sol-menu-branch > .sol-menu-group-btn::after { transition: none; }
+  }
+
+  /* The content area: a direct light-DOM child of <sol-menu>, reachable by
+     page CSS and document queries (sol-menu > .sol-menu-content { ... }).
      overflow:hidden (not auto) by default: app chrome doesn't scroll;
      components placed inside scroll on their own. */
-  slot { display: contents; }
-  ::slotted(.sol-menu-content) {
+  sol-menu > .sol-menu-content {
     flex: 1 1 0; min-height: 0; min-width: 0;
     max-width: 100%;
     display: flex; flex-direction: column;
@@ -144,6 +158,93 @@ export const CSS = `
   /* Touch devices: meet the 44px minimum tap target (desktop is unaffected). */
   @media (hover: none) and (pointer: coarse) {
     .sol-menu-nav button { min-height: 44px; }
+  }
+
+  /* ── Keep-alive strip mode ──────────────────────────────────────────────
+     A <sol-menu keep-alive> renders every top-level item once into its own
+     persistent .sol-menu-pane and switches by visibility (mounted components
+     are never torn down). */
+  sol-menu > .sol-menu-content > .sol-menu-pane {
+    display: flex; flex-direction: column;
+    flex: 1 1 auto; min-height: 0; min-width: 0;
+    max-width: 100%;
+  }
+  sol-menu > .sol-menu-content > .sol-menu-pane[hidden] { display: none; }
+
+  /* ── Phone navigator (keep-alive strips only) ───────────────────────────
+     On a touch / coarse-pointer device the strip swaps its nav for a
+     full-width TRIGGER that opens a bottom SHEET (mounted on <body>,
+     core/nav-sheet.js): submenus as sections, leaves as rows. Colours come
+     from host vars (--surface/--text/--accent and a per-row --row-accent).
+     ── the trigger ── */
+  .sol-menu-navtrigger { display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    /* Hide the nav CONTROLS the sheet replaces — buttons and submenu groups. */
+    sol-menu[keep-alive] > .sol-menu-nav > button,
+    sol-menu[keep-alive] > .sol-menu-nav > .sol-menu-group { display: none; }
+    sol-menu[keep-alive] > .sol-menu-nav { flex-wrap: nowrap; padding: 8px 12px; gap: 0; }
+    sol-menu[keep-alive] > .sol-menu-nav > .sol-menu-navtrigger {
+      display: flex; align-items: center; gap: 10px;
+      flex: 1 1 auto; width: 100%; max-width: 100%; box-sizing: border-box;
+      min-height: 44px; padding: 0 16px;
+      font: inherit; font-size: max(16px, 1em); font-weight: 600;
+      color: var(--text, #1a1a1a); text-align: left;
+      background: var(--surface, #fff);
+      border: 1px solid var(--border, #c8c8c8); border-radius: 999px;
+      cursor: pointer;
+    }
+    .sol-menu-navtrigger-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sol-menu-navtrigger-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto;
+      background: var(--row-accent, var(--accent, #888)); }
+    .sol-menu-navtrigger-chev { flex: 0 0 auto; width: 0; height: 0; opacity: .5;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-bottom: 6px solid currentColor; }   /* up-caret: the sheet rises */
+  }
+
+  /* ── the sheet (a <sol-sheet> on <body>; only created on coarse pointers).
+     Scrim / panel / grip / open-close animation live in sol-sheet's shadow —
+     only the slotted LIST and its rows are styled here. ── */
+  .sol-menu-sheet-list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 10px; }
+  .sol-menu-sheet-grouphead {
+    display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+    min-height: 46px; padding: 6px 12px; margin: 2px 0 0;
+    font: inherit; font-size: max(16px, .82em);
+    text-transform: uppercase; letter-spacing: .07em; font-weight: 700;
+    color: var(--text-muted, #8a8a8a);
+    background: none; border: 0; border-radius: 11px; cursor: pointer; text-align: left;
+  }
+  .sol-menu-sheet-grouphead:active { background: var(--hover, rgba(0,0,0,.06)); }
+  .sol-menu-sheet-grouplabel { flex: 1 1 auto; }
+  .sol-menu-sheet-groupchev { flex: 0 0 auto; width: 0; height: 0; opacity: .7;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid currentColor; transition: transform .2s ease; }
+  .sol-menu-sheet-grouphead.expanded .sol-menu-sheet-groupchev { transform: rotate(-180deg); }
+  .sol-menu-sheet-group { display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows .24s ease; }
+  .sol-menu-sheet-group.expanded { grid-template-rows: 1fr; }
+  .sol-menu-sheet-group-inner { overflow: hidden; min-height: 0; }
+  .sol-menu-sheet-item {
+    display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box;
+    min-height: 44px; padding: 4px 12px;
+    font: inherit; font-size: max(16px, 1.03em); color: var(--text, #1a1a1a);
+    background: none; border: 0; border-radius: 12px; cursor: pointer; text-align: left;
+  }
+  .sol-menu-sheet-group-inner .sol-menu-sheet-item { padding-left: 22px; }
+  .sol-menu-sheet-item:active { background: var(--hover, rgba(0,0,0,.06)); }
+  .sol-menu-sheet-bar { flex: 0 0 auto; width: 4px; align-self: stretch; margin: 9px 0;
+    border-radius: 2px; background: transparent; }
+  .sol-menu-sheet-label { flex: 1 1 auto; }
+  .sol-menu-sheet-check { flex: 0 0 auto; width: 17px; text-align: center; opacity: 0;
+    color: var(--row-accent, var(--accent, #333)); font-weight: 800; }
+  .sol-menu-sheet-check::after { content: '\\2713'; }   /* ✓ */
+  .sol-menu-sheet-item.is-active {
+    background: color-mix(in srgb, var(--row-accent, var(--accent, #999)) 15%, transparent);
+    color: var(--row-accent, var(--accent)); font-weight: 700;
+  }
+  .sol-menu-sheet-item.is-active .sol-menu-sheet-bar { background: var(--row-accent, var(--accent, #999)); }
+  .sol-menu-sheet-item.is-active .sol-menu-sheet-check { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .sol-menu-sheet-group, .sol-menu-sheet-groupchev { transition: none; }
   }
 `;
 

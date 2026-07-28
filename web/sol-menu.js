@@ -1,9 +1,16 @@
 /**
- * <sol-menu> — Sidebar navigation + content panel.
+ * <sol-menu> — menu navigation + content panel: a sidebar or bar of choices
+ * (the ui:Menubar renderer), with real dropdown submenus.
  *
- * Shadow-DOM element with the same declarative API as <sol-tabs>: fill
- * with <a href="…">Label</a> children, each anchor becomes a menu entry;
- * clicking loads its URL into the content panel.
+ * LIGHT-DOM element (host-page CSS reaches every part of the strip) with the
+ * same declarative API as <sol-tabs>: fill with <a href="…">Label</a>
+ * children, each anchor becomes a menu entry; clicking loads its URL into
+ * the content panel. With `keep-alive`, every TOP-LEVEL item renders once
+ * into its own persistent `.sol-menu-pane` and switching parks panes by
+ * visibility (audio keeps playing; scroll / login state survive); a popup
+ * submenu pick mounts into its parent's pane. On coarse-pointer devices a
+ * keep-alive strip collapses into the phone navigator (trigger + bottom
+ * sheet, core/nav-sheet.js).
  *
  * Imperative usage:
  *   const m = document.createElement('sol-menu');
@@ -43,6 +50,7 @@
  *
  * Attributes:
  *   orientation="horizontal"  — lay the nav bar on top instead of the side
+ *   keep-alive                — persistent per-item panes (the strip mode)
  *   data-handler="sol-*"      — default component for rendering each item
  *   from-rdf="menu.ttl#Name"  — build the menu from a ui:Menu RDF document
  *                               instead of light-DOM children. OPT-IN: inert
@@ -55,35 +63,37 @@
  */
 
 import { define } from '../core/define.js';
-import { adopt } from '../core/adopt.js';
+import { adopt, ensureDocStyle } from '../core/adopt.js';
 import { attachEditorSelfGear } from '../core/editor-self.js';
 import { CSS as MENU_CSS, sheet as menuSheet } from './styles/sol-menu-css.js';
-import { registerMenuConsumer, deferUntilLoader } from '../core/menu-consumer.js';
+import { registerMenuConsumer } from '../core/menu-consumer.js';
+import { loadMenuInto } from '../core/menu-load.js';
 import { renderComponentItem, renderLinkItem, ensureHandler, isCommandName, paramsToObject, dispatchCommand } from '../core/rdf-render.js';
 import { renderIcon } from '../core/utils.js';
+import { tabSig, ensurePane, activateInitial, applyMenuItems } from '../core/menu-panes.js';
+import { coarseMql, isCoarsePointer, renderNavSheet, removeSheet, syncNav } from '../core/nav-sheet.js';
+import './sol-sheet.js';   // the shared bottom-sheet surface the phone nav slots into
 
 /**
- * Sidebar navigation + content panel.
+ * Menu navigation + content panel.
  *
- * Shadow-DOM element. Same declarative API as sol-tabs: fill with anchor
+ * Light-DOM element. Same declarative API as sol-tabs: fill with anchor
  * children, each becomes a menu entry.
  *
  * @class SolMenu
  * @extends HTMLElement
  * @attr {string} orientation - "horizontal" to lay nav on top (default: sidebar)
+ * @attr {string} keep-alive - persistent per-item panes (the strip mode)
  * @attr {string} data-handler - default sol-* component tag for anchors
  * @fires sol-menu-change - detail: { name }
  *
- * CSS Shadow Parts (outside theming hooks):
- *   - `nav`     — the .sol-menu-nav strip (the buttons row / column).
- *
- * Content area: the `.sol-menu-content` body where a selection mounts is a
- * LIGHT-DOM child of <sol-menu> (projected through the shadow slot), so
- * results are reachable by page CSS / document queries. It is NOT a shadow
- * part — style it directly, e.g. `sol-menu > .sol-menu-content { overflow: auto }`.
- * Default is `overflow: hidden` (app chrome doesn't scroll; components
- * inside scroll on their own). Authors may supply their own
- * `.sol-menu-content` child; otherwise one is created.
+ * Everything is light DOM — style the strip directly:
+ * `sol-menu > .sol-menu-nav`, its buttons (with `data-tab-id` from the RDF
+ * item), `.sol-menu-group-btn` submenu heads, `.sol-menu-popup` dropdowns,
+ * `sol-menu > .sol-menu-content` and its `.sol-menu-pane`s. Default content
+ * overflow is `hidden` (app chrome doesn't scroll; components inside scroll
+ * on their own). Authors may supply their own `.sol-menu-content` child;
+ * otherwise one is created.
  *
  * Horizontal-orientation nav now wraps (`flex-wrap: wrap`) instead of
  * showing a horizontal scrollbar — items overflow to a second row when
@@ -92,13 +102,61 @@ import { renderIcon } from '../core/utils.js';
 class SolMenu extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this._root = this._createRoot();
     this._items = [];
     this._btns = {};
     this._active = null;
     this._cleanup = null;
+    this._footerEl = null;
+    this._actionsEl = null;
     this._rendered = false;
+    // The phone navigator's class prefix (core/nav-sheet.js).
+    this._navPrefix = 'sol-menu';
   }
+
+  // ── the shared strip contract (core/menu-panes.js, core/nav-sheet.js) ────
+  // Those modules address the host as `_tabs` / `_renderBar` / `switchTab`;
+  // sol-menu's own names stay `_items` / `_renderNav` / `select`.
+  get _tabs() { return this._items; }
+  set _tabs(v) { this._items = v || []; }
+  _renderBar() { this._renderNav(); }
+  switchTab(name, opts) { this.select(name, opts); }
+
+  // Keep-alive: render every top-level item once into its own persistent pane
+  // and switch by toggling visibility, so mounted components are never torn
+  // down — audio keeps playing, scroll / login / in-flight state survive.
+  get _keepAlive() { return this.hasAttribute('keep-alive'); }
+  _ensurePane(item) { return ensurePane(this, item, 'sol-menu-pane'); }
+
+  get footerEl() { return this._footerEl; }
+  set footerEl(el) { this._footerEl = el; }
+  get actionsEl() { return this._actionsEl; }
+  set actionsEl(el) { this._actionsEl = el; }
+
+  /**
+   * Merge an updated set of items (parseMenuItems output) into the live menu
+   * IN PLACE — unchanged items keep their keep-alive panes; see
+   * core/menu-panes.js applyMenuItems.
+   */
+  applyItems(items) { applyMenuItems(this, items, 'sol-menu-pane'); }
+
+  /**
+   * Name a non-menu screen on the phone navigator trigger (e.g. the host
+   * opened Settings from its own chrome, outside this menu). The override
+   * sticks until the next select, which returns the trigger to the active
+   * item's name. Pass a falsy value to clear it explicitly. No-op on
+   * desktop (no navigator trigger).
+   */
+  setNavLabel(text) {
+    this._navLabelOverride = text || null;
+    syncNav(this);
+  }
+
+  // The render root. SolMenu itself is a LIGHT-DOM element — the host page's
+  // CSS must reach every part of the strip (per-item accents, deep selectors).
+  // A subclass that needs encapsulation (sol-dropdown-button — its trigger is
+  // styled via ::part) overrides this to attach a shadow root instead.
+  _createRoot() { return this; }
 
   static get observedAttributes() { return ['from-rdf']; }
 
@@ -147,25 +205,51 @@ class SolMenu extends HTMLElement {
     }
 
     if (this.hasAttribute('editor-self')) attachEditorSelfGear(this);
+
+    // Re-render the nav when the pointer type flips (fine ↔ coarse) so the
+    // phone navigator appears/disappears — chiefly for DevTools device
+    // emulation; on a real device it fires once at most. Wired once.
+    const mql = coarseMql(this);
+    if (mql && !this._mqlWired) {
+      this._mqlWired = true;
+      this._onPointerFlip = () => this._renderNav();
+      mql.addEventListener?.('change', this._onPointerFlip);
+    }
   }
 
   // Select the first leaf so the content panel isn't empty on load. Overridable
   // — e.g. <sol-dropdown-button> has no panel and shouldn't pre-fire anything.
+  // In keep-alive (strip) mode every top-level item gets its persistent pane
+  // up front, then the first is shown.
   _autoSelectFirst() {
+    if (this._keepAlive && this._items.length) { activateInitial(this, 'sol-menu-pane'); return; }
     const firstLeaf = this._firstLeaf(this._items);
     if (firstLeaf) this.select(firstLeaf.name);
   }
 
   _initShell() {
     const orient = this.getAttribute('orientation') === 'horizontal' ? 'horizontal' : 'vertical';
-    const root = this.shadowRoot;
-    root.innerHTML = `
-      <div class="sol-menu-nav" part="nav" role="menubar" aria-orientation="${orient}"></div>
+    const root = this._root;
+    const nav = `<div class="sol-menu-nav" part="nav" role="menubar" aria-orientation="${orient}"></div>`;
+    if (root === this) {
+      // Light DOM: the nav and the content are direct children, so host-page
+      // CSS reaches every part of the strip. An author-supplied content child
+      // survives the shell build.
+      const ownContent = this.querySelector(':scope > .sol-menu-content');
+      if (ownContent) ownContent.remove();
+      this.innerHTML = nav;
+      if (ownContent) this.appendChild(ownContent);
+      ensureDocStyle(this.getRootNode(), 'sol-menu-styles', MENU_CSS);
+    } else {
+      // A shadow-rooted subclass (sol-dropdown-button) projects its light
+      // children through the slot and scopes the menu CSS to its own root.
+      root.innerHTML = `${nav}
       <slot></slot>`;
-    adopt(root, { sheet: menuSheet, css: MENU_CSS });
-    // Content area lives in LIGHT DOM (projected through the slot) so
-    // menu-click results are reachable by page CSS / document queries. The
-    // author may supply their own `.sol-menu-content` child; else create one.
+      adopt(root, { sheet: menuSheet, css: MENU_CSS });
+    }
+    // Content area lives in LIGHT DOM so menu-click results are reachable by
+    // page CSS / document queries. The author may supply their own
+    // `.sol-menu-content` child; else create one.
     if (!this.querySelector(':scope > .sol-menu-content')) {
       const content = document.createElement('div');
       content.className = 'sol-menu-content';
@@ -189,9 +273,16 @@ class SolMenu extends HTMLElement {
       const name = e.detail?.name;
       const isOurs = name && this._flatLeaves(this._items).some(i => i.name === name);
       if (isOurs) {
-        if (this._active !== name) {
-          this._active = name;
-          this._setActiveButton(name);
+        // In a keep-alive strip the active button is the item's TOP-LEVEL
+        // owner (a popup leaf lights its group head), and a mount into a
+        // PARKED (hidden) pane — e.g. the initial pane pre-build — must not
+        // steal the selection.
+        const top = this._keepAlive ? this._topFor(name) : null;
+        if (top && top._pane?.hidden) return;
+        const shown = top ? top.name : name;
+        if (this._active !== shown) {
+          this._active = shown;
+          this._setActiveButton(shown);
         }
       } else {
         this._active = null;
@@ -202,7 +293,7 @@ class SolMenu extends HTMLElement {
   }
 
   _handleKeyDown(e) {
-    const root = this.shadowRoot;
+    const root = this._root;
     const nav = root.querySelector('.sol-menu-nav');
     if (!nav) return;
     const horizontal = this.getAttribute('orientation') === 'horizontal';
@@ -241,14 +332,19 @@ class SolMenu extends HTMLElement {
   }
 
   _focusableButtons(container, target) {
-    // If target is inside an open popup, scope to that popup; otherwise top-level nav
+    // A tree navigates every VISIBLE button (branch heads + leaves of open
+    // subtrees) as one list; a popup menu scopes to the open popup, else the
+    // top-level nav.
+    if (this._view === 'Tree') {
+      return Array.from(container.querySelectorAll('button')).filter((b) => !b.closest('[hidden]'));
+    }
     const popup = target.closest('.sol-menu-popup');
     const scope = popup || container;
     return Array.from(scope.querySelectorAll(':scope > button, :scope > .sol-menu-group > .sol-menu-group-btn'));
   }
 
   _setRovingFocus(btn) {
-    const nav = this.shadowRoot.querySelector('.sol-menu-nav');
+    const nav = this._root.querySelector('.sol-menu-nav');
     if (!nav) return;
     nav.querySelectorAll('button').forEach(b => b.setAttribute('tabindex', '-1'));
     btn.setAttribute('tabindex', '0');
@@ -256,22 +352,21 @@ class SolMenu extends HTMLElement {
   }
 
   async _loadFromRdf(uri) {
-    const load = this.constructor.fromRdfLoader;
-    if (!load) { deferUntilLoader(this); return; }   // wait for the menu-from-rdf add-on
-    try {
-      const result = await load(uri, document.baseURI);
-      if (!result) return;
-      if (!this.hasAttribute('orientation')) this.setAttribute('orientation', result.orientation);
-      this._items = this._wrapRdfItems(result.items);
-      this._renderNav();
-      this._autoSelectFirst();
-    } catch (err) {
-      console.error('<sol-menu> from-rdf load failed:', err);
-      this.dispatchEvent(new CustomEvent('sol-error', {
-        bubbles: true, composed: true,
-        detail: { source: 'sol-menu', kind: 'rdf-load', uri, message: err.message },
-      }));
-    }
+    await loadMenuInto(this, uri, {
+      sourceName: 'sol-menu',
+      apply: (result) => {
+        // The menu's declared ui:view drives this component's presentation:
+        // Toolbar adds the button bar's app-bar styling hook (same cascade as
+        // orientation — a mount that already set a class keeps its own
+        // presentation); Tree renders submenus as inline collapse/expand
+        // branches instead of dropdown popups.
+        this._view = result.view || null;
+        if (result.view === 'Toolbar' && !this.classList.contains('app-bar')) this.classList.add('app-bar');
+        this._items = this._wrapRdfItems(result.items);
+        this._renderNav();
+        this._autoSelectFirst();
+      },
+    });
   }
 
   // Wrap pure item descriptions from core/menu-rdf.js with the DOM-side
@@ -284,18 +379,27 @@ class SolMenu extends HTMLElement {
     };
     return descriptions.map(desc => {
       const rw = desc.requiresWrite;   // surfaced as part="requires-write"; app decides policy
+      const sig = tabSig(desc);        // change signature for applyItems' in-place merge
       if (desc.type === 'submenu') {
-        return { name: desc.name, requiresWrite: rw, children: this._wrapRdfItems(desc.children) };
+        // A strip submenu's pane is filled by its POPUP picks (never
+        // pre-rendered), so its own render is a no-op. `isSubmenu` +
+        // `children` also feed the phone sheet's accordion groups.
+        return { name: desc.name, id: desc.id, icon: desc.icon, sig, requiresWrite: rw,
+          isSubmenu: true, children: this._wrapRdfItems(desc.children), render: () => {} };
       }
       if (desc.type === 'component') {
         // A desc whose tag isn't a custom-element tag is a command:
         // clicking dispatches sol-command (no content mounted, not selectable).
         if (isCommandName(desc.tag)) {
-          return { name: desc.name, icon: desc.icon, requiresWrite: rw, command: desc.tag, params: paramsToObject(desc.params) };
+          // desc.id rides along so dispatchCommand's data-for routing can
+          // address the item's claimed region (dead without it).
+          return { name: desc.name, id: desc.id, icon: desc.icon, sig, requiresWrite: rw, command: desc.tag, params: paramsToObject(desc.params) };
         }
-        return { name: desc.name, icon: desc.icon, requiresWrite: rw, render: renderComponentItem(desc, ctx) };
+        return { name: desc.name, id: desc.id, icon: desc.icon, sig, type: desc.type, requiresWrite: rw, render: renderComponentItem(desc, ctx) };
       }
-      return { name: desc.name, icon: desc.icon, requiresWrite: rw, render: renderLinkItem(desc, ctx) };
+      // href rides along so the phone sheet can open an external link leaf
+      // without switching to an empty submenu pane.
+      return { name: desc.name, id: desc.id, icon: desc.icon, sig, type: desc.type, href: desc.href, requiresWrite: rw, render: renderLinkItem(desc, ctx) };
     });
   }
 
@@ -368,6 +472,13 @@ class SolMenu extends HTMLElement {
     return out;
   }
 
+  // The top-level item that owns `name` — the item itself, or the submenu
+  // whose subtree holds it (the strip button that should read active).
+  _topFor(name) {
+    return this._items.find(t => t.name === name
+      || (t.children && this._flatLeaves(t.children).some(c => c.name === name)));
+  }
+
   _firstLeaf(items) {
     for (const it of items) {
       if (it.children) {
@@ -407,7 +518,7 @@ class SolMenu extends HTMLElement {
   get body() { return this.querySelector(':scope > .sol-menu-content'); }
 
   _renderNav() {
-    const root = this.shadowRoot;
+    const root = this._root;
     const nav = root.querySelector('.sol-menu-nav');
     if (!nav) return;
     nav.innerHTML = '';
@@ -424,10 +535,49 @@ class SolMenu extends HTMLElement {
     // Roving tabindex: only the first focusable button is in tab order
     const allBtns = nav.querySelectorAll('button');
     allBtns.forEach((b, i) => b.setAttribute('tabindex', i === 0 ? '0' : '-1'));
+
+    // Touch/coarse-pointer devices: a keep-alive strip collapses into the
+    // phone navigator (trigger + bottom sheet, core/nav-sheet.js). Legacy
+    // menus (no keep-alive) keep their bar — their hosts own the phone story.
+    if (this._keepAlive) {
+      if (isCoarsePointer(this)) renderNavSheet(this, nav);
+      else removeSheet(this);
+    }
   }
 
-  _renderNavLevel(parent, items, depth) {
+  _renderNavLevel(parent, items, depth, topItem = null) {
     items.forEach(item => {
+      const top = depth === 0 ? item : topItem;
+      if (item.children && this._view === 'Tree') {
+        // ui:Tree: a submenu is an inline collapse/expand branch — the
+        // subtree opens in place (indented), never as a floating popup.
+        const wrap = document.createElement('div');
+        wrap.className = 'sol-menu-branch';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sol-menu-group-btn';
+        btn.textContent = item.name;
+        btn.setAttribute('role', 'menuitem');
+        btn.setAttribute('aria-expanded', item.open ? 'true' : 'false');
+        if (item.open) btn.classList.add('open');
+        if (item.id) btn.dataset.tabId = item.id;
+        if (item.requiresWrite) btn.setAttribute('part', 'item requires-write');
+        const sub = document.createElement('div');
+        sub.className = 'sol-menu-subtree';
+        sub.setAttribute('role', 'group');
+        sub.hidden = !item.open;
+        this._renderNavLevel(sub, item.children, depth + 1, top);
+        btn.onclick = () => {
+          const opening = sub.hidden;
+          sub.hidden = !opening;
+          btn.setAttribute('aria-expanded', String(opening));
+          btn.classList.toggle('open', opening);
+        };
+        wrap.appendChild(btn);
+        wrap.appendChild(sub);
+        parent.appendChild(wrap);
+        return;
+      }
       if (item.children) {
         const wrap = document.createElement('div');
         wrap.className = 'sol-menu-group';
@@ -438,12 +588,25 @@ class SolMenu extends HTMLElement {
         btn.setAttribute('role', 'menuitem');
         btn.setAttribute('aria-haspopup', 'menu');
         btn.setAttribute('aria-expanded', 'false');
+        if (item.id) btn.dataset.tabId = item.id;
         if (item.requiresWrite) btn.setAttribute('part', 'item requires-write');
         const popup = document.createElement('div');
         popup.className = 'sol-menu-popup';
         popup.setAttribute('role', 'menu');
         popup.setAttribute('aria-label', item.name);
-        this._renderNavLevel(popup, item.children, depth + 1);
+        this._renderNavLevel(popup, item.children, depth + 1, top);
+        if (depth === 0 && this._keepAlive) {
+          // The group head is a first-class strip button: select() toggles its
+          // active state, and the phone sheet's leaf picks duck-type a
+          // `.select(childName)` on it (the same contract a submenu launcher
+          // element offers).
+          this._btns[item.name] = btn;
+          btn.select = (childName) => {
+            const want = String(childName).toLowerCase();
+            const child = this._flatLeaves(item.children).find(c => c.name.toLowerCase() === want);
+            if (child) this._selectChild(item, child);
+          };
+        }
         btn.onclick = (e) => {
           e.stopPropagation();
           const wasOpen = wrap.classList.contains('open');
@@ -480,8 +643,13 @@ class SolMenu extends HTMLElement {
         } else {
           btn.textContent = item.name;
         }
+        if (item.id) btn.dataset.tabId = item.id;
         if (item.command) {
           btn.onclick = () => { dispatchCommand(this, item.command, item.params, { id: item.id || null }); this._closeAllPopups(); };
+        } else if (depth > 0 && top && this._keepAlive) {
+          // A popup leaf in a keep-alive strip mounts into its top-level
+          // submenu's pane rather than replacing the shared body.
+          btn.onclick = () => { this._selectChild(top, item); this._closeAllPopups(); };
         } else {
           btn.onclick = () => { this.select(item.name); this._closeAllPopups(); };
         }
@@ -512,32 +680,74 @@ class SolMenu extends HTMLElement {
   }
 
   _closeAllPopups() {
-    this.shadowRoot.querySelectorAll('.sol-menu-group.open').forEach(g => {
+    this._root.querySelectorAll('.sol-menu-group.open').forEach(g => {
       g.classList.remove('open');
       const b = g.querySelector(':scope > .sol-menu-group-btn');
       if (b) b.setAttribute('aria-expanded', 'false');
     });
   }
 
-  select(name) {
-    const item = this._flatLeaves(this._items).find(t => t.name.toLowerCase() === name.toLowerCase());
+  select(name, { silent = false } = {}) {
+    const lower = String(name).toLowerCase();
+    // Keep-alive strips select among TOP-LEVEL items (a submenu parent owns a
+    // pane of its own); otherwise selection means a leaf, wherever it nests.
+    const top = this._keepAlive
+      ? this._items.find(t => t.name.toLowerCase() === lower) : null;
+    const item = top
+      || this._flatLeaves(this._items).find(t => t.name.toLowerCase() === lower);
     if (!item) return;
     this._active = item.name;
-
-    if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
     this._setActiveButton(item.name);
 
-    const body = this.body;
-    body.innerHTML = '';
-    body.style.padding = ''; body.style.overflow = ''; body.style.height = '';
-    body.setAttribute('aria-label', `Content: ${item.name}`);
+    if (top) {
+      // No teardown: ensure this item's pane exists, then park the others.
+      this._ensurePane(item);
+      for (const t of this._items) if (t._pane) t._pane.hidden = (t !== item);
+      this.body.setAttribute('aria-label', `Content: ${item.name}`);
+    } else {
+      if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
+      const body = this.body;
+      body.innerHTML = '';
+      body.style.padding = ''; body.style.overflow = ''; body.style.height = '';
+      body.setAttribute('aria-label', `Content: ${item.name}`);
+      const cleanup = item.render(body);
+      if (typeof cleanup === 'function') this._cleanup = cleanup;
+    }
 
-    const cleanup = item.render(body);
-    if (typeof cleanup === 'function') this._cleanup = cleanup;
+    // Keep the phone navigator in step (see core/nav-sheet.js). A select of a
+    // top-level item clears any remembered submenu leaf; a leaf pick re-sets
+    // _navKey in _selectChild right after this runs.
+    if (this._navTrigger) {
+      this._navLabelOverride = null;
+      if (this._navItems?.some((i) => i.meta.kind === 'tab' && i.meta.name === item.name)) {
+        this._navKey = `t:${item.name}`;
+      } else if (!(this._navKey || '').startsWith(`c:${item.name}`)) {
+        this._navKey = null;
+      }
+      syncNav(this);
+    }
 
-    this.dispatchEvent(new CustomEvent('sol-menu-change', {
-      bubbles: true, composed: true, detail: { name: item.name },
-    }));
+    // `silent` = a programmatic refresh (applyItems re-asserting the SAME
+    // active item after a live update) — listeners must not mistake it for
+    // the user picking one.
+    if (!silent) {
+      this.dispatchEvent(new CustomEvent('sol-menu-change', {
+        bubbles: true, composed: true, detail: { name: item.name },
+      }));
+    }
+  }
+
+  // A popup leaf pick inside a keep-alive strip: surface the top-level
+  // submenu's pane, then mount the picked leaf into it. The render closure's
+  // region cascade falls back to the pane we pass, and component-mount's
+  // [data-menu-item] wrappers + pruneSiblings make repeated picks switch
+  // keep-alive within it.
+  _selectChild(top, child) {
+    this.select(top.name);
+    const pane = top._pane;
+    if (pane && typeof child.render === 'function') child.render(pane);
+    this._navKey = `c:${top.name}${child.name}`;
+    if (this._navTrigger) syncNav(this);
   }
 
   /**
@@ -574,8 +784,9 @@ class SolMenu extends HTMLElement {
   disconnectedCallback() {
     if (typeof this._cleanup === 'function') { this._cleanup(); this._cleanup = null; }
     if (this._onDocClick) { document.removeEventListener('click', this._onDocClick); this._onDocClick = null; }
-    if (this._onKeyDown) { this.shadowRoot.removeEventListener('keydown', this._onKeyDown); this._onKeyDown = null; }
+    if (this._onKeyDown) { this._root.removeEventListener('keydown', this._onKeyDown); this._onKeyDown = null; }
     if (this._onTabActivate) { document.removeEventListener('sol-tab-activate', this._onTabActivate); this._onTabActivate = null; }
+    removeSheet(this);   // the phone sheet lives on <body>, so detach it with the element
   }
 }
 

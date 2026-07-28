@@ -144,6 +144,11 @@ class SolDropdownButton extends SolMenu {
   // Context items (context-source=) append below a separator after the
   // standard items — see _renderNav below and _appendContextItems.
 
+  // Unlike light-DOM SolMenu, the dropdown keeps a shadow root: its trigger
+  // is themed from outside via ::part(trigger), and its popup must not be
+  // restyled by host-page menu CSS.
+  _createRoot() { return this.attachShadow({ mode: 'open' }); }
+
   _initShell() {
     // A dropdown is always a vertical list — pin it before _loadFromRdf can
     // copy ui:orientation (which defaults to horizontal and would trigger the
