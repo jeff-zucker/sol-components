@@ -91,11 +91,11 @@ class SolMenuManager extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     adopt(this.shadowRoot, { sheet: SHEET, css: CSS });
     this._items = [];        // the edited tree (parseMenuItems shape)
-    // orientation starts NULL and is set only from a ui:orientation triple in
-    // the loaded doc — a save must never inject an orientation the doc didn't
-    // declare (a flat menu that gains ui:Horizontal would reclassify as a
-    // button bar in sol-plugin-manager's slot discovery).
-    this._meta = { label: null, orientation: null, region: null, regionRef: null };
+    // orientation and view start NULL and are set only from ui:orientation /
+    // ui:view triples in the loaded doc — a save must never inject either one
+    // the doc didn't declare (a flat menu that gains ui:Horizontal would
+    // reclassify as a button bar in sol-plugin-manager's slot discovery).
+    this._meta = { label: null, orientation: null, view: null, region: null, regionRef: null };
     this._dirty = false;
   }
 
@@ -281,6 +281,8 @@ class SolMenuManager extends HTMLElement {
       this._meta.label = label ? label.value : (this.source.split('#')[1] || 'menu');
       const orient = store.any(menuNode, rdf.sym('http://www.w3.org/ns/ui#orientation'));
       if (orient) this._meta.orientation = orient.value.split('#').pop().toLowerCase();
+      const view = store.any(menuNode, rdf.sym('http://www.w3.org/ns/ui#view'));
+      if (view) this._meta.view = view.value.split('#').pop();
       // A ui:region KIND (ui:Modal, …) round-trips as a keyword; a TARGET region
       // NODE (e.g. shell:MenuPane) round-trips as a node REFERENCE, so its IRI is
       // preserved verbatim rather than flattened to a token — see emitMenu.
@@ -846,6 +848,7 @@ class SolMenuManager extends HTMLElement {
       catch { store = rdf.graph(); }
       updateMenuInStore(store, this._docUrl(), this._menuIri(), {
         label: this._meta.label, orientation: this._meta.orientation,
+        view: this._meta.view,
         region: this._meta.region, regionRef: this._meta.regionRef, items: this._items,
       });
       const turtle = await serializeMenuDocument(store, this._docUrl());

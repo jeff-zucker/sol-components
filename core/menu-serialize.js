@@ -2,7 +2,7 @@
 // plain item descriptions back into a complete Turtle document.
 //
 // Contract (mirrors parseMenuItems exactly):
-//   { type: 'submenu',   id, name, children: [...] }
+//   { type: 'submenu',   id, name, view, children: [...] }
 //   { type: 'component', id, name, icon, region, requiresWrite, tag, params }
 //   { type: 'link',      id, name, icon, region, requiresWrite, href, contents }
 // `region` is the lowercase ui:Region token (e.g. "modal"), written as
@@ -141,7 +141,8 @@ function emitItem(store, docUrl, doc, item, taken) {
 
   if (item.type === 'submenu') {
     emitMenu(store, docUrl, doc, node, {
-      label: item.name, items: item.children, requiresWrite: item.requiresWrite, comment: item.comment,
+      label: item.name, items: item.children, requiresWrite: item.requiresWrite,
+      comment: item.comment, view: item.view,
     }, taken);
     return node;
   }
@@ -205,7 +206,7 @@ function emitItem(store, docUrl, doc, item, taken) {
   return node;
 }
 
-function emitMenu(store, docUrl, doc, menuNode, { label, orientation, region, regionRef, items, requiresWrite, comment }, taken) {
+function emitMenu(store, docUrl, doc, menuNode, { label, orientation, view, region, regionRef, items, requiresWrite, comment }, taken) {
   store.add(menuNode, a, ui('Menu'), doc);
   if (label != null) store.add(menuNode, ui('label'), rdf.literal(String(label)), doc);
   if (comment) store.add(menuNode, rdfs('comment'), rdf.literal(String(comment)), doc);
@@ -213,6 +214,9 @@ function emitMenu(store, docUrl, doc, menuNode, { label, orientation, region, re
     const local = orientation[0].toUpperCase() + orientation.slice(1).toLowerCase();
     store.add(menuNode, ui('orientation'), ui(local), doc);
   }
+  // The menu's view (ui:view, a ui:View subclass) round-trips like
+  // orientation: written only when the tree carries one, never invented.
+  if (view) store.add(menuNode, ui('view'), ui(String(view)), doc);
   // Menu-level default placement (ui:region on the MENU) round-trips like
   // orientation; members that inherit it carry no region of their own. A TARGET
   // region is a NODE reference (regionRef, e.g. shell:MenuPane) — the menu→region
@@ -253,7 +257,7 @@ function emitMenu(store, docUrl, doc, menuNode, { label, orientation, region, re
  * @param store rdflib store holding the parsed original document
  * @param docUrl the document URL (graph name)
  * @param menuIri full IRI of the menu root (e.g. `${docUrl}#Tabs`)
- * @param menu   { label, orientation, region, items }
+ * @param menu   { label, orientation, view, region, items }
  */
 export function updateMenuInStore(store, docUrl, menuIri, menu) {
   const doc = rdf.sym(docUrl.split('#')[0]);

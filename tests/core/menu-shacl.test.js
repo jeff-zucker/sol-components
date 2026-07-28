@@ -12,8 +12,8 @@
  *   - a free-standing ui:Component without ui:label conforms (labels are only
  *     required in menu context)
  *   - a ui:Link with neither schema:url nor ui:contents fails (the sh:xone)
- *   - the three menu VARIANTS, which carry no sh:targetClass and are reached
- *     by name: what each admits as members
+ *   - the five menu VARIANTS (one per menu-capable ui:view), which carry no
+ *     sh:targetClass and are reached by name: what each admits as members
  */
 
 import { readFileSync } from 'node:fs';
@@ -152,6 +152,7 @@ test("a Component's schema:url must be an IRI with a tag-shaped filename", async
 
 // The menu variants have no sh:targetClass — they are named contracts, applied
 // to a chosen node. Binding one with sh:targetNode is how a validator aims it.
+// Each pairs a ui:view with the membership rule it implies.
 const SHAPES_BASE = 'http://menu-shacl.test/shapes';
 const uiShaclText = readFileSync(join(root, 'shapes', 'ui.shacl'), 'utf8');
 
@@ -165,15 +166,18 @@ async function validateAs(shapeName, focus, dataText) {
 
 const FOCUS = 'http://menu-shacl.test/doc#Menu';
 
-const flatMenu = `
-<#Menu> a ui:Menu ; ui:label "m" ;
+// A ui:view triple on the head when `view` is given; view-less otherwise.
+const head = (view) => `<#Menu> a ui:Menu ; ui:label "m" ;${view ? ` ui:view ui:${view} ;` : ''}`;
+
+const flatMenu = (view) => `
+${head(view)}
   schema:itemListElement <#A>, <#B> .
 <#A> a ui:Link ; ui:label "A" ; schema:url "https://a.example/" .
 <#B> a ui:Link ; ui:label "B" ; schema:url "https://b.example/" .
 `;
 
-const menuWithSubmenu = `
-<#Menu> a ui:Menu ; ui:label "m" ;
+const menuWithSubmenu = (view) => `
+${head(view)}
   schema:itemListElement <#A>, <#Sub> .
 <#A> a ui:Link ; ui:label "A" ; schema:url "https://a.example/" .
 <#Sub> a ui:Menu ; ui:label "More" ;
@@ -181,43 +185,63 @@ const menuWithSubmenu = `
 <#C> a ui:Link ; ui:label "C" ; schema:url "https://c.example/" .
 `;
 
-const oneSubmenu = `
-<#Menu> a ui:Menu ; ui:label "☰" ;
+const oneSubmenu = (view) => `
+${head(view)}
   schema:itemListElement <#Sub> .
 <#Sub> a ui:Menu ; ui:label "More" ;
   schema:itemListElement <#C> .
 <#C> a ui:Link ; ui:label "C" ; schema:url "https://c.example/" .
 `;
 
-test('a tabbed menu takes many items, submenus among them', async () => {
-  expect((await validateAs('TabbedMenuShape', FOCUS, flatMenu)).conforms).toBe(true);
-  expect((await validateAs('TabbedMenuShape', FOCUS, menuWithSubmenu)).conforms).toBe(true);
+test('a menubar takes many items, submenus among them; a tree nests the same way', async () => {
+  expect((await validateAs('MenubarMenuShape', FOCUS, flatMenu('Menubar'))).conforms).toBe(true);
+  expect((await validateAs('MenubarMenuShape', FOCUS, menuWithSubmenu('Menubar'))).conforms).toBe(true);
+  expect((await validateAs('TreeMenuShape', FOCUS, flatMenu('Tree'))).conforms).toBe(true);
+  expect((await validateAs('TreeMenuShape', FOCUS, menuWithSubmenu('Tree'))).conforms).toBe(true);
 });
 
-test('a tabbed menu needs at least one item', async () => {
-  const report = await validateAs('TabbedMenuShape', FOCUS, `<#Menu> a ui:Menu ; ui:label "m" .`);
-  expect(report.conforms).toBe(false);
+test('a tablist needs at least one item and refuses a submenu (tabs are flat)', async () => {
+  expect((await validateAs('TablistMenuShape', FOCUS, flatMenu('Tablist'))).conforms).toBe(true);
+  expect((await validateAs('TablistMenuShape', FOCUS,
+    `<#Menu> a ui:Menu ; ui:label "m" ; ui:view ui:Tablist .`)).conforms).toBe(false);
+  expect((await validateAs('TablistMenuShape', FOCUS, menuWithSubmenu('Tablist'))).conforms).toBe(false);
 });
 
-test('a button menu is one item, and that item is a submenu', async () => {
-  expect((await validateAs('ButtonMenuShape', FOCUS, oneSubmenu)).conforms).toBe(true);
+test('a menu button is one item, and that item is a submenu', async () => {
+  expect((await validateAs('MenuButtonMenuShape', FOCUS, oneSubmenu('MenuButton'))).conforms).toBe(true);
   // two items — a button drops one list
-  expect((await validateAs('ButtonMenuShape', FOCUS, menuWithSubmenu)).conforms).toBe(false);
+  expect((await validateAs('MenuButtonMenuShape', FOCUS, menuWithSubmenu('MenuButton'))).conforms).toBe(false);
   // one item, but not a submenu
-  expect((await validateAs('ButtonMenuShape', FOCUS, `
-<#Menu> a ui:Menu ; ui:label "☰" ; schema:itemListElement <#A> .
+  expect((await validateAs('MenuButtonMenuShape', FOCUS, `
+<#Menu> a ui:Menu ; ui:label "☰" ; ui:view ui:MenuButton ; schema:itemListElement <#A> .
 <#A> a ui:Link ; ui:label "A" ; schema:url "https://a.example/" .
 `)).conforms).toBe(false);
 });
 
-test('a button bar takes many items but refuses a submenu', async () => {
-  expect((await validateAs('ButtonBarShape', FOCUS, flatMenu)).conforms).toBe(true);
-  expect((await validateAs('ButtonBarShape', FOCUS, menuWithSubmenu)).conforms).toBe(false);
-  expect((await validateAs('ButtonBarShape', FOCUS, oneSubmenu)).conforms).toBe(false);
+test('a toolbar takes many items but refuses a submenu', async () => {
+  expect((await validateAs('ToolbarMenuShape', FOCUS, flatMenu('Toolbar'))).conforms).toBe(true);
+  expect((await validateAs('ToolbarMenuShape', FOCUS, menuWithSubmenu('Toolbar'))).conforms).toBe(false);
+  expect((await validateAs('ToolbarMenuShape', FOCUS, oneSubmenu('Toolbar'))).conforms).toBe(false);
+});
+
+
+test('a view-less menu fails a variant shape (each asserts its ui:view)', async () => {
+  expect((await validateAs('TablistMenuShape', FOCUS, flatMenu(null))).conforms).toBe(false);
+});
+
+test('a ui:view outside the menu-capable set fails MenuShape', async () => {
+  expect((await validate(flatMenu('Carousel'))).conforms).toBe(false);
+  expect((await validate(flatMenu('Accordion'))).conforms).toBe(false);
 });
 
 test('the variants leave plain ui:Menu data alone (no targetClass)', async () => {
-  // the same submenu-bearing menu conforms when nothing aims a variant at it
-  const report = await validate(menuWithSubmenu);
+  // the same submenu-bearing, view-less menu conforms when nothing aims a
+  // variant at it
+  const report = await validate(menuWithSubmenu(null));
+  expect(report.conforms).toBe(true);
+});
+
+test('a declared menu-capable ui:view conforms to MenuShape', async () => {
+  const report = await validate(flatMenu('Toolbar'));
   expect(report.conforms).toBe(true);
 });

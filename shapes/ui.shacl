@@ -37,6 +37,13 @@
     sh:description "ui:Horizontal or ui:Vertical menu layout" ;
   ] ;
   sh:property [
+    sh:path ui:view ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The view the menu is presented as — a menu-capable kind of ui:View, e.g. ui:Tablist." ;
+  ] ;
+  sh:property [
     sh:path ui:region ;
     sh:maxCount 1 ;
     sh:or (
@@ -44,7 +51,7 @@
       [ sh:class ui:Layout ]
       [ sh:datatype xsd:string ]
     ) ;
-    sh:name "region" ;
+    sh:name "shown in" ;
     sh:description "Default placement for items that carry no region of their own: a ui:Region KIND (ui:Modal etc.), OR a TARGET region NODE the menu binds to (e.g. a ui:Layout region — the renderer derives its element from the node's own id), OR a legacy target-selector string." ;
   ] .
 
@@ -251,12 +258,20 @@
   ] .
 
 # ── menu variants ─────────────────────────────────────────────────────────
-# Three kinds of menu, told apart by what their membership admits. Each is a
-# ui:Menu and carries a menu's head fields; only the membership rule differs.
+# One shape per menu-capable ui:view. Each is a ui:Menu and carries a menu's
+# head fields; the shape pairs the view with the membership rule it implies.
 
-:TabbedMenuShape
+:MenubarMenuShape
   a sh:NodeShape ;
   sh:node :MenuShape ;
+  sh:property [
+    sh:path ui:view ;
+    sh:hasValue ui:Menubar ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The menu's view: ui:Menubar." ;
+  ] ;
   sh:property [
     sh:path schema:itemListElement ;
     sh:minCount 1 ;
@@ -266,12 +281,20 @@
       [ sh:node :UnorderedItemShape ]
     ) ;
     sh:name "menu items" ;
-    sh:description "The items of a tabbed menu. Any item may itself be a menu, which nests as a submenu." ;
+    sh:description "The items of a menubar. Any item may itself be a menu, which nests as a submenu." ;
   ] .
 
-:ButtonMenuShape
+:MenuButtonMenuShape
   a sh:NodeShape ;
   sh:node :MenuShape ;
+  sh:property [
+    sh:path ui:view ;
+    sh:hasValue ui:MenuButton ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The menu's view: ui:MenuButton." ;
+  ] ;
   sh:property [
     sh:path schema:itemListElement ;
     sh:minCount 1 ;
@@ -282,12 +305,20 @@
       [ sh:node :SubmenuMemberShape ]
     ) ;
     sh:name "menu item" ;
-    sh:description "The one item of a button menu: a menu, whose own items are what the button drops." ;
+    sh:description "The one item of a menu button: a menu, whose own items are what the button drops." ;
   ] .
 
-:ButtonBarShape
+:TablistMenuShape
   a sh:NodeShape ;
   sh:node :MenuShape ;
+  sh:property [
+    sh:path ui:view ;
+    sh:hasValue ui:Tablist ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The menu's view: ui:Tablist." ;
+  ] ;
   sh:property [
     sh:path schema:itemListElement ;
     sh:minCount 1 ;
@@ -297,7 +328,53 @@
       [ sh:node :FlatMemberShape ]
     ) ;
     sh:name "menu items" ;
-    sh:description "The items of a button bar, each one a button. No item is itself a menu — a bar has no second level." ;
+    sh:description "The items of a tablist, one per tab. No item is itself a menu — tabs do not nest." ;
+  ] .
+
+:TreeMenuShape
+  a sh:NodeShape ;
+  sh:node :MenuShape ;
+  sh:property [
+    sh:path ui:view ;
+    sh:hasValue ui:Tree ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The menu's view: ui:Tree." ;
+  ] ;
+  sh:property [
+    sh:path schema:itemListElement ;
+    sh:minCount 1 ;
+    sh:nodeKind sh:IRI ;
+    sh:or (
+      [ sh:node :OrderedItemShape ]
+      [ sh:node :UnorderedItemShape ]
+    ) ;
+    sh:name "menu items" ;
+    sh:description "The items of a tree. Any item may itself be a menu, which nests as a branch." ;
+  ] .
+
+:ToolbarMenuShape
+  a sh:NodeShape ;
+  sh:node :MenuShape ;
+  sh:property [
+    sh:path ui:view ;
+    sh:hasValue ui:Toolbar ;
+    sh:maxCount 1 ;
+    sh:in ( ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar ) ;
+    sh:name "shown as" ;
+    sh:description "The menu's view: ui:Toolbar." ;
+  ] ;
+  sh:property [
+    sh:path schema:itemListElement ;
+    sh:minCount 1 ;
+    sh:nodeKind sh:IRI ;
+    sh:or (
+      [ sh:node :OrderedFlatItemShape ]
+      [ sh:node :FlatMemberShape ]
+    ) ;
+    sh:name "menu items" ;
+    sh:description "The items of a toolbar, each one a button. No item is itself a menu — a toolbar has no second level." ;
   ] .
 
 # A member that is NOT a menu: the leaf kinds a flat menu holds.

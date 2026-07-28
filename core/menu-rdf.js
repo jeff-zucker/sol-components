@@ -163,6 +163,26 @@ function orientationToken(v) {
   return local.toLowerCase();
 }
 
+// Normalize a ui:view value to the view's local name (ui:Tablist → "Tablist").
+// The value is a menu-capable ui:View subclass; anything else passes through
+// as its local name for the consumer to reject.
+export function viewToken(v) {
+  if (!v) return null;
+  return v.includes('#') ? v.slice(v.indexOf('#') + 1) : v;
+}
+
+// The mount a menu-capable ui:view resolves to — the one view→HTML mapping,
+// shared by the page generator and the app builder. Every menu-capable view
+// has a renderer; sol-menu reads the doc's ui:view itself to pick its
+// presentation (bar styling for Toolbar, inline branches for Tree).
+export const MENU_VIEW_MOUNTS = {
+  Menubar:    { tag: 'sol-menu' },
+  MenuButton: { tag: 'sol-dropdown-button' },
+  Tablist:    { tag: 'sol-tabs' },
+  Toolbar:    { tag: 'sol-menu', class: 'app-bar' },
+  Tree:       { tag: 'sol-menu' },
+};
+
 // Normalize a ui:region OBJECT to the lowercase token the HTML `region=`
 // attribute uses. region is the ONE display property carried in RDF: it is the
 // stored form of placement. At render time placement is still resolved from HTML
@@ -240,7 +260,9 @@ export function parseMenuItems(store, menuNode, inheritedRegion = null) {
     const requiresWrite = requiresWriteMode(store, part);
 
     if (isA('Menu')) {
-      items.push({ type: 'submenu', id, name: label, comment, requiresWrite, children: parseMenuItems(store, part, menuRegion) });
+      items.push({ type: 'submenu', id, name: label, comment, requiresWrite,
+        view: viewToken(rdfVal(store, part, 'view')),
+        children: parseMenuItems(store, part, menuRegion) });
       continue;
     }
 
@@ -441,8 +463,9 @@ export async function loadReferencedDocs(store, rootDocUrl, fetchFn = null) {
  * locate the menu root (by fragment or by ui:Menu type), pull in any docs
  * its members reference (ui:Plugin entries), and parse it.
  *
- * @returns {Promise<null | { items, orientation }>}
- *   `null` if no ui:Menu is found in the document.
+ * @returns {Promise<null | { items, orientation, view }>}
+ *   `null` if no ui:Menu is found in the document. `view` is the menu's
+ *   ui:view local name (e.g. "Tablist"), or null when the menu declares none.
  */
 export async function loadMenuFromUri(uri, baseUri = null) {
   let docUrl, fragment;
@@ -470,6 +493,7 @@ export async function loadMenuFromUri(uri, baseUri = null) {
   await loadReferencedDocs(store, docUrl);
 
   const orientation = orientationToken(rdfVal(store, root, 'orientation')) || 'horizontal';
+  const view        = viewToken(rdfVal(store, root, 'view'));
   const items       = parseMenuItems(store, root);
-  return { items, orientation };
+  return { items, orientation, view };
 }

@@ -222,6 +222,48 @@ test('seedAppMenu emits a parseable newborn menu doc', () => {
   // a newborn menu has NO membership triples yet — members arrive as
   // positioned wrappers when the managers add them
   expect(g.any(menu, rdf.sym('http://schema.org/itemListElement'))).toBeFalsy();
+  // no view given → none written; a view given → the ui:view triple
+  expect(g.any(menu, rdf.sym(`${UI}view`))).toBeFalsy();
+  const viewed = parseInto(seedAppMenu({ label: 'Tabs', fragment: 'Tabs', view: 'Tablist' }),
+    'http://layout.test/app-menu.ttl');
+  expect(viewed.any(rdf.sym('http://layout.test/app-menu.ttl#Tabs'), rdf.sym(`${UI}view`)).value)
+    .toBe(`${UI}Tablist`);
+});
+
+// A bare ui:Menu layout member: its declared ui:view picks the mounted
+// element; a view-less menu still falls back to the region-role inference;
+// a view with no menu renderer warns and falls back the same way.
+test('a menu member mounts by its ui:view, with role inference as fallback', () => {
+  const VIEWED = `
+:Layout a ui:Layout ; ui:label "App" ; xhv:role "document" ;
+  schema:itemListElement :Layout-Nav, :Layout-Main .
+:Nav a ui:Layout ; ui:label "Nav" ; xhv:role "navigation" ;
+  schema:itemListElement :Nav-bar .
+:BarMenu a ui:Menu ; ui:label "Bar" ; ui:view ui:Toolbar .
+:Main a ui:Layout ; ui:label "Content" ; xhv:role "main" ;
+  schema:itemListElement :Main-plain, :Main-deep, :Main-tree .
+:PlainMenu a ui:Menu ; ui:label "Plain" .
+:DeepMenu a ui:Menu ; ui:label "Deep" ; ui:view ui:Accordion .
+:TreeMenu2 a ui:Menu ; ui:label "T" ; ui:view ui:Tree .
+:Layout-Nav a schema:ListItem; schema:item :Nav; schema:position 1.
+:Layout-Main a schema:ListItem; schema:item :Main; schema:position 2.
+:Nav-bar a schema:ListItem; schema:item :BarMenu; schema:position 1.
+:Main-plain a schema:ListItem; schema:item :PlainMenu; schema:position 1.
+:Main-deep a schema:ListItem; schema:item :DeepMenu; schema:position 2.
+:Main-tree a schema:ListItem; schema:item :TreeMenu2; schema:position 3.
+`;
+  const { store, layoutNode } = loadTtl(VIEWED);
+  const warnings = [];
+  const html = generateAppHtml({ store, layoutNode, warn: (m) => warnings.push(m) });
+  // ui:Toolbar in a navigation region would have inferred sol-menu anyway —
+  // the view adds the bar's class; a view-less menu in main keeps sol-tabs
+  expect(html).toMatch(/<sol-menu class="app-bar" from-rdf="#BarMenu"><\/sol-menu>/);
+  expect(html).toMatch(/<sol-tabs from-rdf="#PlainMenu"><\/sol-tabs>/);
+  // ui:Tree mounts sol-menu (the doc's own ui:view drives its presentation)
+  expect(html).toMatch(/<sol-menu from-rdf="#TreeMenu2"><\/sol-menu>/);
+  // a view with no menu renderer (ui:Accordion): warned, then role fallback
+  expect(html).toMatch(/<sol-tabs from-rdf="#DeepMenu"><\/sol-tabs>/);
+  expect(warnings.some((m) => m.includes('ui:Accordion'))).toBe(true);
 });
 
 // generateLayoutBody — the body FRAGMENT (no <head>/<body>) a host splices into

@@ -125,6 +125,63 @@ ui:proxy a rdf:Property ;
   rdfs:comment "URL prefix that wraps a target URL for CORS proxying; the target is URI-encoded onto the end." ;
   rdfs:range   xsd:string .
 
+##############
+# VIEW TERMS #
+##############
+
+ui:View a rdfs:Class ; rdfs:label "View" ;
+  rdfs:comment "A way of presenting a collection of items." .
+
+ui:view a rdf:Property ;
+  rdfs:label   "view" ;
+  rdfs:comment "The view an element is presented as: a subclass of ui:View (e.g. ui:Tablist), or an instance of one carrying its own properties." .
+
+# menu-capable views
+
+ui:Menubar a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Menubar" ;
+  rdfs:comment "A bar of top-level choices; a choice with a submenu opens it below the bar, or beside it when the bar is vertical." .
+
+ui:MenuButton a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Menu button" ;
+  rdfs:comment "A single button that opens its choices in a temporary panel." .
+
+ui:Tablist a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Tablist" ;
+  rdfs:comment "A set of tabs, one per choice, with the selected tab distinguished; choices do not nest." .
+
+ui:Tree a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Tree" ;
+  rdfs:comment "A collapsible tree whose submenus expand and collapse in place." .
+
+ui:Toolbar a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Toolbar" ;
+  rdfs:comment "A flat set of buttons or links with the selected one distinguished; choices do not nest." .
+
+ui:Accordion a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Accordion" ;
+  rdfs:comment "A stack of sections, one per top-level choice, each expanding in place to reveal its items." .
+
+ui:Select a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Select" ;
+  rdfs:comment "A select control of top-level choices; the chosen section's items appear in an attached panel." .
+
+ui:Breadcrumb a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Breadcrumb" ;
+  rdfs:comment "A trail of links from an origin to the current item." .
+
+# collection views
+
+ui:Table a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Table" ;
+  rdfs:comment "A table of rows and columns." .
+
+ui:List a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "List" ;
+  rdfs:comment "A plain vertical list." .
+
+ui:DefinitionList a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Definition list" ;
+  rdfs:comment "Term and description pairs." .
+
+ui:Carousel a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Carousel" ;
+  rdfs:comment "One item shown at a time, moved through in sequence." .
+
+ui:Combobox a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Combobox" ;
+  rdfs:comment "A type-ahead text box choosing among matching items." .
+
+ui:Feed a rdfs:Class ; rdfs:subClassOf ui:View ; rdfs:label "Feed" ;
+  rdfs:comment "A scrolling stream of entries." .
+
 ################
 # LAYOUT TERMS #
 ################

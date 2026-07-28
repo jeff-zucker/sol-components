@@ -168,3 +168,33 @@ test('a KIND region still round-trips as ui:<Kind> when no regionRef is given', 
   const region = store.any(sym(DOC + '#More'), sym(UI_NS + 'region'));
   expect(region.value).toBe(UI_NS + 'Modal');
 });
+
+// ui:view — the menu's declared presentation view (a ui:View subclass, e.g.
+// ui:Tablist) — round-trips like orientation: parsed to its local name,
+// written back as ui:<View>, and never invented for a view-less menu.
+test('a submenu ui:view parses to its local name', () => {
+  const store = storeFrom(`${PREFIXES}
+:Menu a ui:Menu ; ui:label "M" ; schema:itemListElement :Sub .
+:Sub a ui:Menu ; ui:label "Sub" ; ui:view ui:Tree ; schema:itemListElement :A .
+:A a ui:Link ; ui:label "A" ; schema:url "https://a.example/" .
+`);
+  const [sub] = parseMenuItems(store, sym(BASE + '#Menu'));
+  expect(sub.view).toBe('Tree');
+});
+
+test('a menu view serializes as ui:<View>; a view-less menu stays view-less', () => {
+  const DOC = 'http://region.test/menu.ttl';
+  const store = graph();
+  updateMenuInStore(store, DOC, DOC + '#Tabs', {
+    label: 'Tabs', view: 'Tablist',
+    items: [{ type: 'link', id: 'A', name: 'A', href: 'https://a.example/' }],
+  });
+  expect(store.any(sym(DOC + '#Tabs'), sym(UI_NS + 'view')).value).toBe(UI_NS + 'Tablist');
+
+  const bare = graph();
+  updateMenuInStore(bare, DOC, DOC + '#Plain', {
+    label: 'Plain',
+    items: [{ type: 'link', id: 'A', name: 'A', href: 'https://a.example/' }],
+  });
+  expect(bare.any(sym(DOC + '#Plain'), sym(UI_NS + 'view'))).toBeFalsy();
+});

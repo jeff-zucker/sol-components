@@ -60,7 +60,7 @@ import { solFetch } from '../core/auth-fetch.js';
 import { fetchContainer, deleteFolder } from '../core/pod-ops.js';
 import { resolveEditorSpec, buildEditorElement } from '../core/editor.js';
 import {
-  parseLayoutTree, generateAppHtml, generateAppCss, seedAppMenu,
+  parseLayoutTree, generateAppHtml, generateAppCss, seedAppMenu, deriveTagFromModule,
 } from '../core/layout-generate.js';
 import {
   serializeLayout, addLeaf, addLink, removeLeaf, moveNode, removeRegion, insertPart,
@@ -124,6 +124,28 @@ const TABS = [
   { key: 'customize', label: 'Customize' },
   { key: 'preview', label: 'Preview' },
 ];
+
+// One entry per menu-capable ui:view with a renderer: the Add-Features chip,
+// the component leaf it mounts (pre/post params around the from-rdf), the
+// seeded menu head, and the surface that edits it. The menu doc's ui:view
+// triple is the source of truth; everything here derives from it.
+const MENU_VIEWS = {
+  Menubar: { label: 'Menubar', icon: '🗂', frag: 'Menubar', file: 'sol-menu.js',
+    pre: [], post: [], orientation: 'Horizontal',
+    manager: 'sol-menu-manager', shape: 'MenubarMenuShape' },
+  MenuButton: { label: 'Button Menu', icon: '☰', frag: 'Menu', file: 'sol-dropdown-button.js',
+    pre: [['label', '☰']], post: [], orientation: 'Vertical',
+    manager: 'sol-menu-manager', shape: 'MenuButtonMenuShape' },
+  Tablist: { label: 'Tabbed Menu', icon: '🗂', frag: 'Tabs', file: 'sol-tabs.js',
+    pre: [['keep-alive', '']], post: [], orientation: 'Horizontal',
+    manager: 'sol-menu-manager', shape: 'TablistMenuShape' },
+  Toolbar: { label: 'Button bar', icon: '🔘', frag: 'Bar', file: 'sol-menu.js',
+    pre: [], post: [['class', 'app-bar']], orientation: 'Horizontal',
+    manager: 'sol-button-bar-manager', shape: 'ToolbarMenuShape' },
+  Tree: { label: 'Tree Menu', icon: '🌳', frag: 'Tree', file: 'sol-menu.js',
+    pre: [], post: [], orientation: 'Vertical',
+    manager: 'sol-menu-manager', shape: 'TreeMenuShape' },
+};
 
 // A content item is a ui:Link naming an html file (the site title, the footer,
 // any Content the owner added) — the app's own text, not a foreign page.
@@ -228,6 +250,7 @@ const HAMBURGER_MENU_TTL = `@prefix : <#> .
 # The app's ☰ menu — edit via the builder (or any sol-menu-manager).
 :MainHamburgerMenu a ui:Menu ;
   ui:label "☰" ;
+  ui:view ui:MenuButton ;
   ui:orientation ui:Vertical ;
   schema:itemListElement :Ham-Theme, :Ham-Text-size .
 
@@ -251,6 +274,7 @@ const BUTTON_BAR_TTL = `@prefix : <#> .
 # The app's button bar — edit via the builder (or any sol-button-bar-manager).
 :MainButtonBar a ui:Menu ;
   ui:label "Button bar" ;
+  ui:view ui:Toolbar ;
   ui:orientation ui:Horizontal ;
   schema:itemListElement :Bar-Help .
 
@@ -759,7 +783,8 @@ class SolAppBuilder extends HTMLElement {
   async _seedComposedDocs(layoutUrl, cfg) {
     const menuDoc = new URL('app-menu.ttl', layoutUrl).href;
     await this._ensureMenuFragment(menuDoc, 'MainMenu',
-      seedAppMenu({ label: 'Main menu', fragment: 'MainMenu', orientation: menuOrientationFor(cfg.menuLocation) }));
+      seedAppMenu({ label: 'Main menu', fragment: 'MainMenu',
+        orientation: menuOrientationFor(cfg.menuLocation), view: 'Menubar' }));
     if (cfg.buttonBar !== 'none') {
       await this._ensureMenuFragment(menuDoc, 'MainButtonBar', BUTTON_BAR_TTL);
       await this._seedIfAbsent(new URL('help.html', layoutUrl).href, STARTER_HELP, 'text/html');
@@ -1151,9 +1176,11 @@ class SolAppBuilder extends HTMLElement {
       : (part.item.name || part.item.tag || 'Item');
   }
 
-  // Every menu label the layout's from-rdf leaves name, read once per document.
+  // Every menu label — and declared ui:view — the layout's from-rdf leaves
+  // name, read once per document.
   async _loadMenuLabels(tree) {
     this._menuLabels = new Map();
+    this._menuViews = new Map();
     const sources = new Set();
     (function walk(n) {
       if (!n) return;
@@ -1172,6 +1199,8 @@ class SolAppBuilder extends HTMLElement {
       const store = docs.get(doc);
       const label = store && store.any(rdf.sym(abs), rdf.sym(UI + 'label'));
       if (label && label.value) this._menuLabels.set(abs, label.value);
+      const view = store && store.any(rdf.sym(abs), rdf.sym(UI + 'view'));
+      if (view && view.value) this._menuViews.set(abs, view.value.split('#').pop());
     }
   }
 
@@ -1180,6 +1209,9 @@ class SolAppBuilder extends HTMLElement {
   // its glyph) and what a removed element is remembered by.
   _chipIcon(part) {
     if (part.kind === 'link') return '🔗';
+    const menu = this._menuOf(part);
+    if (menu && menu.view && MENU_VIEWS[menu.view]) return MENU_VIEWS[menu.view].icon;
+    // View-less menu: the legacy mount sniff.
     const tag = part.item.tag;
     const cls = new Map(part.item.params || []).get('class') || '';
     if (tag === 'sol-dropdown-button') return '☰';   // the Button (hamburger) menu
@@ -1209,9 +1241,8 @@ class SolAppBuilder extends HTMLElement {
       : '';
     const removed = (this._removed || [])
       .map((r) => feat({ op: 'restore', id: r.id, restore: r.restore }, r.label)).join('');
-    box.innerHTML = feat({ op: 'menu' }, 'Button Menu')
-      + feat({ op: 'bar' }, 'Button bar')
-      + feat({ op: 'tabs' }, 'Tabbed Menu')
+    box.innerHTML = Object.entries(MENU_VIEWS)
+      .map(([view, spec]) => feat({ op: 'menu-view', view }, spec.label)).join('')
       + missingAreas + removed;
     this._renderContentList();
   }
@@ -1257,24 +1288,19 @@ class SolAppBuilder extends HTMLElement {
       await this._saveLayout();
       await this._seedIfAbsent(new URL(spec.file, this._layoutUrl).href,
         starterFor(spec.file), 'text/html');
-    } else if (payload.op === 'menu' || payload.op === 'bar' || payload.op === 'tabs') {
-      const base = payload.op === 'tabs' ? 'Tabs' : payload.op === 'bar' ? 'Bar' : 'Menu';
-      const frag = await this._mintMenuFragment(base);
-      let item;
-      if (payload.op === 'menu') {           // a Button Menu is a ☰ dropdown
-        item = { label: 'Button Menu', module: mod('sol-dropdown-button.js'),
-          params: [['label', '☰'], ['from-rdf', `app-menu.ttl#${frag}`]] };
-      } else if (payload.op === 'bar') {
-        item = { label: 'Button bar', module: mod('sol-menu.js'),
-          params: [['from-rdf', `app-menu.ttl#${frag}`], ['class', 'app-bar']] };
-      } else {
-        item = { label: 'Tabbed Menu', module: mod('sol-tabs.js'),
-          params: [['keep-alive', ''], ['from-rdf', `app-menu.ttl#${frag}`]] };
-      }
+    } else if (payload.op === 'menu-view' || payload.op === 'menu' || payload.op === 'bar' || payload.op === 'tabs') {
+      // Legacy op spellings map to their views (menu = the ☰ Button Menu).
+      const view = payload.view
+        || (payload.op === 'menu' ? 'MenuButton' : payload.op === 'bar' ? 'Toolbar' : 'Tablist');
+      const spec = MENU_VIEWS[view];
+      if (!spec) return;
+      const frag = await this._mintMenuFragment(spec.frag);
+      const item = { label: spec.label, module: mod(spec.file),
+        params: [...spec.pre, ['from-rdf', `app-menu.ttl#${frag}`], ...spec.post] };
       addLeaf(this._tree, regionIri, item, this._layoutUrl);
       await this._saveLayout();
       await this._ensureMenuFragment(new URL('app-menu.ttl', this._layoutUrl).href, frag,
-        seedAppMenu({ label: frag, fragment: frag, orientation: payload.op === 'menu' ? 'Vertical' : 'Horizontal' }));
+        seedAppMenu({ label: frag, fragment: frag, orientation: spec.orientation, view }));
     } else if (payload.op === 'restore') {
       const rd = payload.restore || {};
       if (rd.type === 'link') addLink(this._tree, regionIri, { label: rd.label, url: rd.url }, this._layoutUrl);
@@ -1415,6 +1441,20 @@ class SolAppBuilder extends HTMLElement {
     form.addEventListener('sol-form-change', resync);
     host.appendChild(form);
     return form;
+  }
+
+  // The drag-drop manager under a menu form owns the menu's items; the form's
+  // own "menu items" field would double that surface, so this app removes the
+  // field from the rendered form — on every (re)render, since the form
+  // rebuilds its fields after loads and saves. sol-form itself stays generic.
+  _stripFormField(form, key) {
+    if (!form) return;
+    const root = () => form.shadowRoot || form;
+    const strip = () => {
+      root().querySelectorAll(`[data-key="${key}"]`).forEach((n) => n.remove());
+    };
+    strip();
+    new MutationObserver(strip).observe(root(), { childList: true, subtree: true });
   }
 
   // The named file's own text, in a textarea with its own save, under the
@@ -1753,19 +1793,25 @@ class SolAppBuilder extends HTMLElement {
   }
 
   // The menu document a component reads, the manager that edits it (a bar is
-  // flat — no submenus), and the shape its metadata answers to.
+  // flat — no submenus), and the shape its metadata answers to. The menu doc's
+  // declared ui:view picks all three; a view-less menu falls back to the
+  // legacy mount sniff (class=app-bar / element tag).
   _menuOf(part) {
     if (!part || part.kind !== 'leaf') return null;
     const params = new Map(part.item.params || []);
     const from = params.get('from-rdf');
     if (!from) return null;
+    const source = new URL(from, this._layoutUrl).href;
+    const view = this._menuViews && this._menuViews.get(source);
+    const spec = view && MENU_VIEWS[view];
+    if (spec) return { source, view, manager: spec.manager, shape: spec.shape };
     const bar = (params.get('class') || '').includes('app-bar');
     const tag = part.item.tag;
     return {
-      source: new URL(from, this._layoutUrl).href,
+      source,
       manager: bar ? 'sol-button-bar-manager' : 'sol-menu-manager',
-      shape: bar ? 'ButtonBarShape'
-        : tag === 'sol-dropdown-button' ? 'ButtonMenuShape' : 'TabbedMenuShape',
+      shape: bar ? 'ToolbarMenuShape'
+        : tag === 'sol-dropdown-button' ? 'MenuButtonMenuShape' : 'TablistMenuShape',
     };
   }
 
@@ -1841,7 +1887,15 @@ class SolAppBuilder extends HTMLElement {
     const resync = () => this._loadMenuLabels(this._tree)
       .then(() => { head.textContent = this._chipLabel(this._findPart(nodeIri) || part); });
     if (menu) {
-      await this._mountForm(host, menu.source, resync, `${EDIT_SHAPE_URL}#${menu.shape}`);
+      // A form save may have changed the menu's ui:view — the doc is the
+      // source of truth, so the mounted component follows it.
+      const menuResync = async () => {
+        await resync();
+        const now = this._menuViews && this._menuViews.get(menu.source);
+        if (now !== menu.view) await this._remountMenuView(nodeIri, now);
+      };
+      const form = await this._mountForm(host, menu.source, menuResync, `${EDIT_SHAPE_URL}#${menu.shape}`);
+      this._stripFormField(form, 'itemListElement');
       await import(menu.manager === 'sol-button-bar-manager'
         ? './sol-button-bar-manager.js' : './sol-menu-manager.js').catch(() => {});
       const mgr = document.createElement(menu.manager);
@@ -1897,6 +1951,42 @@ class SolAppBuilder extends HTMLElement {
     const body = row.querySelector('.sab-el-body');
     body.hidden = true;
     body.innerHTML = '';
+  }
+
+  // The menu doc's ui:view changed: remount the layout leaf to the view's
+  // component (module, label, params), regenerate the page, and reopen the
+  // editor so its form shape and manager re-key to the new view. A view with
+  // no menu renderer keeps the current mount — the menu doc still records the
+  // owner's choice.
+  async _remountMenuView(nodeIri, view) {
+    const part = this._findPart(nodeIri);
+    if (!part || part.kind !== 'leaf') return;
+    const spec = view && MENU_VIEWS[view];
+    if (spec) {
+      part.url = `${this.componentsBase}/web/${spec.file}`;
+      part.item.tag = deriveTagFromModule(part.url);
+      part.item.name = spec.label;
+      // Rebuild the params around the leaf's own pairs: the old view's owned
+      // pairs go (label, keep-alive; the bar's app-bar class token), the new
+      // view's come in, everything else (from-rdf, region, custom classes)
+      // rides through.
+      const params = new Map((part.item.params || []).map(([k, v]) => [k, v]));
+      params.delete('label');
+      params.delete('keep-alive');
+      if (params.has('class')) {
+        const cls = params.get('class').split(/\s+/).filter((c) => c && c !== 'app-bar');
+        if (cls.length) params.set('class', cls.join(' '));
+        else params.delete('class');
+      }
+      for (const [k, v] of [...spec.pre, ...spec.post]) {
+        if (k === 'class' && params.has('class')) params.set('class', `${params.get('class')} ${v}`);
+        else params.set(k, v);
+      }
+      part.item.params = [...params.entries()];
+      await this._saveLayout();
+    }
+    this._paintLayout();
+    await this._openElement(nodeIri);
   }
 
   // A plugin (or a page from the HTML Content shelf) dropped on an element:

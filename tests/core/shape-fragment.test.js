@@ -1,7 +1,7 @@
 /**
  * core/shape-to-form.js — naming ONE shape in a multi-shape document.
  *
- * A shape URI carrying a fragment (…/ui.shacl#ButtonBarShape) selects that
+ * A shape URI carrying a fragment (…/ui.shacl#ToolbarMenuShape) selects that
  * shape outright. Without one the resolver infers, which can only work while
  * each class has a single shape — the fragment is what makes several shapes
  * per class (the menu variants) reachable at all.

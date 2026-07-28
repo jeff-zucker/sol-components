@@ -13,8 +13,11 @@ shape <#MenuShape> -> ui:Menu {
     ui:orientation [0..1] in=[ui:Horizontal ui:Vertical] %
         sh:name "orientation" ; sh:description "ui:Horizontal or ui:Vertical menu layout"
     % .
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] %
+        sh:name "shown as" ; sh:description "The view the menu is presented as — a menu-capable kind of ui:View, e.g. ui:Tablist."
+    % .
     ui:region [0..1] in=[ui:Inline ui:Element ui:Modal ui:Floating ui:Window ui:Tab ui:Dropdown]|ui:Layout|xsd:string %
-        sh:name "region" ; sh:description "Default placement for items that carry no region of their own: a ui:Region KIND (ui:Modal etc.), OR a TARGET region NODE the menu binds to (e.g. a ui:Layout region — the renderer derives its element from the node's own id), OR a legacy target-selector string."
+        sh:name "shown in" ; sh:description "Default placement for items that carry no region of their own: a ui:Region KIND (ui:Modal etc.), OR a TARGET region NODE the menu binds to (e.g. a ui:Layout region — the renderer derives its element from the node's own id), OR a legacy target-selector string."
     % .
 }
 
@@ -126,17 +129,23 @@ shape <#CommandShape> ;
     % .
 }
 
-shape <#TabbedMenuShape> ;
+shape <#MenubarMenuShape> ;
     sh:node <#MenuShape> {
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] hasValue=ui:Menubar %
+        sh:name "shown as" ; sh:description "The menu's view: ui:Menubar."
+    % .
     schema:itemListElement IRI [1..*] @<#OrderedItemShape>|@<#UnorderedItemShape> %
-        sh:name "menu items" ; sh:description "The items of a tabbed menu. Any item may itself be a menu, which nests as a submenu."
+        sh:name "menu items" ; sh:description "The items of a menubar. Any item may itself be a menu, which nests as a submenu."
     % .
 }
 
-shape <#ButtonMenuShape> ;
+shape <#MenuButtonMenuShape> ;
     sh:node <#MenuShape> {
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] hasValue=ui:MenuButton %
+        sh:name "shown as" ; sh:description "The menu's view: ui:MenuButton."
+    % .
     schema:itemListElement IRI [1..1] @<#OrderedSubmenuItemShape>|@<#SubmenuMemberShape> %
-        sh:name "menu item" ; sh:description "The one item of a button menu: a menu, whose own items are what the button drops."
+        sh:name "menu item" ; sh:description "The one item of a menu button: a menu, whose own items are what the button drops."
     % .
 }
 
@@ -156,10 +165,13 @@ shape <#SubmenuMemberShape> {
     % .
 }
 
-shape <#ButtonBarShape> ;
+shape <#TablistMenuShape> ;
     sh:node <#MenuShape> {
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] hasValue=ui:Tablist %
+        sh:name "shown as" ; sh:description "The menu's view: ui:Tablist."
+    % .
     schema:itemListElement IRI [1..*] @<#OrderedFlatItemShape>|@<#FlatMemberShape> %
-        sh:name "menu items" ; sh:description "The items of a button bar, each one a button. No item is itself a menu — a bar has no second level."
+        sh:name "menu items" ; sh:description "The items of a tablist, one per tab. No item is itself a menu — tabs do not nest."
     % .
 }
 
@@ -176,6 +188,26 @@ shape <#FlatMemberShape> {
     class=ui:Plugin|class=ui:Link|class=ui:Component|class=ui:Command .
     ui:label xsd:string [1..1] %
         sh:name "label" ; sh:description "Display label"
+    % .
+}
+
+shape <#TreeMenuShape> ;
+    sh:node <#MenuShape> {
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] hasValue=ui:Tree %
+        sh:name "shown as" ; sh:description "The menu's view: ui:Tree."
+    % .
+    schema:itemListElement IRI [1..*] @<#OrderedItemShape>|@<#UnorderedItemShape> %
+        sh:name "menu items" ; sh:description "The items of a tree. Any item may itself be a menu, which nests as a branch."
+    % .
+}
+
+shape <#ToolbarMenuShape> ;
+    sh:node <#MenuShape> {
+    ui:view [0..1] in=[ui:Menubar ui:MenuButton ui:Tablist ui:Tree ui:Toolbar] hasValue=ui:Toolbar %
+        sh:name "shown as" ; sh:description "The menu's view: ui:Toolbar."
+    % .
+    schema:itemListElement IRI [1..*] @<#OrderedFlatItemShape>|@<#FlatMemberShape> %
+        sh:name "menu items" ; sh:description "The items of a toolbar, each one a button. No item is itself a menu — a toolbar has no second level."
     % .
 }
 

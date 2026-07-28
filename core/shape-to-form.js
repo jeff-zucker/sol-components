@@ -60,7 +60,7 @@ const OWL      = 'http://www.w3.org/2002/07/owl#';
  *
  * @param {string} shapeText  raw turtle of the SHACL document
  * @param {string} baseUri    the shape's URI. A FRAGMENT names one shape in the
- *                            document (…/ui.shacl#ButtonBarShape); without one
+ *                            document (…/ui.shacl#ToolbarMenuShape); without one
  *                            the shape is inferred (see below)
  * @returns {{ targets: Targets, properties: ShapeProp[] }}
  */

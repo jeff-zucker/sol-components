@@ -456,20 +456,24 @@ test('removing a chip offers it back in its accordion; restoring re-adds it', as
   expect([...el.querySelectorAll('#sab-content .sab-feat')].some((f) => f.textContent.includes('Site Banner'))).toBe(false);
 });
 
-test('the UI-elements list offers the three menus, and any standard link the layout lacks', async () => {
+test('the UI-elements list offers the menu views, and any standard link the layout lacks', async () => {
   const el = await mount();
   await createHello(el);
   await settle();
   const feats = [...el.querySelectorAll('#sab-features .sab-feat')].map((f) => f.textContent.trim());
-  // a full layout already holds all three links, so only the menus are offered
-  expect(feats).toEqual(['Button Menu', 'Button bar', 'Tabbed Menu']);
-  // dropping the Button Menu names it that in the layout too
+  // a full layout already holds all three links, so only the menu views are offered
+  expect(feats).toEqual(['Menubar', 'Button Menu', 'Tabbed Menu', 'Button bar', 'Tree Menu']);
+  // dropping the Button Menu names it that in the layout too, and the seeded
+  // menu declares its view
   writes = [];
+  const bmChip = [...el.querySelectorAll('#sab-features .sab-feat')]
+    .find((f) => f.textContent.trim() === 'Button Menu');
   dropFeature(el.querySelector('.sab-acc-head[data-region$="#Main"]'),
-    JSON.parse([...el.querySelectorAll('#sab-features .sab-feat')][0].dataset.feature));
+    JSON.parse(bmChip.dataset.feature));
   await settle();
   const layoutPut = writes.find((w) => w.url === `${APPS}hello-world/layout.ttl`);
   expect(layoutPut.body).toContain('ui:label "Button Menu"');
+  expect(writes.some((w) => w.body && w.body.includes('ui:view ui:MenuButton'))).toBe(true);
 });
 
 test('dragging a chip to another area moves it (moveNode)', async () => {
@@ -623,7 +627,7 @@ test('clicking an element opens its editor IN the column — the KIND shape plus
   const form = open.querySelector('sol-form');
   // the menu node itself, against the shape for THIS kind of menu
   expect(form.getAttribute('subject')).toBe(`${APPS}hello-world/app-menu.ttl#MainMenu`);
-  expect(form.getAttribute('shape')).toMatch(/ui\.shacl#TabbedMenuShape$/);
+  expect(form.getAttribute('shape')).toMatch(/ui\.shacl#MenubarMenuShape$/);
   // and the manager below it, to see, reorder and drop plugins into
   const mgr = open.querySelector('sol-menu-manager');
   expect(mgr).toBeTruthy();
@@ -657,13 +661,40 @@ test('a plugin element opens the settings ITS component declares', async () => {
   expect(form.getAttribute('subject')).toBe('http://pod.test/probe.ttl#it');
 });
 
-test('the ☰ element answers to the ButtonMenu shape', async () => {
+test('the ☰ element answers to the MenuButton shape', async () => {
   const el = await mount();
   await createHello(el, 'customize');
   [...el.querySelectorAll('.sab-el-head')].find((c) => c.textContent === 'Button Menu').click();
   await settle(120);
   expect(el.querySelector('#sab-custom sol-form').getAttribute('shape'))
-    .toMatch(/ui\.shacl#ButtonMenuShape$/);
+    .toMatch(/ui\.shacl#MenuButtonMenuShape$/);
+});
+
+test('changing the menu doc ui:view remounts the layout leaf and re-keys the editor', async () => {
+  const el = await mount();
+  await createHello(el, 'customize');
+  [...el.querySelectorAll('.sab-el-head')].find((c) => c.textContent === 'Main menu').click();
+  await settle(120);
+  // the owner switches Main menu's view to Tabs: the saved doc is the truth
+  const menuDoc = `${APPS}hello-world/app-menu.ttl`;
+  docs[menuDoc] = docs[menuDoc].replace('ui:view ui:Menubar', 'ui:view ui:Tablist');
+  writes = [];
+  el.querySelector('#sab-custom sol-form')
+    .dispatchEvent(new CustomEvent('sol-form-save', { bubbles: true }));
+  await settle(250);
+  // the leaf remounted to the Tablist view's component, keeping its own params
+  const layoutPut = writes.find((w) => w.url === `${APPS}hello-world/layout.ttl`);
+  expect(layoutPut).toBeTruthy();
+  expect(layoutPut.body).toContain('sol-tabs.js');
+  expect(layoutPut.body).toContain('keep-alive');
+  expect(layoutPut.body).toContain('app-menu.ttl#MainMenu');   // from-rdf rides through
+  // …the page regenerated…
+  expect(writes.some((w) => w.url.endsWith('index.html') && w.body.includes('<sol-tabs'))).toBe(true);
+  // …and the reopened editor answers to the new view's shape
+  const open = [...el.querySelectorAll('.sab-el')]
+    .find((r) => r.querySelector('.sab-el-head').getAttribute('aria-expanded') === 'true');
+  expect(open.querySelector('sol-form').getAttribute('shape')).toMatch(/#TablistMenuShape$/);
+  expect(open.querySelector('sol-menu-manager')).toBeTruthy();
 });
 
 test('a plugin dropped on a REGION card lands in that region', async () => {

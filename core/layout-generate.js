@@ -35,7 +35,7 @@
 //                `role` that named a native element is dropped as redundant).
 
 import { rdf } from './rdf.js';
-import { menuMembers, rdfVal, rdfComponent, deriveTagFromModule } from './menu-rdf.js';
+import { menuMembers, rdfVal, rdfComponent, deriveTagFromModule, viewToken, MENU_VIEW_MOUNTS } from './menu-rdf.js';
 import { emitBarItem, esc } from './menu-generate.js';
 
 const UI     = 'http://www.w3.org/ns/ui#';
@@ -137,10 +137,11 @@ export function parseLayoutTree(store, node) {
       item: { type: 'component', tag, params, name: rdfVal(store, node, 'label') || '', comment },
     };
   }
-  // A ui:Menu member → rendered by a menu component (sol-menu / sol-tabs) via
-  // from-rdf; the presentation is inferred from the containing region's role.
+  // A ui:Menu member → rendered by a menu component via from-rdf; its declared
+  // ui:view picks the mount, else the containing region's role infers one.
   if (isType(store, node, UI + 'Menu')) {
-    return { kind: 'menu', node, fragment: fragmentOf(node.value), comment };
+    return { kind: 'menu', node, fragment: fragmentOf(node.value), comment,
+      view: viewToken(rdfVal(store, node, 'view')) };
   }
   // A ui:Link member (class, or a ui:Plugin of kind ui:Link) → its schema:url,
   // resolved to an include/iframe at emit time.
@@ -294,11 +295,16 @@ function emitPart(part, depth, parentRole, warn, baseUrl) {
   const indent = '  '.repeat(depth + 1);
   const lead = part.comment ? `${indent}<!-- ${esc(part.comment)} -->\n` : '';
   if (part.kind === 'menu') {
-    // A menu in a `navigation` region reads as a nav list (sol-menu); elsewhere
-    // as a tabset (sol-tabs). from-rdf points the component at the menu doc.
-    const tag = parentRole === 'navigation' ? 'sol-menu' : 'sol-tabs';
+    // The menu's declared ui:view picks the mount. A view-less menu falls back
+    // to role inference: in a `navigation` region it reads as a nav list
+    // (sol-menu), elsewhere as a tabset (sol-tabs). from-rdf points the
+    // component at the menu doc.
+    const mount = part.view ? MENU_VIEW_MOUNTS[part.view] : null;
+    if (part.view && !mount) warn(`menu ${part.node.value} declares ui:${part.view} — no renderer for that view yet, using the region-role fallback`);
+    const tag = mount ? mount.tag : (parentRole === 'navigation' ? 'sol-menu' : 'sol-tabs');
+    const cls = mount && mount.class ? ` class="${esc(mount.class)}"` : '';
     const from = part.fragment ? `#${part.fragment}` : part.node.value;
-    return `${lead}${indent}<${tag} from-rdf="${esc(from)}"></${tag}>\n`;
+    return `${lead}${indent}<${tag}${cls} from-rdf="${esc(from)}"></${tag}>\n`;
   }
   if (part.kind === 'link') {
     if (!part.url) { warn(`ui:Link ${part.node.value} has no schema:url`); return ''; }
@@ -542,7 +548,7 @@ main > :first-child { margin-top: 0; }
  * form. Turtle template rather than the serializer: seeding predates any
  * store/doc to rewrite, and presets ship as authored TTL the same way.
  */
-export function seedAppMenu({ label = 'Tabs', fragment = 'Tabs', orientation = 'Horizontal' } = {}) {
+export function seedAppMenu({ label = 'Tabs', fragment = 'Tabs', orientation = 'Horizontal', view = null } = {}) {
   return `@prefix : <#> .
 @prefix ui: <http://www.w3.org/ns/ui#> .
 
@@ -550,7 +556,8 @@ export function seedAppMenu({ label = 'Tabs', fragment = 'Tabs', orientation = '
 # Members arrive as positioned schema:ListItem wrappers (schema:itemListElement);
 # a newborn menu simply has none yet.
 :${fragment} a ui:Menu ;
-  ui:label "${label.replace(/"/g, '\\"')}" ;
+  ui:label "${label.replace(/"/g, '\\"')}" ;${view ? `
+  ui:view ui:${view} ;` : ''}
   ui:orientation ui:${orientation} .
 `;
 }
