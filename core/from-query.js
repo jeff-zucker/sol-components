@@ -37,6 +37,7 @@ import { rdf } from './rdf.js';
 import { getAuthFetch } from './auth-fetch.js';
 import { substituteVariables, assertSafeQuery } from './sparql-safety.js';
 import { execSparql, loadRdfStore, parsePatternParts, matchStore, fetchQueryFromRdf } from './rdf-utils.js';
+import { escapeHtml } from './utils.js';
 
 // Config attributes may be written bare (`endpoint`) or `data-`-prefixed
 // (`data-endpoint`) — the latter keeps the host markup spec-valid HTML. Bare
@@ -192,7 +193,7 @@ export function renderInto(el, data) {
 function runQueryInto(el) {
   return buildData(el)
     .then((data) => renderInto(el, data))
-    .catch((e) => { el.innerHTML = `<div class="error">${(e && e.message) || e}</div>`; console.error('[data-from-query]', e); });
+    .catch((e) => { el.innerHTML = `<div class="error">${escapeHtml((e && e.message) || e)}</div>`; console.error('[data-from-query]', e); });
 }
 
 activate('[data-from-query]', (el) => {

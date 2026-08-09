@@ -1,6 +1,7 @@
 import { mkLink } from '../views/_helpers.js';
 import { render as renderTable } from '../views/table.js';
 import { deepActiveElement, trapTab } from '../../core/focus-trap.js';
+import { escapeHtml } from '../../core/utils.js';
 
 // W3C SPARQL Query Results JSON envelope helper.
 function w3c(vars, bindings) { return { head: { vars }, results: { bindings } }; }
@@ -23,11 +24,11 @@ export class SparqlResultsRenderer {
   }
 
   showLoading(message = 'Loading results...') {
-    this.container.innerHTML = `<div class="loading" role="status" aria-live="polite">${message}</div>`;
+    this.container.innerHTML = `<div class="loading" role="status" aria-live="polite">${escapeHtml(message)}</div>`;
   }
 
   showError(message) {
-    this.container.innerHTML = `<div class="error" role="alert">${message}</div>`;
+    this.container.innerHTML = `<div class="error" role="alert">${escapeHtml(message)}</div>`;
   }
 
   showNoResults() {

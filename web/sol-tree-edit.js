@@ -47,6 +47,7 @@
 import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { rdf } from '../core/rdf.js';
+import { escapeHtml } from '../core/utils.js';
 import { parseShape, renderRecordForm, effectiveProperties } from '../core/shape-to-form.js';
 
 const RDF_TYPE  = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
@@ -253,7 +254,7 @@ class SolTreeEdit extends HTMLElement {
   }
 
   _fatal(err) {
-    this.innerHTML = `<div class="sol-tree-edit-error">${err.message}</div>`;
+    this.innerHTML = `<div class="sol-tree-edit-error">${escapeHtml(err.message)}</div>`;
     console.error('[sol-tree-edit]', err);
   }
 

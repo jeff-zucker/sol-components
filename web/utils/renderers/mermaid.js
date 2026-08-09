@@ -1,3 +1,5 @@
+import { escapeHtml } from '../../../core/utils.js';
+
 let mermaidReady = false;
 let _mermaid = null;
 let _mmdSeq = 0;
@@ -48,7 +50,7 @@ export async function renderMermaid(content, outputEl) {
     const orphan = document.getElementById('d' + id);
     if (orphan) orphan.remove();
     outputEl.innerHTML = `<pre style="padding:1rem;color:#c0392b;white-space:pre-wrap;font-size:max(16px, .85em)">Diagram error: ${
-      (e.message || String(e)).replace(/<[^>]*>/g, '')
+      escapeHtml(e.message || String(e))
     }</pre>`;
   }
 }

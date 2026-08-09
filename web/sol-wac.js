@@ -35,6 +35,7 @@ import { define } from '../core/define.js';
 import { ensureDocStyle } from '../core/adopt.js';
 import { CSS as WAC_CSS } from './styles/sol-wac-css.js';
 import { rdf } from '../core/rdf.js';
+import { escapeHtml } from '../core/utils.js';
 import './sol-tabs.js';
 
 // ── ACL constants ─────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ class SolWac extends HTMLElement {
     try {
       perms = await getPermissions(url, this.fetchFn);
     } catch (e) {
-      this.innerHTML = `<div class="acl-error">Failed to load ACL: ${e.message}</div>`;
+      this.innerHTML = `<div class="acl-error">Failed to load ACL: ${escapeHtml(e.message)}</div>`;
       this._emit('sol-wac-error', { phase: 'load', error: e });
       return;
     }
