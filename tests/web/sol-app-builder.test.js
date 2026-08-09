@@ -202,6 +202,24 @@ test('the Metadata tab edits the app entry against the Plugin shape', async () =
   expect(form.getAttribute('shape')).toMatch(/shapes\/ui\.shacl$/);
   expect(document.querySelector('sol-window')).toBeFalsy();
 });
+test('the Metadata tab carries a confirm-guarded Delete this app', async () => {
+  const el = await mount();
+  await createHello(el, 'meta');
+  await settle(80);
+  const del = el.querySelector('.sab-meta-pane [data-del-app]');
+  expect(del).toBeTruthy();
+  expect(del.textContent).toBe('Delete this app');
+  expect(del.dataset.delApp).toBe('hello-world');
+
+  // declining the confirm deletes nothing
+  const realConfirm = window.confirm;
+  window.confirm = () => false;
+  const before = writes.length;
+  del.click();
+  await settle(5);
+  expect(writes.slice(before).some((w) => w.method === 'DELETE')).toBe(false);
+  window.confirm = realConfirm;
+});
 test('Create app PUTs app.ttl and composes the full layout', async () => {
   const el = await mount();
   await createHello(el);
@@ -595,6 +613,23 @@ test('Add/Edit Features: one card per region, everything it holds as chips', asy
   const pantry = el.querySelector('sol-plugin-manager');
   expect(pantry.getAttribute('source')).toBe(CATALOG);
   expect(pantry.hasAttribute('grouped')).toBe(true);
+});
+
+test('clicking a menu chip on Add Features opens its editor on Customize', async () => {
+  const el = await mount();
+  await createHello(el, 'features');
+  await settle(60);
+  const menuChip = [...el.querySelectorAll('.sab-chip-menu')].find((c) => c.textContent.includes('Main menu'));
+  expect(menuChip).toBeTruthy();
+  menuChip.click();
+  await settle(140);
+  // it switched tabs and opened the Main menu row's editor in place
+  expect(el._tab).toBe('customize');
+  const open = [...el.querySelectorAll('.sab-el')]
+    .find((r) => r.querySelector('.sab-el-head')?.getAttribute('aria-expanded') === 'true');
+  expect(open).toBeTruthy();
+  expect(open.querySelector('.sab-el-head').textContent).toBe('Main menu');
+  expect(document.querySelector('sol-window')).toBeFalsy();
 });
 
 test('Customize lists the app\u2019s elements — not its regions', async () => {
@@ -1034,8 +1069,6 @@ test('the HTML Content panel offers NEW html content', async () => {
   // the panel names itself on its border
   expect(shelf.querySelector('legend').textContent).toBe('HTML Content');
   expect(el.querySelector('.sab-panel-fill > legend').textContent).toBe('Plugins Available');
-  // each panel's action sits on its border: one wired, one waiting
-  expect(shelf.querySelector('[data-action="import-snippets"]').textContent).toBe('Import snippets');
   expect(el.querySelector('.sab-panel-fill [data-action="add-plugin"]').textContent).toBe('Add plugins');
   expect([...shelf.querySelectorAll('[data-content]')].map((n) => n.textContent.trim()))
     .toEqual(['New HTML Content']);

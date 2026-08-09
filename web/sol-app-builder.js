@@ -514,6 +514,15 @@ sol-app-builder .sab-panel-btn {
 }
 [data-theme="dark"] sol-app-builder .sab-panel-btn { color: #0f1115; }
 sol-app-builder .sab-panel > legend { font-size: 1.1rem; padding: 0 .5rem; color: #b45309; }
+sol-app-builder .sab-meta-danger { margin-top: 1.5rem; }
+sol-app-builder .sab-del-app {
+  font-family: inherit; font-size: 1rem; padding: .4rem .8rem;
+  border: 1px solid #b00020; border-radius: .3rem;
+  background: transparent; color: #b00020; cursor: pointer;
+}
+sol-app-builder .sab-del-app:hover { background: #b00020; color: #fff; }
+[data-theme="dark"] sol-app-builder .sab-del-app { border-color: #ff8a80; color: #ff8a80; }
+[data-theme="dark"] sol-app-builder .sab-del-app:hover { background: #ff8a80; color: #0f1115; }
 sol-app-builder .sab-panel-fill { flex: 1 1 auto; }
 sol-app-builder .sab-panel-fill > sol-plugin-manager { flex: 1 1 auto; min-height: 0; }
 sol-app-builder .sab-shelf { flex: 0 0 auto; }
@@ -966,6 +975,8 @@ class SolAppBuilder extends HTMLElement {
     }
     const restore = e.target.closest('[data-restore-area]');
     if (restore) { this._restoreArea(restore.dataset.restoreArea); return; }
+    const menuChip = e.target.closest('.sab-chip-menu[data-node]');
+    if (menuChip) { this._editMenuChip(menuChip.dataset.node); return; }
     const tab = e.target.closest('[data-tab]');
     if (tab) { this._tab = tab.dataset.tab; this._render(); return; }
     const action = e.target.closest('[data-action]');
@@ -1113,7 +1124,10 @@ class SolAppBuilder extends HTMLElement {
                src="${escHtml(app.folder)}index.html"
                title="Preview of ${escHtml(app.name)}"></iframe></div>`
           : `<div class="sab-pane sab-meta-pane"><fieldset class="sab-panel"><legend>${
-              escHtml(app.name)}</legend><div id="sab-meta"></div></fieldset></div>`;
+              escHtml(app.name)}</legend><div id="sab-meta"></div>
+              <div class="sab-meta-danger"><button type="button" class="sab-del-app"
+                data-del-app="${escHtml(app.slug)}">Delete this app</button></div>
+              </fieldset></div>`;
     queueMicrotask(() => this._mountTab());
     this.innerHTML = `${host ? '' : top}${body}${err}`;
   }
@@ -1735,8 +1749,6 @@ class SolAppBuilder extends HTMLElement {
       <div id="sab-features"></div>
     </fieldset>` : ''}
     <fieldset class="sab-panel sab-shelf"><legend>HTML Content</legend>
-      <button type="button" class="sab-panel-btn" data-action="import-snippets"
-        title="Import snippets">Import snippets</button>
       <div id="sab-content"></div>
     </fieldset>`;
     if (this.catalog) {
@@ -1862,6 +1874,19 @@ class SolAppBuilder extends HTMLElement {
   // Opening one unfolds it in place: its own fields, plus — for a menu — its
   // items with the pantry's drop zone, and — for a content link — the html
   // file itself. One open at a time.
+  // A menu chip says "Edit <name>"; its editor lives on the Customize tab, so
+  // go there first and open the row once the list has painted.
+  async _editMenuChip(nodeIri) {
+    if (this._tab !== 'customize') {
+      this._tab = 'customize';
+      this._render();
+      for (let i = 0; i < 40 && !this.querySelector(`.sab-el[data-el="${cssQuote(nodeIri)}"]`); i++) {
+        await new Promise((r) => setTimeout(r, 25));
+      }
+    }
+    return this._openElement(nodeIri);
+  }
+
   async _openElement(nodeIri) {
     const box = this.querySelector('#sab-custom');
     const part = this._findPart(nodeIri);

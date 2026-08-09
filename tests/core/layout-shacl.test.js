@@ -4,7 +4,7 @@
  * file (ui.shacl), so a single shapes graph covers both.
  *
  * Covered here:
- *   - every shipped preset (data/layouts/*.ttl) conforms, index included
+ *   - every layout the App Builder composes (core/layout-compose.js) conforms
  *   - ui:columns outside 1..6 fails
  *   - a ui:Link in layout parts fails (parts are Layout|Component only)
  *   - an app node without ui:layout fails :AppShape

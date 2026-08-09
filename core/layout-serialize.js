@@ -3,8 +3,8 @@
 // layout.ttl Turtle document, plus the pure tree editors the builder's
 // element step uses (add / remove / move a ui:Component leaf).
 //
-// Emission is a string template in the exact idiom of the authored presets
-// (data/layouts/*.ttl): prefixed Turtle, positioned schema:ListItem wrappers
+// Emission is a string template in the idiom layout-compose.js produces:
+// prefixed Turtle, positioned schema:ListItem wrappers
 // with DETERMINISTIC `<parentFrag>-<childFrag>` fragments (menu-serialize's
 // wrapper convention), schema:additionalProperty blank-node pairs. Same-origin module
 // URLs relativize to path form (</node_modules/…>) so a saved layout stays
