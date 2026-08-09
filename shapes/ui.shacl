@@ -603,6 +603,13 @@
     sh:description "Icon: a URL (IRI or string) used as the favicon, or an emoji string" ;
   ] ;
   sh:property [
+    sh:path schema:inLanguage ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+    sh:name "language" ;
+    sh:description "The language of the app's content, as a BCP 47 language tag" ;
+  ] ;
+  sh:property [
     sh:path ui:layout ;
     sh:minCount 1 ;
     sh:maxCount 1 ;

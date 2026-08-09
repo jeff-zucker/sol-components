@@ -261,6 +261,9 @@ shape <#AppShape> -> schema:WebApplication schema:SoftwareApplication {
     ui:icon [0..1] IRI|xsd:string %
         sh:name "icon" ; sh:description "Icon: a URL (IRI or string) used as the favicon, or an emoji string"
     % .
+    schema:inLanguage xsd:string [0..1] %
+        sh:name "language" ; sh:description "The language of the app's content, as a BCP 47 language tag"
+    % .
     ui:layout IRI [1..1] %
         sh:name "layout" ; sh:description "The app's root ui:Layout"
     % .

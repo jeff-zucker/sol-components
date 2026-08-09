@@ -109,6 +109,7 @@ test('a full app node conforms', async () => {
 <#app> a schema:WebApplication ;
   schema:name "My App" ;
   ui:icon "🍳" ;
+  schema:inLanguage "en" ;
   ui:layout <layout.ttl#Layout> .
 `);
   const messages = report.results.map((r) => r.message.map((m) => m.value).join('; '));

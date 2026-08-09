@@ -260,6 +260,7 @@ test('Create app PUTs app.ttl and composes the full layout', async () => {
   expect(put.method).toBe('PUT');
   expect(put.body).toContain('a schema:WebApplication');
   expect(put.body).toContain('schema:name "Hello World"');
+  expect(put.body).toContain('schema:inLanguage "en"');   // hand-editable, surfaced in app.ttl
   expect(put.body).toContain('ui:layout <layout.ttl#Layout>');
   // no layout picker, no steps — straight to the working screen
   expect(el.querySelector('.sab-areas')).toBeTruthy();
@@ -645,7 +646,7 @@ test('creating an app already writes index.html + app.css and the catalog entry'
   // structure: header banner (holds the site-title link) + asides + main in the middle row
   expect(html.body).toContain('<header class="app-banner app-row" aria-label="Header">');
   expect(html.body).toContain('<sol-include source="site-title.html"');
-  expect(html.body).toMatch(/<section[^>]*class="app-row"[\s\S]*?<aside[\s\S]*?<main class="app-main app-col" aria-label="Main">/);
+  expect(html.body).toMatch(/<section[^>]*class="app-row"[\s\S]*?<aside[\s\S]*?<main class="app-main app-col" id="content" aria-label="Main">/);
   expect(html.body).toContain('<footer class="app-footer app-row"');
   // chrome scripts + visible sources
   expect(html.body).toContain('web/scripts/prefs.js');

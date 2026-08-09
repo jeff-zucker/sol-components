@@ -90,6 +90,27 @@ describe('SolDropdownButton', () => {
     expect(el.activeItem).toBeNull();       // no content panel → no pre-select
   });
 
+  test('a symbol-only label gets a "Menu" accessible name; an explicit one wins', async () => {
+    // attributes must be set before attach — the component renders on connect
+    const make = (attrs) => {
+      const el = document.createElement('sol-dropdown-button');
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return attached(el);
+    };
+    const glyph = make({ label: '☰', source: BASE + '#More' });
+    await flush();
+    expect(trigger(glyph).textContent).toBe('☰');           // still shows the glyph
+    expect(trigger(glyph).getAttribute('aria-label')).toBe('Menu');
+
+    const named = make({ label: '☰', 'aria-label': 'Main menu', source: BASE + '#More' });
+    await flush();
+    expect(trigger(named).getAttribute('aria-label')).toBe('Main menu');
+
+    const worded = make({ label: 'More', source: BASE + '#More' });
+    await flush();
+    expect(trigger(worded).hasAttribute('aria-label')).toBe(false);   // a worded label needs no fallback
+  });
+
   test('clicking the trigger opens the popup with one button per item', async () => {
     const el = attached(document.createElement('sol-dropdown-button'));
     el.setAttribute('source', BASE + '#More');

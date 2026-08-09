@@ -174,7 +174,10 @@ class SolDropdownButton extends SolMenu {
     this._rendered = true;
 
     const trigger = root.querySelector('.sol-dd-trigger');
-    const a11y = this.getAttribute('aria-label') || this.getAttribute('title');
+    // An explicit name wins; otherwise a symbol-only label (☰, ⋮) gives a
+    // screen reader nothing to read, so fall back to "Menu".
+    const a11y = this.getAttribute('aria-label') || this.getAttribute('title')
+      || (/[\p{L}\p{N}]/u.test(label) ? null : 'Menu');
     if (a11y) trigger.setAttribute('aria-label', a11y);
     trigger.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(); });
     // Dismiss listeners (document outside-click + Escape) are wired in

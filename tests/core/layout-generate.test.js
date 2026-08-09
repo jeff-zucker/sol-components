@@ -122,7 +122,7 @@ test('a nav + main skeleton emits with visible sources', () => {
 
   expect(html).toContain('<nav class="app-chrome-bar app-row" aria-label="Controls">');
   expect(html).toMatch(/<sol-login[\s\S]*?><\/sol-login>/);
-  expect(html).toContain('<main class="app-panels app-col" aria-label="Content">');
+  expect(html).toContain('<main class="app-panels app-col" id="content" aria-label="Content">');
   expect(html).toMatch(/<sol-tabs[\s\S]*?keep-alive[\s\S]*?from-rdf="app-menu\.ttl#Tabs"[\s\S]*?><\/sol-tabs>/);
   // the leaf's rdfs:comment round-trips as an HTML comment
   expect(html).toContain('<!-- The whole app body: a tabset built from the app\'s own menu doc -->');
@@ -135,6 +135,15 @@ test('a nav + main skeleton emits with visible sources', () => {
   expect(html).toMatch(/<link rel="icon" href="data:image\/svg\+xml,/);
   // body carries the root's structural class
   expect(html).toContain('<body class="app-col">');
+  // a skip link ahead of the chrome, pointing at the main region's id
+  expect(html).toContain('<a class="skip-link" href="#content">Skip to content</a>');
+  expect(html.indexOf('skip-link')).toBeLessThan(html.indexOf('<nav'));
+});
+
+test('the document language comes from app.lang, defaulting to en', () => {
+  const { store, layoutNode } = loadTtl(NAV_MAIN);
+  expect(generateAppHtml({ store, layoutNode })).toContain('<html lang="en">');
+  expect(generateAppHtml({ store, layoutNode, app: { lang: 'fr' } })).toContain('<html lang="fr">');
 });
 
 test('componentsBase override reaches stylesheet and loader', () => {
@@ -149,7 +158,7 @@ test('a columns grid emits app-grid-2 markup and CSS', () => {
   const { store, layoutNode } = loadTtl(GRID);
   const html = generateAppHtml({ store, layoutNode });
   // :Main (role main) with ui:columns 2 → <main>, grid class
-  expect(html).toContain('<main class="app-widgets app-grid-2" aria-label="Widgets">');
+  expect(html).toContain('<main class="app-widgets app-grid-2" id="content" aria-label="Widgets">');
   expect(html).toContain('<header class="app-header app-row" aria-label="Header">');
   expect(html).toMatch(/data-components="sol-basic sol-time sol-calendar"/);
 
@@ -167,7 +176,7 @@ test('sidebar: aside emits, empty main is a placeholder pane', () => {
   const html = generateAppHtml({ store, layoutNode });
   expect(html).toContain('<aside class="app-side app-col" aria-label="Sidebar">');
   expect(html).toMatch(/<sol-menu[\s\S]*?from-rdf="app-menu\.ttl#Menu"[\s\S]*?region="\.app-main"/);
-  expect(html).toMatch(/<main class="app-main app-col" aria-label="Content">\s*<\/main>/);
+  expect(html).toMatch(/<main class="app-main app-col" id="content" aria-label="Content">\s*<\/main>/);
 });
 
 test('a foreign (non sol-*) leaf loads via its own visible module script', () => {
@@ -340,7 +349,7 @@ describe('ARIA role regions + member-type dispatch', () => {
 `);
     expect(out).toMatch(/<header class="app-col">/);
     expect(out).toMatch(/<nav class="app-col">/);
-    expect(out).toMatch(/<main class="app-col">/);
+    expect(out).toMatch(/<main class="app-col" id="content">/);
     expect(out).toMatch(/<footer class="app-col">/);
     expect(out).not.toMatch(/role="banner"|role="main"|role="navigation"|role="contentinfo"/);
   });

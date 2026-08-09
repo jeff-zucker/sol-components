@@ -239,6 +239,8 @@ function emitRegion(region, { depth, isMain, warn, baseUrl }) {
   // -redundant `role` attribute. (An unrecognised role falls through to <div>
   // and its `role` attr is kept, so e.g. role="search" still emits.)
   if (region.roleTag) attrs.delete('role');
+  // The main region is the skip link's target, so it needs an id.
+  if (tag === 'main' && !attrs.get('id')) attrs.set('id', 'content');
   // A region's ui:label IS its accessible name: emit it as aria-label on the
   // LANDMARK element, unless an explicit aria-label / aria-labelledby already
   // names it (the explicit attribute wins). Skipped on a plain <div> (not a
@@ -342,6 +344,7 @@ export function generateAppHtml({
   baseUrl = null,
   warn = () => {},
 }) {
+  const lang = app.lang || 'en';
   const tree = parseLayoutTree(store, layoutNode);
   // Only component leaves carry a module tag; menu/link members resolve to
   // sol-basic elements (sol-menu/sol-tabs/sol-include), so they need no token.
@@ -392,12 +395,16 @@ export function generateAppHtml({
   for (const [k, v] of rootAttrs) bodyOpen += v === '' ? ` ${k}` : ` ${k}="${esc(v)}"`;
   bodyOpen += '>';
   const body = bodyFromTree(tree, warn, baseUrl);
+  // A keyboard user meets the header, its menu and the rail toggle before the
+  // content; the skip link (visible on focus) lets them jump past all of it.
+  const skip = `  <a class="skip-link" href="#content">Skip to content</a>`;
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${esc(lang)}">
 <head>
 ${head}</head>
 ${bodyOpen}
+${skip}
 ${body}
 </body>
 </html>
@@ -473,13 +480,23 @@ html, body { height: 100%; }
 html { background: var(--bg); color: var(--text); font-size: var(--font-size); }
 body { margin: 0; min-height: 100dvh; overflow: hidden;
        font-family: var(--font-ui); }
+/* Off-screen until focused, then it drops into the top-left corner. */
+.skip-link {
+  position: absolute; left: .5rem; top: -3rem; z-index: 1000;
+  padding: .4rem .8rem; border-radius: .3rem;
+  background: var(--accent, #1F618D); color: #fff; text-decoration: none;
+  transition: top .15s;
+}
+.skip-link:focus { top: .5rem; }
 .app-row { display: flex; flex-direction: row; align-items: center; gap: .5rem; }
 .app-col { display: flex; flex-direction: column; }
 /* Scroll lives on the content pane, never the page. */
 main { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 1rem 1.25rem; }
 nav, aside { padding: .5rem 1rem; }
-header { height: 4rem; box-sizing: border-box; padding: 0 1rem; overflow: hidden; }
-footer { height: 3rem; box-sizing: border-box; padding: 0 1rem; overflow: hidden; }
+/* min-height, not a fixed height: at a larger text size the band grows with
+   its content instead of clipping it. */
+header { min-height: 4rem; box-sizing: border-box; padding: .25rem 1rem; }
+footer { min-height: 3rem; box-sizing: border-box; padding: .25rem 1rem; }
 /* Chrome: the bands read as bands. Surface against the page's --bg, with a
    rule between each and the content. */
 header { background: var(--surface); border-bottom: 1px solid var(--border); }
@@ -497,7 +514,8 @@ body.app-col > main { flex: 1 1 auto; min-height: 0; align-items: stretch; }
 body.app-col > header,
 body.app-col > nav,
 body.app-col > footer { flex: 0 0 auto; }
-aside { flex: 0 0 420px; overflow: auto; position: relative; padding-bottom: 2.6rem; }
+/* Rem, not px: the rail scales with the text size instead of clipping it. */
+aside { flex: 0 0 21rem; overflow: auto; position: relative; padding-bottom: 2.6rem; }
 /* Collapse control: the rail's outer bottom corner. */
 .app-rail-toggle {
   position: absolute; bottom: .5rem; width: 1.8rem; height: 1.8rem; line-height: 1;
@@ -521,7 +539,6 @@ header :is(h1, h2, h3, strong, b) {
 h1, h2, h3 { color: #b45309; }
 [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
 [data-theme="dark"] header :is(strong, b) { color: #fb923c; }
-footer :is(h1, h2, h3, p) { font-size: .9em; }
 main :is(h1, h2) { font-size: 1.2em; }
 main > :first-child { margin-top: 0; }
 /* Theme chrome: the banner's ☰ sits at the right end of the bar. */

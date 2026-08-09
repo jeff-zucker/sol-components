@@ -186,13 +186,14 @@ const isSeededBanner = (text, names) => STOCK_SITE_TITLES.includes(text)
     || text === `<strong>${escHtml(n)}</strong>`);
 
 // app.ttl: the app node, written whole — the builder owns this file.
-const appTurtle = (name, icon) => `@prefix : <#> .
+const appTurtle = (name, icon, lang = 'en') => `@prefix : <#> .
 @prefix ui: <http://www.w3.org/ns/ui#> .
 @prefix schema: <http://schema.org/> .
 
 :app a schema:WebApplication ;
   schema:name "${String(name).replace(/"/g, '\\"')}" ;${icon ? `
   ui:icon "${String(icon).replace(/"/g, '\\"')}" ;` : ''}
+  schema:inLanguage "${String(lang).replace(/"/g, '\\"')}" ;
   ui:layout <layout.ttl#Layout> .
 `;
 
@@ -706,6 +707,7 @@ class SolAppBuilder extends HTMLElement {
           folder: c.url,
           name: (store.any(node, rdf.sym(SCHEMA + 'name')) || {}).value || c.name,
           icon: (store.any(node, rdf.sym(UI + 'icon')) || {}).value || '',
+          lang: (store.any(node, rdf.sym(SCHEMA + 'inLanguage')) || {}).value || '',
         });
       } catch { /* not an app folder */ }
     }
@@ -807,8 +809,11 @@ class SolAppBuilder extends HTMLElement {
       const html = generateAppHtml({
         store,
         layoutNode: rdf.sym(`${layoutUrl}#Layout`),
-        app: { title: app.name, icon: app.icon },
+        app: { title: app.name, icon: app.icon, lang: app.lang },
         componentsBase: this.componentsBase,
+        // The generator lints the layout's accessibility as it compiles; surface
+        // those notes to whoever is building rather than dropping them.
+        warn: (m) => console.warn(`[app-builder] ${m}`),
         // The app folder is the base: same-origin ui:Link content (site-title /
         // footer html) transcludes via sol-include rather than framing.
         baseUrl: app.folder,
