@@ -85,7 +85,12 @@ const PLUGIN_MIME = 'application/x-sol-plugin';
 const EDIT_SHAPE_URL = new URL('../shapes/ui.shacl', import.meta.url).href;
 
 const escHtml = (s) => String(s ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+// One instance id per builder on the page, so ids it mints (tabs, panels, the
+// drag-and-drop help text) stay unique when two builders share a document.
+let SAB_SEQ = 0;
 
 const slugify = (name) =>
   String(name).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
@@ -115,6 +120,13 @@ const STANDARD_AREAS = [
 
 // An IRI inside an attribute selector — quoted, since it carries # and /.
 const cssQuote = (v) => String(v).replace(/["\\]/g, '\\$&');
+
+// An IRI folded into a usable id-attribute fragment (for aria-controls, which
+// points by id): non-word characters to hyphens.
+const cssId = (v) => String(v).replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '');
+
+// A chip's own label, without the ✕ button's glyph — for announcements.
+const chipText = (chip) => (chip.firstChild && chip.firstChild.textContent || chip.textContent).trim();
 
 // The four things you do to an app, each rendering into the work area. The
 // tabs sit in the top row; picking an app opens on Metadata.
@@ -315,7 +327,7 @@ const PREVIEW_CSS = `
      these are dummies, so they are drawn as solidly as the real thing. */
   .sab-mock { display: inline-flex; align-items: center; gap: .3rem; }
   .sab-mock-item {
-    font: max(13px, .9em)/1.3 system-ui, sans-serif;
+    font: max(16px, .9em)/1.3 system-ui, sans-serif;
     color: var(--accent, #1F618D);
     border: 1px solid var(--accent, #1F618D); background: var(--surface, #fff);
     padding: .25rem .7rem; white-space: nowrap;
@@ -328,11 +340,21 @@ const PREVIEW_CSS = `
 
 const CSS = `
 sol-app-builder {
+  position: relative;
   display: flex; flex-direction: column; min-height: 0; font-size: 1rem;
 }
+/* Screen-reader-only: the drag-and-drop instructions and the live region. */
+sol-app-builder .sab-a11y {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* Headings placed inside a legend or wrapping a disclosure button carry no
+   visual weight of their own — the legend/button already styles them. */
+sol-app-builder .sab-legend-h { font: inherit; color: inherit; display: inline; margin: 0; }
+sol-app-builder .sab-el-h { font: inherit; color: inherit; margin: 0; display: block; }
+sol-app-builder .sab-tablist { display: flex; gap: .5rem; }
 /* Chrome keeps its own size; the step's panel takes what is left. */
 sol-app-builder > * { flex: 0 0 auto; }
-sol-app-builder > .sab-feat-wrap,
 sol-app-builder > .sab-pane { flex: 1 1 auto; min-height: 0; }
 /* Metadata and Preview take the whole width: one column, filling the height. */
 sol-app-builder.sab-one-col { display: flex; flex-direction: column; min-height: 0; }
@@ -367,19 +389,6 @@ sol-app-builder .sab-el-body {
   padding: .2rem .5rem 1rem;
 }
 [data-theme="dark"] sol-app-builder .sab-el-head { color: #fb923c; }
-sol-app-builder .sab-steps { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
-sol-app-builder .sab-steps button {
-  font-size: 1rem; padding: .4rem .9rem; border-radius: 999px;
-  border: 1px solid var(--border, #9e9e9e); background: transparent;
-  color: inherit; cursor: pointer;
-}
-sol-app-builder .sab-steps button[aria-current="step"] {
-  background: var(--accent, #1F618D); color: #fff;
-  border-color: transparent;
-}
-sol-app-builder .sab-steps button:disabled {
-  color: var(--text-muted, #4d4d4d); cursor: default;
-}
 .sab-top { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .75rem; }
 /* The picker and the app's actions wear the same chip as a panel's button. */
 .sab-top .sab-app-select,
@@ -391,55 +400,18 @@ sol-app-builder .sab-steps button:disabled {
 sol-app-builder .sab-app-title { flex: 1 1 auto; font-size: 1.1rem; color: inherit; text-decoration: none; }
 sol-app-builder .sab-app-title:hover { text-decoration: underline; }
 sol-app-builder .sab-hint { color: var(--text-muted, #4d4d4d); margin: .5rem 0; }
-sol-app-builder .sab-hint-list { margin: 1.4rem 0 1rem; padding-left: 1.3rem; }
 sol-app-builder .sab-error { color: #b00020; margin: .5rem 0; }
-sol-app-builder .sab-cards { display: flex; flex-wrap: wrap; gap: .75rem; margin: .75rem 0; }
-/* An app card: pick it to edit, or ✕ to delete the whole app folder. */
-sol-app-builder .sab-card {
-  display: flex; align-items: flex-start; gap: .5rem;
-  border: 1px solid var(--border, #9e9e9e); border-radius: .5rem;
-  padding: .75rem 1rem; min-width: 12rem; max-width: 18rem;
-  background: var(--surface, #fff); text-align: left; font-size: 1rem;
-  color: var(--text, #000);
-}
-sol-app-builder .sab-card-pick {
-  flex: 1 1 auto; min-width: 0; cursor: pointer; text-align: left;
-  font: inherit; color: inherit; background: transparent; border: 0; padding: 0;
-}
-sol-app-builder .sab-card-x {
-  flex: 0 0 auto; font-size: 1rem; line-height: 1; padding: .15rem .4rem;
-  border: 0; border-radius: .3rem; background: transparent;
-  color: #b00020; cursor: pointer;
-}
-sol-app-builder .sab-card .sab-card-title { font-weight: 600; }
-sol-app-builder .sab-card .sab-card-desc {
-  color: var(--text-muted, #4d4d4d); margin-top: .25rem;
-}
-sol-app-builder .sab-choice {
-  font-size: 1rem; padding: .4rem .9rem; border-radius: 999px;
-  border: 1px solid var(--border, #9e9e9e); background: transparent;
-  color: inherit; cursor: pointer;
-}
-sol-app-builder .sab-choice[aria-pressed="true"] {
-  background: var(--accent, #1F618D); color: #fff; border-color: transparent;
-}
-[data-theme="dark"] sol-app-builder .sab-choice[aria-pressed="true"] { color: #0f1115; }
 sol-app-builder form.sab-new { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .75rem 0; }
 sol-app-builder input {
   font-size: 1rem; padding: .4rem .6rem; border-radius: .3rem;
   border: 1px solid var(--input-border, #9aa0a8);
   background: var(--input-bg, #eef); color: var(--input-text, #1a1a1a);
 }
-sol-app-builder .sab-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
-sol-app-builder .sab-actions button, sol-app-builder form.sab-new button {
+sol-app-builder form.sab-new button {
   font-size: 1rem; padding: .45rem .9rem; border-radius: .3rem;
   border: 1px solid transparent; background: var(--accent, #1F618D);
   color: #fff; cursor: pointer;
 }
-sol-app-builder button.sab-quiet {
-  background: transparent; color: inherit; border-color: var(--border, #9e9e9e);
-}
-sol-app-builder .sab-files { margin: .5rem 0; padding-left: 1.25rem; }
 /* ONE screen in two columns: the app picker over the regions on the left, the
    instructions over what you can place on the right. A grid, so both columns'
    panels start on the same line however tall the headers above them are. */
@@ -540,30 +512,14 @@ sol-app-builder .sab-acc-body {
   display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
   min-height: 2.4rem; padding: .3rem 0 .1rem;
 }
-/* Edit-Interface step: layout areas (left) + the elements list (right). */
-/* Side by side, each panel taking the container's height and scrolling its own
-   list. NOT wrap: a wrapping line sizes to its tallest item and can only be
-   clipped, never shrunk — the panels would lose their bottoms. */
-sol-app-builder .sab-feat-wrap {
-  display: flex; flex-wrap: nowrap; gap: 1rem; align-items: stretch;
-  min-height: 0; overflow: hidden;
-}
-/* Narrow: stack them and let the step itself scroll. */
+/* Narrow: stack the two columns and let the step itself scroll. */
 @media (max-width: 48rem) {
-  sol-app-builder .sab-feat-wrap { flex-wrap: wrap; overflow: auto; }
-  sol-app-builder .sab-layout,
-  sol-app-builder .sab-features,
   sol-app-builder .sab-areas,
   sol-app-builder .sab-right { overflow: visible; }
 }
 /* Every panel scrolls its own list — the page never does. */
-sol-app-builder .sab-layout,
-sol-app-builder .sab-features,
 sol-app-builder .sab-areas,
 sol-app-builder .sab-right { min-height: 0; overflow: auto; }
-sol-app-builder .sab-layout { flex: 1 1 22rem; min-width: 0; }
-sol-app-builder .sab-features { flex: 0 0 16rem; display: flex; flex-direction: column; gap: .35rem; }
-sol-app-builder .sab-feat-head { font-size: 1rem; margin: 0 0 .1rem; color: #b45309; }
 /* The catalog styles itself in its own shadow tree; these vars reach in. */
 sol-app-builder sol-plugin-manager {
   --builder-title-display: none;
@@ -576,33 +532,12 @@ sol-app-builder sol-plugin-manager {
   --builder-add-hover-bg: var(--accent-dark, #2980b9);
   --builder-add-hover-fg: #fff;
 }
-/* Wrapper regions render transparently — just a flex container along the
-   region's axis (root stacks; the Middle band runs across, full width). */
-sol-app-builder .sab-group { display: flex; gap: 1rem; }
-sol-app-builder .sab-group-col { flex-direction: column; }
-sol-app-builder .sab-group-row { flex-direction: row; align-items: stretch; }
-sol-app-builder .sab-group-row > .sab-area { flex: 1 1 0; min-width: 0; }
-/* A fillable area: a dotted box around the elements it holds, its name on the
-   upper border (the legend — also the area's drop target) and its ✕ at the far
-   right of that border. */
-sol-app-builder .sab-area {
-  position: relative; min-width: 0; margin: 0 0 1rem;
-  border: 2px dotted var(--border, #9e9e9e); border-radius: .5rem;
-  padding: .3rem 1rem 1rem;
-}
-sol-app-builder .sab-area > legend {
-  font-size: 1.2rem; padding: .1rem .5rem; border-radius: .3rem;
-  color: #b45309;
-}
+/* A region's ✕ sits at the far right of its card's upper border. */
 sol-app-builder .sab-area-x {
   position: absolute; top: -1.45rem; right: .7rem;
   font-size: 1rem; line-height: 1; padding: .15rem .45rem;
   border: 0; border-radius: .3rem; background: var(--bg, #f5f5f5);
   color: #b00020; cursor: pointer;
-}
-sol-app-builder .sab-area-body {
-  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
-  min-height: 2rem; padding: .6rem 0 .2rem;
 }
 sol-app-builder .sab-drop-over { outline: 2px solid var(--accent, #1F618D); }
 /* A chip in a region and an offering on the right are the same object seen
@@ -616,7 +551,7 @@ sol-app-builder .sab-feat {
 sol-app-builder .sab-chip { padding-right: .3rem; }   /* its ✕ carries the rest */
 sol-app-builder .sab-chip-menu { cursor: pointer; }
 sol-app-builder .sab-chip-x {
-  font-size: .9rem; line-height: 1; padding: .1rem .3rem; border-radius: 999px;
+  font-size: 1rem; line-height: 1; padding: .1rem .3rem; border-radius: 999px;
   border: 0; background: transparent; color: #b00020; cursor: pointer;
 }
 /* Each offering is sized to its own text; they wrap in their panel. */
@@ -641,7 +576,6 @@ sol-app-builder button.sab-feat { cursor: pointer; }
 [data-theme="dark"] sol-app-builder .sab-error { color: #ff8a80; }
 [data-theme="dark"] sol-app-builder .sab-area > legend,
 [data-theme="dark"] sol-app-builder .sab-acc-head,
-[data-theme="dark"] sol-app-builder .sab-feat-head,
 [data-theme="dark"] sol-app-builder sol-plugin-manager {
   --builder-del-fg: #ff8a80;
   --builder-add-fg: #0f1115;
@@ -650,8 +584,7 @@ sol-app-builder button.sab-feat { cursor: pointer; }
 [data-theme="dark"] sol-app-builder .sab-panel > legend { color: #fb923c; }
 /* The dark-red ✕ would fail contrast on the dark surface. */
 [data-theme="dark"] sol-app-builder .sab-chip-x,
-[data-theme="dark"] sol-app-builder .sab-area-x,
-[data-theme="dark"] sol-app-builder .sab-card-x { color: #ff8a80; }
+[data-theme="dark"] sol-app-builder .sab-area-x { color: #ff8a80; }
 `;
 
 class SolAppBuilder extends HTMLElement {
@@ -663,25 +596,55 @@ class SolAppBuilder extends HTMLElement {
     this._removed = [];   // elements removed from the layout — offered back in the list
     this._removedSeq = 0;
     this._error = null;
+    this._announcedError = null;   // last error announced, so a re-render doesn't repeat it
+    this._picked = null;  // keyboard drag-and-drop: the item currently "picked up"
     this._tab = 'meta';   // which of TABS the work area is showing
+    this._uid = `sab${++SAB_SEQ}`;
+    // A constructor-owned, screen-reader-only node that survives every
+    // innerHTML rebuild: the keyboard drag-and-drop instructions, and one
+    // polite live region for errors and the "picked up / placed" announcements.
+    this._a11y = document.createElement('div');
+    this._a11y.className = 'sab-a11y';
+    this._a11y.innerHTML =
+      `<p id="${this._uid}-dnd-help">Press Enter to pick this item up, then the arrow keys to `
+      + `choose a region and Enter to place it there; Escape cancels. Arrow up and down `
+      + `reorders an item within its region.</p>`
+      + `<p class="sab-live" aria-live="polite"></p>`;
+  }
+
+  // Say something to a screen reader once. Clearing then setting on a timeout
+  // makes even a repeat of the same words announce, and lands after _render
+  // has re-attached the live region.
+  _announce(msg) {
+    const live = this._a11y.querySelector('.sab-live');
+    if (!live) return;
+    live.textContent = '';
+    setTimeout(() => { live.textContent = msg || ''; }, 30);
   }
 
   connectedCallback() {
     ensureDocStyle(this, 'sol-app-builder-css', CSS);
+    this.append(this._a11y);
     // The heavy editors load lazily; the Menus step renders them by tag.
     import('./sol-menu-manager.js').catch(() => {});
     import('./sol-plugin-manager.js').catch(() => {});
-    const onClick = (e) => this._onClick(e);
+    // A host-seated top row is outside this element, so the same handlers
+    // listen there too; the guard stops one event running twice if the two
+    // scopes ever nest.
+    const seen = (e) => { if (e._sabSeen) return true; e._sabSeen = true; return false; };
+    const onClick = (e) => { if (!seen(e)) this._onClick(e); };
+    const onKeydown = (e) => { if (!seen(e)) this._onKeydown(e); };
     const onChange = (e) => {
-      if (e.target.classList.contains('sab-app-select')) this._pick(e.target.value);
+      if (!seen(e) && e.target.classList.contains('sab-app-select')) this._pick(e.target.value);
     };
     this.addEventListener('click', onClick);
+    this.addEventListener('keydown', onKeydown);
     this.addEventListener('submit', (e) => this._onSubmit(e));
     this.addEventListener('change', onChange);
-    // A host-seated top row is outside this element, so it listens there too.
     const host = this.controlsHost;
     if (host) {
       host.addEventListener('click', onClick);
+      host.addEventListener('keydown', onKeydown);
       host.addEventListener('change', onChange);
     }
     // Edit Interface: drag a list feature or a chip onto a layout area.
@@ -988,6 +951,178 @@ class SolAppBuilder extends HTMLElement {
     }
   }
 
+  // Keyboard companion to the pointer gestures. Tabs use manual activation
+  // (arrows move focus, Enter activates) because a switch loads over the
+  // network; chips and offerings drag with a pick-up / choose-region / place
+  // flow announced through the live region, so no mouse is needed.
+  _onKeydown(e) {
+    const key = e.key;
+    const space = key === ' ' || key === 'Spacebar';
+
+    // Escape drops an in-progress pick, wherever focus is.
+    if (this._picked && key === 'Escape') { e.preventDefault(); this._cancelPick(); return; }
+
+    // Tab strip: move focus and roving tabindex only; Enter/Space fall through
+    // to the native button click, which switches the tab.
+    const tab = e.target.closest('[role="tab"][data-tab]');
+    if (tab && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
+      e.preventDefault();
+      this._moveTabFocus(tab, key);
+      return;
+    }
+
+    // While an item is picked up: arrows walk the drop targets, Enter places.
+    if (this._picked) {
+      if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(key)) {
+        e.preventDefault();
+        this._stepPickTarget(key === 'ArrowUp' || key === 'ArrowLeft' ? -1 : 1);
+        return;
+      }
+      if (key === 'Enter' || space) {
+        const target = e.target.closest('.sab-drop, .sab-drop-el');
+        if (target) { e.preventDefault(); this._dropPicked(target); }
+        return;
+      }
+      return;
+    }
+
+    // A menu chip opens its editor on Enter/Space (as clicking does); either
+    // chip reorders within its region with Up/Down.
+    const menuChip = e.target.closest('.sab-chip-menu[data-node]');
+    if (menuChip) {
+      if (key === 'Enter' || space) { e.preventDefault(); this._editMenuChip(menuChip.dataset.node); return; }
+      if (key === 'ArrowUp' || key === 'ArrowDown') { e.preventDefault(); this._reorderChip(menuChip, key === 'ArrowUp' ? -1 : 1); return; }
+      return;
+    }
+    const chip = e.target.closest('.sab-chip[data-node]');
+    if (chip) {
+      if (key === 'Enter' || space) {
+        e.preventDefault();
+        this._pickUp({ label: chipText(chip), sab: { op: 'move', node: chip.dataset.node } }, chip);
+        return;
+      }
+      if (key === 'ArrowUp' || key === 'ArrowDown') { e.preventDefault(); this._reorderChip(chip, key === 'ArrowUp' ? -1 : 1); return; }
+      return;
+    }
+
+    // An offering (a menu/content the app is without). A restore-area offering
+    // is a real <button> whose Enter already restores, so leave it be.
+    const feat = e.target.closest('.sab-feat[data-feature], [data-content]');
+    if (feat && (key === 'Enter' || space) && feat.tagName !== 'BUTTON') {
+      e.preventDefault();
+      this._pickUpFeature(feat);
+    }
+  }
+
+  // Move focus along the tab strip and carry the roving tabindex with it,
+  // without switching tabs (that waits for Enter/Space).
+  _moveTabFocus(tab, key) {
+    const list = tab.closest('[role="tablist"]');
+    const tabs = [...list.querySelectorAll('[role="tab"]')];
+    const i = tabs.indexOf(tab);
+    const to = key === 'Home' ? 0 : key === 'End' ? tabs.length - 1
+      : key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+        : (i + 1) % tabs.length;
+    tabs.forEach((t, n) => t.setAttribute('tabindex', n === to ? '0' : '-1'));
+    tabs[to].focus();
+  }
+
+  // ── keyboard drag-and-drop ───────────────────────────────────────────
+
+  // Pick an item up: remember it and a way back to its source, mark it, then
+  // offer the drop targets and land focus on the first.
+  _pickUp(picked, sourceEl) {
+    this._picked = { ...picked, sourceId: this._captureFocus() };
+    if (sourceEl) sourceEl.setAttribute('data-picked', 'true');
+    const targets = this._pickTargets();
+    if (!targets.length) { this._picked = null; if (sourceEl) sourceEl.removeAttribute('data-picked'); return; }
+    this._announce(`Picked up ${picked.label || 'item'}. Arrow keys choose a region, Enter places it, Escape cancels.`);
+    targets[0].focus();
+  }
+
+  _pickUpFeature(feat) {
+    if (feat.dataset.content) {
+      this._pickUp({ label: 'HTML content', plugin: { label: 'Content', newContent: true, icon: '🔗' } }, feat);
+      return;
+    }
+    let spec = null;
+    try { spec = JSON.parse(feat.dataset.feature); } catch { spec = null; }
+    if (!spec) return;
+    const link = spec.op === 'link' && STANDARD_LINKS.find((l) => l.key === spec.key);
+    this._pickUp({
+      label: feat.textContent.trim(),
+      sab: spec,
+      plugin: link ? { label: link.label, href: link.file } : null,
+    }, feat);
+  }
+
+  // The places a picked item may land: region drop zones on Add Features, and
+  // element heads on Customize. They are made focusable for the duration.
+  _pickTargets() {
+    const els = [...this.querySelectorAll('.sab-acc-head.sab-drop, .sab-el-head.sab-drop-el')];
+    els.forEach((el) => { if (!el.hasAttribute('tabindex')) el.setAttribute('data-sab-temp-tab', ''); el.setAttribute('tabindex', '-1'); });
+    this._picked.targets = els;
+    this._picked.ti = 0;
+    return els;
+  }
+
+  _stepPickTarget(dir) {
+    const t = this._picked && this._picked.targets;
+    if (!t || !t.length) return;
+    this._picked.ti = (this._picked.ti + dir + t.length) % t.length;
+    t[this._picked.ti].focus();
+  }
+
+  async _dropPicked(target) {
+    const picked = this._picked;
+    if (!picked) return;
+    this._endPick();
+    if (target.classList.contains('sab-drop-el')) {
+      // Onto an element (Customize): only a plugin or a content page goes in.
+      if (picked.plugin) await this._dropOnElement(target.dataset.editNode, picked.plugin);
+    } else {
+      const regionIri = target.dataset.region;
+      if (picked.sab) await this._applyFeaturePayload(picked.sab, regionIri, null);
+      else if (picked.plugin) await this._addPlugin(picked.plugin, regionIri);
+    }
+    this._announce(`Placed ${picked.label || 'item'}.`);
+  }
+
+  _cancelPick() {
+    const back = this._picked && this._picked.sourceId;
+    this._endPick();
+    this._announce('Move cancelled.');
+    this._restoreFocus(back);
+  }
+
+  // Clear picked state and the temporary tabindex/marker it set.
+  _endPick() {
+    this.querySelectorAll('[data-picked]').forEach((el) => el.removeAttribute('data-picked'));
+    (this._picked?.targets || []).forEach((el) => {
+      if (el.hasAttribute('data-sab-temp-tab')) { el.removeAttribute('tabindex'); el.removeAttribute('data-sab-temp-tab'); }
+    });
+    this._picked = null;
+  }
+
+  // Up/Down on a focused chip: move it before its previous sibling, or past its
+  // next one, within the same region.
+  async _reorderChip(chip, dir) {
+    const region = chip.closest('[data-region]');
+    if (!region) return;
+    const regionIri = region.dataset.region;
+    const chips = [...region.querySelectorAll('.sab-chip[data-node]')];
+    const i = chips.indexOf(chip);
+    if (dir < 0) {
+      if (i <= 0) return;
+      await this._moveChip(chip.dataset.node, regionIri, chips[i - 1].dataset.node);
+    } else {
+      if (i >= chips.length - 1) return;
+      const after = chips[i + 2] ? chips[i + 2].dataset.node : null;   // before the one past the next
+      await this._moveChip(chip.dataset.node, regionIri, after);
+    }
+    this._announce(`Moved ${chipText(chip)}.`);
+  }
+
   // The picker: "" clears, "__new" opens the create form, "__edit" lists the
   // apps to choose from, anything else is an app slug to work on.
   async _pick(value) {
@@ -1078,7 +1213,42 @@ class SolAppBuilder extends HTMLElement {
 
   // ── rendering ────────────────────────────────────────────────────────
 
+  // Before an innerHTML rebuild, note what has focus by a stable identity — the
+  // nearest ancestor carrying one of these keys, plus an inner class for a
+  // button inside it (a chip's ✕). After the rebuild, put focus back on the
+  // matching element; a no-match (the focused thing is genuinely gone) does
+  // nothing.
+  _captureFocus() {
+    const a = document.activeElement;
+    const host = this.controlsHost;
+    if (!a || a === document.body) return null;
+    if (!this.contains(a) && !(host && host.contains(a))) return null;
+    const keys = ['data-node', 'data-el', 'data-tab', 'data-feature', 'data-content',
+      'data-restore-area', 'data-edit-node', 'data-region', 'data-area', 'data-action',
+      'data-app', 'data-del-app'];
+    for (const k of keys) {
+      const holder = a.closest(`[${k}]`);
+      if (holder) {
+        return {
+          sel: `[${k}="${cssQuote(holder.getAttribute(k))}"]`,
+          inner: holder === a ? null : (a.classList[0] ? `.${a.classList[0]}` : null),
+        };
+      }
+    }
+    if (a.classList.contains('sab-app-select')) return { sel: '.sab-app-select', inner: null };
+    return null;
+  }
+
+  _restoreFocus(id) {
+    if (!id) return;
+    for (const scope of [this, this.controlsHost].filter(Boolean)) {
+      const holder = scope.querySelector(id.sel);
+      if (holder) { ((id.inner && holder.querySelector(id.inner)) || holder).focus?.(); return; }
+    }
+  }
+
   _render() {
+    const focus = this._captureFocus();
     const app = this._app;
     const opt = (value, label) => `<option value="${escHtml(value)}">${escHtml(label)}</option>`;
     // The picker names the app in play; the buttons beside it act on that app.
@@ -1090,9 +1260,21 @@ class SolAppBuilder extends HTMLElement {
           escHtml(`${a.icon ? a.icon + ' ' : ''}${a.name}`)}</option>`).join('')}
         ${opt('__new', 'Create new app…')}
       </select>
-      ${app ? `<span class="sab-app-btns" role="tablist" aria-label="What to edit">
-        ${TABS.map((t) => `<button type="button" role="tab" class="sab-app-btn sab-tab"
-          data-tab="${t.key}" aria-selected="${this._tab === t.key}">${t.label}</button>`).join('')}
+      ${app ? `<span class="sab-app-btns">
+        <span class="sab-tablist" role="tablist" aria-label="What to edit">
+        ${TABS.map((t) => {
+          // features/customize show two columns — the left one keeps its long-
+          // standing id (sab-areas / sab-custom), the right pantry gets a
+          // per-instance one; the tab governs both.
+          const controls = t.key === 'features' ? `sab-areas ${this._uid}-panel-features-right`
+            : t.key === 'customize' ? `sab-custom ${this._uid}-panel-customize-right`
+            : `${this._uid}-panel-${t.key}`;
+          return `<button type="button" role="tab" class="sab-app-btn sab-tab"
+          id="${this._uid}-tab-${t.key}" data-tab="${t.key}"
+          aria-controls="${controls}" aria-selected="${this._tab === t.key}"
+          tabindex="${this._tab === t.key ? '0' : '-1'}">${t.label}</button>`;
+        }).join('')}
+        </span>
         ${app.registered === false
           ? '<button type="button" class="sab-app-btn" data-action="register">Add to the plugin catalog</button>'
           : ''}
@@ -1105,6 +1287,8 @@ class SolAppBuilder extends HTMLElement {
     if (!app) {
       this.classList.remove('sab-two-col', 'sab-one-col');
       this.innerHTML = (host ? '' : top) + err + (this._mode ? this._render_chooser() : '');
+      this.append(this._a11y);
+      this._afterRender(focus);
       return;
     }
     // Two of the tabs work in two columns — what the app has on the left, what
@@ -1114,22 +1298,43 @@ class SolAppBuilder extends HTMLElement {
     this.classList.toggle('sab-two-col', twoCol);
     this.classList.toggle('sab-one-col', !twoCol);
     const body = this._tab === 'features'
-      ? `<div class="sab-areas" id="sab-areas"><p class="sab-hint">Loading the layout…</p></div>
-         ${this._render_pantry()}`
+      ? `<div class="sab-areas" id="sab-areas" role="tabpanel"
+           aria-labelledby="${this._uid}-tab-features"
+         ><p class="sab-hint">Loading the layout…</p></div>
+         ${this._render_pantry({ panelId: `${this._uid}-panel-features-right` })}`
       : this._tab === 'customize'
-        ? `<div class="sab-areas" id="sab-custom"><p class="sab-hint">Loading the layout…</p></div>
-           ${this._render_pantry({ elements: false, target: '#sab-custom' })}`
+        ? `<div class="sab-areas" id="sab-custom" role="tabpanel"
+             aria-labelledby="${this._uid}-tab-customize"
+           ><p class="sab-hint">Loading the layout…</p></div>
+           ${this._render_pantry({ elements: false, target: '#sab-custom', panelId: `${this._uid}-panel-customize-right` })}`
         : this._tab === 'preview'
-          ? `<div class="sab-pane sab-preview-pane"><iframe class="sab-preview"
+          ? `<div class="sab-pane sab-preview-pane" role="tabpanel" id="${this._uid}-panel-preview"
+               aria-labelledby="${this._uid}-tab-preview"><iframe class="sab-preview"
                src="${escHtml(app.folder)}index.html"
                title="Preview of ${escHtml(app.name)}"></iframe></div>`
-          : `<div class="sab-pane sab-meta-pane"><fieldset class="sab-panel"><legend>${
-              escHtml(app.name)}</legend><div id="sab-meta"></div>
+          : `<div class="sab-pane sab-meta-pane" role="tabpanel" id="${this._uid}-panel-meta"
+              aria-labelledby="${this._uid}-tab-meta"><fieldset class="sab-panel"><legend><h2 class="sab-legend-h">${
+              escHtml(app.name)}</h2></legend><div id="sab-meta"></div>
               <div class="sab-meta-danger"><button type="button" class="sab-del-app"
                 data-del-app="${escHtml(app.slug)}">Delete this app</button></div>
               </fieldset></div>`;
-    queueMicrotask(() => this._mountTab());
     this.innerHTML = `${host ? '' : top}${body}${err}`;
+    this.append(this._a11y);
+    queueMicrotask(() => this._mountTab());
+    this._afterRender(focus);
+  }
+
+  // The common tail of a render: put focus back where it was, and announce a
+  // new error to a screen reader (the visible .sab-error is rebuilt each time,
+  // so on its own it never announces).
+  _afterRender(focus) {
+    this._restoreFocus(focus);
+    if (this._error && this._error !== this._announcedError) {
+      this._announce(this._error);
+      this._announcedError = this._error;
+    } else if (!this._error) {
+      this._announcedError = null;
+    }
   }
 
   // Fill the tab the work area is showing.
@@ -1172,9 +1377,11 @@ class SolAppBuilder extends HTMLElement {
   _chipHtml(part, { removable = true } = {}) {
     const iri = part.node.value;
     const label = this._chipLabel(part);
-    return `<span class="sab-chip" draggable="true" data-node="${escHtml(iri)}">${escHtml(label)}${
+    return `<span class="sab-chip" draggable="true" role="listitem" tabindex="0"
+      aria-roledescription="movable item" aria-describedby="${this._uid}-dnd-help"
+      data-node="${escHtml(iri)}">${escHtml(label)}${
       removable ? `<button type="button" class="sab-chip-x"
-      data-el-action="remove" aria-label="Remove">✕</button>` : ''}</span>`;
+      data-el-action="remove" aria-label="Remove ${escHtml(label)}">✕</button>` : ''}</span>`;
   }
 
   // What a chip calls itself: a menu-consuming element takes the MENU's own
@@ -1240,7 +1447,9 @@ class SolAppBuilder extends HTMLElement {
   _renderFeatures() {
     const box = this.querySelector('#sab-features');
     if (!box) return;
-    const feat = (feature, label) => `<div class="sab-feat" draggable="true"
+    const focus = this._captureFocus();
+    const feat = (feature, label) => `<div class="sab-feat" draggable="true" role="button" tabindex="0"
+      aria-describedby="${this._uid}-dnd-help"
       data-feature="${escHtml(JSON.stringify(feature))}">${escHtml(label)}</div>`;
     // The areas the layout is WITHOUT — read from the layout, so they stay on
     // offer across reloads. Each always goes back to its own place, so both
@@ -1248,7 +1457,8 @@ class SolAppBuilder extends HTMLElement {
     const areaBtn = (key, label) => `<button type="button" class="sab-feat" draggable="true"
       data-restore-area="${escHtml(key)}"
       data-feature="${escHtml(JSON.stringify({ op: 'restore-area', area: key }))}"
-      title="Put ${escHtml(label)} back">${escHtml(label)}<span class="sab-chip-icon">↩</span></button>`;
+      aria-label="Put ${escHtml(label)} back"
+      title="Put ${escHtml(label)} back">${escHtml(label)}<span class="sab-chip-icon" aria-hidden="true">↩</span></button>`;
     const missingAreas = this._tree
       ? STANDARD_AREAS.filter((spec) => !findArea(this._tree, spec))
         .map((spec) => areaBtn(spec.key, spec.label)).join('')
@@ -1258,6 +1468,7 @@ class SolAppBuilder extends HTMLElement {
     box.innerHTML = Object.entries(MENU_VIEWS)
       .map(([view, spec]) => feat({ op: 'menu-view', view }, spec.label)).join('')
       + missingAreas + removed;
+    this._restoreFocus(focus);
     this._renderContentList();
   }
 
@@ -1266,14 +1477,18 @@ class SolAppBuilder extends HTMLElement {
   _renderContentList() {
     const box = this.querySelector('#sab-content');
     if (!box) return;
+    const focus = this._captureFocus();
     const missing = this._tree
       ? STANDARD_LINKS.filter((l) => !hasLink(this._tree, l.file))
-        .map((l) => `<div class="sab-feat" draggable="true"
+        .map((l) => `<div class="sab-feat" draggable="true" role="button" tabindex="0"
+          aria-describedby="${this._uid}-dnd-help"
           data-feature="${escHtml(JSON.stringify({ op: 'link', key: l.key }))}"
           >${escHtml(l.label)}</div>`).join('')
       : '';
-    box.innerHTML = `<div class="sab-feat" draggable="true" data-content="new"
+    box.innerHTML = `<div class="sab-feat" draggable="true" role="button" tabindex="0"
+      aria-describedby="${this._uid}-dnd-help" data-content="new"
       >New HTML Content</div>${missing}`;
+    this._restoreFocus(focus);
   }
 
   async _saveLayout() {
@@ -1487,6 +1702,7 @@ class SolAppBuilder extends HTMLElement {
     save.style.cssText = 'font-size:1rem; padding:.35rem .8rem; border-radius:.3rem;'
       + ' border:1px solid transparent; background:var(--accent, #1F618D); color:#fff; cursor:pointer;';
     const status = document.createElement('span');
+    status.setAttribute('role', 'status');   // updated in place — announces its own changes
     status.style.cssText = 'color:var(--text-muted, #4d4d4d);';
     const area = document.createElement('textarea');
     area.rows = 12;
@@ -1719,20 +1935,30 @@ class SolAppBuilder extends HTMLElement {
     this.querySelectorAll('.sab-drop-over').forEach((el) => el.classList.remove('sab-drop-over'));
     if (!payload) return;
     e.preventDefault();
-    // An area returns to its own slot — where it was dropped doesn't matter.
-    if (payload.op === 'restore-area') { await this._restoreArea(payload.area); return; }
-    const regionIri = drop.dataset.region;
     // Drop onto a chip = insert before it (reorder); onto the area = append.
     const beforeChip = e.target.closest('.sab-chip[data-node]');
     const beforeIri = beforeChip ? beforeChip.dataset.node : null;
-    if (payload.op === 'move') {
-      if (payload.node !== beforeIri && moveNode(this._tree, payload.node, regionIri, beforeIri)) {
-        await this._saveLayout();
-        this._renderAreaAccordion();
-      }
-      return;
-    }
+    await this._applyFeaturePayload(payload, drop.dataset.region, beforeIri);
+  }
+
+  // The SAB_MIME dispatch, shared by the pointer drop above and the keyboard
+  // path below: an area restore, a chip move, or a new feature.
+  async _applyFeaturePayload(payload, regionIri, beforeIri) {
+    if (!payload) return;
+    // An area returns to its own slot — the target region doesn't matter.
+    if (payload.op === 'restore-area') { await this._restoreArea(payload.area); return; }
+    if (payload.op === 'move') { await this._moveChip(payload.node, regionIri, beforeIri); return; }
     await this._addFeature(payload, regionIri);
+  }
+
+  // Move a chip into a region, before `beforeIri` (or to the end when null),
+  // then persist and repaint. Returns true when something actually moved.
+  async _moveChip(nodeIri, regionIri, beforeIri) {
+    if (nodeIri === beforeIri) return false;
+    if (!moveNode(this._tree, nodeIri, regionIri, beforeIri)) return false;
+    await this._saveLayout();
+    this._renderAreaAccordion();
+    return true;
   }
 
   // ── step 2: Add Plugins (catalog pantry + the app's menu managers) ────
@@ -1743,19 +1969,20 @@ class SolAppBuilder extends HTMLElement {
   // `elements` — the Interface-elements list, which places NEW menus and bars.
   // Customize edits what the app already has, so it shows the rest only.
   // `target` — the column whose menu editors the plugin cards drop into.
-  _render_pantry({ elements = true, target = '#sab-areas' } = {}) {
-    let html = `<div class="sab-right">
-    ${elements ? `<fieldset class="sab-panel sab-panel-elements"><legend>Interface elements</legend>
+  _render_pantry({ elements = true, target = '#sab-areas', panelId = '' } = {}) {
+    const idAttr = panelId ? ` id="${panelId}"` : '';
+    let html = `<div class="sab-right"${idAttr}>
+    ${elements ? `<fieldset class="sab-panel sab-panel-elements"><legend><h2 class="sab-legend-h">Interface elements</h2></legend>
       <div id="sab-features"></div>
     </fieldset>` : ''}
-    <fieldset class="sab-panel sab-shelf"><legend>HTML Content</legend>
+    <fieldset class="sab-panel sab-shelf"><legend><h2 class="sab-legend-h">HTML Content</h2></legend>
       <div id="sab-content"></div>
     </fieldset>`;
     if (this.catalog) {
       // The catalog names itself inside its own shadow tree; the panel's legend
       // says it instead, so the name sits on the border like every other panel —
       // and its own ＋ add is hidden in favour of the one on that border.
-      html += `<fieldset class="sab-panel sab-panel-fill"><legend>Plugins Available</legend>
+      html += `<fieldset class="sab-panel sab-panel-fill"><legend><h2 class="sab-legend-h">Plugins Available</h2></legend>
         <button type="button" class="sab-panel-btn" data-action="add-plugin"
           title="Add plugins">Add plugins</button>
         <sol-plugin-manager grouped source="${escHtml(this.catalog)}"
@@ -1832,6 +2059,7 @@ class SolAppBuilder extends HTMLElement {
   _renderAreaAccordion() {
     const box = this.querySelector('#sab-areas');
     if (!box || !this._tree) return;
+    const focus = this._captureFocus();
     box.innerHTML = this._fillableAreas().map((region) => {
       const iri = region.node.value;
       const chips = region.parts
@@ -1843,10 +2071,11 @@ class SolAppBuilder extends HTMLElement {
         data-area-action="remove" data-area="${escHtml(iri)}"
         aria-label="Remove ${escHtml(label)}">✕</button>`;
       return `<fieldset class="sab-acc-area"><legend class="sab-acc-head sab-drop"
-        data-region="${escHtml(iri)}">${escHtml(label)}</legend>${x}<div
-        class="sab-acc-body sab-drop" data-region="${escHtml(iri)}">${
+        data-region="${escHtml(iri)}"><h3 class="sab-legend-h">${escHtml(label)}</h3></legend>${x}<div
+        class="sab-acc-body sab-drop" role="list" data-region="${escHtml(iri)}">${
         chips || '<span class="sab-hint">drop a plugin or content here</span>'}</div></fieldset>`;
     }).join('');
+    this._restoreFocus(focus);
   }
 
   // Customize's left column: everything in the app you can edit, flat and in
@@ -1855,6 +2084,7 @@ class SolAppBuilder extends HTMLElement {
   _renderCustomList() {
     const box = this.querySelector('#sab-custom');
     if (!box || !this._tree) return;
+    const focus = this._captureFocus();
     const parts = this._fillableAreas()
       .flatMap((region) => region.parts.filter((p) => p.kind === 'leaf' || p.kind === 'link'));
     if (!parts.length) {
@@ -1864,11 +2094,13 @@ class SolAppBuilder extends HTMLElement {
     box.innerHTML = `<div class="sab-els">${parts.map((part) => {
       const iri = part.node.value;
       return `<div class="sab-el" data-el="${escHtml(iri)}">
-        <button type="button" class="sab-el-head sab-drop-el" aria-expanded="false"
-          data-edit-node="${escHtml(iri)}">${escHtml(this._chipLabel(part))}</button>
-        <div class="sab-el-body" hidden></div>
+        <h3 class="sab-el-h"><button type="button" class="sab-el-head sab-drop-el" aria-expanded="false"
+          aria-controls="${this._uid}-elbody-${cssId(iri)}"
+          data-edit-node="${escHtml(iri)}">${escHtml(this._chipLabel(part))}</button></h3>
+        <div class="sab-el-body" id="${this._uid}-elbody-${cssId(iri)}" hidden></div>
       </div>`;
     }).join('')}</div>`;
+    this._restoreFocus(focus);
   }
 
   // Opening one unfolds it in place: its own fields, plus — for a menu — its
@@ -2058,9 +2290,11 @@ class SolAppBuilder extends HTMLElement {
     if (!menu) return this._chipHtml(part);
     const iri = part.node.value;
     const label = this._chipLabel(part);
-    return `<span class="sab-chip sab-chip-menu" draggable="true" data-node="${escHtml(iri)}"
+    return `<span class="sab-chip sab-chip-menu" draggable="true" role="listitem" tabindex="0"
+      aria-roledescription="movable item" aria-describedby="${this._uid}-dnd-help"
+      data-node="${escHtml(iri)}"
       title="Edit ${escHtml(label)}">${escHtml(label)}<button type="button" class="sab-chip-x"
-      data-el-action="remove" aria-label="Remove">✕</button></span>`;
+      data-el-action="remove" aria-label="Remove ${escHtml(label)}">✕</button></span>`;
   }
 
   // A plugin card dropped on a REGION becomes a layout member: a ui:Link for a

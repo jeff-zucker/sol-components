@@ -171,6 +171,19 @@ test('an app in play brings the four tabs, opening on Metadata', async () => {
     .toEqual(['Metadata', 'Add Features', 'Customize', 'Preview']);
   expect(tabs.map((b) => b.getAttribute('aria-selected')))
     .toEqual(['true', 'false', 'false', 'false']);
+  // every tab has an id and names its panel; the register button is not a tab
+  const list = el.querySelector('[role="tablist"]');
+  expect(list).toBeTruthy();
+  expect(list.querySelector('[data-action="register"]')).toBeFalsy();
+  tabs.forEach((t) => {
+    expect(t.id).toBeTruthy();
+    expect(t.getAttribute('aria-controls')).toBeTruthy();
+  });
+  // only the SELECTED tab's panel is in the DOM (panels render lazily per tab),
+  // and it is a tabpanel labelled by its tab
+  const metaPanel = document.getElementById(tabs[0].getAttribute('aria-controls'));
+  expect(metaPanel.getAttribute('role')).toBe('tabpanel');
+  expect(metaPanel.getAttribute('aria-labelledby')).toBe(tabs[0].id);
   expect(el.querySelector('#sab-meta')).toBeTruthy();
   expect(el.querySelector('.sab-areas')).toBeFalsy();
   // and Add Features is the two-column working screen
@@ -178,6 +191,25 @@ test('an app in play brings the four tabs, opening on Metadata', async () => {
   expect(el.querySelector('.sab-areas')).toBeTruthy();
   expect(el.querySelector('.sab-right')).toBeTruthy();
   expect(document.querySelector('sol-window')).toBeFalsy();
+});
+
+test('regions and elements are headed, and chips are movable list items', async () => {
+  const el = await mount();
+  await createHello(el);
+  await settle();
+  // each region card's title is a real heading inside its legend
+  const head = el.querySelector('.sab-acc-area legend .sab-legend-h');
+  expect(head && head.tagName).toBe('H3');
+  // chips are list items with a keyboard tab stop and their own Remove name
+  const chip = el.querySelector('.sab-chip[data-node]');
+  expect(chip.getAttribute('role')).toBe('listitem');
+  expect(chip.getAttribute('tabindex')).toBe('0');
+  const x = chip.querySelector('.sab-chip-x');
+  expect(x.getAttribute('aria-label')).toMatch(/^Remove .+/);
+  // the live region and DnD help survive a re-render (same node, still attached)
+  const live = el.querySelector('.sab-a11y .sab-live');
+  await gotoTab(el, 'customize');
+  expect(el.querySelector('.sab-a11y .sab-live')).toBe(live);
 });
 
 test('the Preview tab shows the generated page in the work area', async () => {
@@ -283,6 +315,12 @@ test('an app that already has a layout keeps it — no recompose', async () => {
 function dropFeature(target, payload) {
   const dt = { types: ['application/x-sab-feature'], getData: () => JSON.stringify(payload), dropEffect: '' };
   target.dispatchEvent(Object.assign(new Event('drop', { bubbles: true }), { dataTransfer: dt }));
+}
+
+// Press a key on whatever currently has focus, the way a keyboard user would.
+function key(name) {
+  (document.activeElement || document.body)
+    .dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
 }
 
 const areaTitles = (el) => [...el.querySelectorAll('.sab-acc-area > legend.sab-acc-head')]
@@ -509,6 +547,90 @@ test('dragging a chip to another area moves it (moveNode)', async () => {
   expect(layoutPut).toBeTruthy();
   // the Menu leaf now sits under :Main, not :Header
   expect(layoutPut.body).toMatch(/:Main-Menu a schema:ListItem; schema:item :Menu/);
+});
+
+test('the tab strip is arrow-navigable with a roving tabindex', async () => {
+  const el = await mount();
+  await createHello(el, null);
+  await settle();
+  const tabs = [...el.querySelectorAll('[role="tab"]')];
+  expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
+  tabs[0].focus();
+  key('ArrowRight');
+  // focus and the roving index move, but the tab has NOT switched (manual activation)
+  expect(document.activeElement).toBe(tabs[1]);
+  expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['-1', '0', '-1', '-1']);
+  expect(el._tab).toBe('meta');
+  key('End');
+  expect(document.activeElement).toBe(tabs[3]);
+});
+
+test('keyboard: pick a chip up, choose a region, place it — same write as a drag', async () => {
+  const el = await mount();
+  await createHello(el);
+  await settle();
+  // a plain (non-menu) chip picks up on Enter; a menu chip's Enter edits instead
+  const chip = [...el.querySelectorAll('.sab-chip:not(.sab-chip-menu)[data-node]')][0];
+  const node = chip.dataset.node;
+  chip.focus();
+  writes = [];
+  key('Enter');                         // pick up
+  expect(el._picked).toBeTruthy();
+  // focus is now on a drop target; walk to Main and place
+  let guard = 0;
+  while (!(document.activeElement.dataset && /#Main$/.test(document.activeElement.dataset.region || '')) && guard++ < 10) {
+    key('ArrowDown');
+  }
+  expect(/#Main$/.test(document.activeElement.dataset.region)).toBe(true);
+  key('Enter');                         // place
+  await settle();
+  expect(el._picked).toBe(null);
+  const layoutPut = writes.find((w) => w.url === `${APPS}hello-world/layout.ttl`);
+  expect(layoutPut).toBeTruthy();
+  // the moved leaf now sits under :Main
+  const frag = node.split('#')[1];
+  expect(layoutPut.body).toMatch(new RegExp(`:Main-${frag} a schema:ListItem; schema:item :${frag}`));
+});
+
+test('keyboard: Escape cancels a pick, writing nothing', async () => {
+  const el = await mount();
+  await createHello(el);
+  await settle();
+  const chip = el.querySelector('.sab-chip[data-node]');
+  chip.focus();
+  writes = [];
+  key('Enter');
+  expect(el._picked).toBeTruthy();
+  key('ArrowDown');
+  key('Escape');
+  await settle();
+  expect(el._picked).toBe(null);
+  expect(writes.some((w) => w.method === 'PUT' && /layout\.ttl$/.test(w.url))).toBe(false);
+});
+
+test('keyboard: a menu/content offering can be added without a mouse', async () => {
+  const el = await mount();
+  await createHello(el);
+  await settle();
+  // the Footer region was created full; remove it so its page returns to the shelf
+  const foot = el.querySelector('.sab-area-x[data-area$="#Footer"]');
+  if (foot) { foot.click(); await settle(60); }
+  // pick the first offering in the Interface-elements list
+  const offer = el.querySelector('#sab-features .sab-feat[role="button"]');
+  expect(offer).toBeTruthy();
+  offer.focus();
+  writes = [];
+  key('Enter');
+  expect(el._picked).toBeTruthy();
+  let guard = 0;
+  while (!(document.activeElement.classList && document.activeElement.classList.contains('sab-acc-head')) && guard++ < 12) {
+    key('ArrowDown');
+  }
+  expect(document.activeElement.classList.contains('sab-acc-head')).toBe(true);
+  key('Enter');
+  await settle();
+  expect(el._picked).toBe(null);
+  expect(writes.some((w) => w.method === 'PUT' && /layout\.ttl$/.test(w.url))).toBe(true);
 });
 
 test('creating an app already writes index.html + app.css and the catalog entry', async () => {
