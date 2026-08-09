@@ -2,6 +2,7 @@
   "name": "sol-components",
   "version": "2.9.0",
   "description": "Web components and Node.js tools for querying, including, and editing RDF/Linked Data on Solid Pods",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
