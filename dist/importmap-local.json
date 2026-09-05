@@ -7,7 +7,7 @@
     "@comunica/query-sparql": "./vendor/@comunica-query-sparql.js",
     "solid-ui": "./vendor/solid-ui.js",
     "solid-logic": "./vendor/solid-logic.js",
-    "@inrupt/solid-client-authn-browser": "./vendor/@inrupt-solid-client-authn-browser.js",
+    "@uvdsl/solid-oidc-client-browser": "./vendor/@uvdsl-solid-oidc-client-browser.js",
     "n3": "./vendor/n3.js",
     "rdf-validate-shacl": "./vendor/rdf-validate-shacl.js",
     "menu-from-rdf": "../web/menu-from-rdf.js",

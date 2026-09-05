@@ -45,7 +45,7 @@
       "@comunica/query-sparql": "dist/vendor/@comunica-query-sparql.js",
       "solid-ui": "dist/vendor/solid-ui.js",
       "solid-logic": "dist/vendor/solid-logic.js",
-      "@inrupt/solid-client-authn-browser": "dist/vendor/@inrupt-solid-client-authn-browser.js",
+      "@uvdsl/solid-oidc-client-browser": "dist/vendor/@uvdsl-solid-oidc-client-browser.js",
       "n3": "dist/vendor/n3.js",
       "rdf-validate-shacl": "dist/vendor/rdf-validate-shacl.js",
       "menu-from-rdf": "web/menu-from-rdf.js",

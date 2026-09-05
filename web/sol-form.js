@@ -35,7 +35,6 @@
  * @extends HTMLElement
  */
 
-import { inrupt } from '../core/inrupt-global.js';
 import { define } from '../core/define.js';
 import { adopt }  from '../core/adopt.js';
 import { rdf }    from '../core/rdf.js';
@@ -69,15 +68,13 @@ function installRawSparqlUpdate(store) {
     if (deletes.length) parts.push(`DELETE DATA {\n${deletes.map(nt).join('\n')}\n}`);
     if (inserts.length) parts.push(`INSERT DATA {\n${inserts.map(nt).join('\n')}\n}`);
     const body = parts.join(' ;\n');
-    // Prefer the logged-in Solid session's fetch (carries the auth token for
-    // writes to a protected pod); fall back to solFetch — the same
-    // auth-manager-aware wrapper every other component writes through (in
-    // Data Kitchen it carries the shell's gate token; on a plain page it
-    // degrades to fetch). A bare globalThis.fetch fallback 401s on dk
-    // (2026-07-18, found by the entry-editor live probe).
-    const session = inrupt?.getDefaultSession?.();
-    const fetchFn = (session?.info?.isLoggedIn && session.fetch.bind(session))
-      || solFetch;
+    // Write through solFetch — the auth-manager-aware wrapper every other
+    // component writes through. It routes by the document's origin to the
+    // covering session's fetch (in Data Kitchen the shell's gate token; a
+    // remote pod's OIDC session; a plain page degrades to fetch). A bare
+    // globalThis.fetch fallback 401s on dk (2026-07-18, found by the
+    // entry-editor live probe).
+    const fetchFn = solFetch;
     const applyLocal = () => {
       for (const s of deletes) store.remove(s);
       for (const s of inserts) store.add(s.subject, s.predicate, s.object, s.why || s.graph);

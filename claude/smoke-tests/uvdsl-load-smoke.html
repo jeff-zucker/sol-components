@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>uvdsl load smoke</title>
+<!-- Confirms the vendored @uvdsl build loads via the importmap, and that
+     sol-login's AuthManager + a coverage-routed local/remote pair work in a
+     real browser (IndexedDB-backed SessionIDB constructs, no SharedWorker). -->
+<script type="importmap">
+{
+  "imports": {
+    "@uvdsl/solid-oidc-client-browser": "../../dist/vendor/@uvdsl-solid-oidc-client-browser.js",
+    "rdflib": "../../dist/vendor/rdflib.js",
+    "n3": "../../dist/vendor/n3.js",
+    "dompurify": "../../dist/vendor/dompurify.js",
+    "ical.js": "../../dist/vendor/ical.js.js",
+    "marked": "../../dist/vendor/marked.js"
+  }
+}
+</script>
+<pre id="out">running…</pre>
+<script type="module">
+  const out = document.getElementById('out');
+  const log = (m) => { out.textContent += '\n' + m; };
+  try {
+    const mod = await import('@uvdsl/solid-oidc-client-browser');
+    log('exports: ' + Object.keys(mod).join(', '));
+    log('has Session: ' + (typeof mod.Session === 'function'));
+    log('has SessionIDB: ' + (typeof mod.SessionIDB === 'function'));
+    // SessionIDB opens IndexedDB — must not throw in a real browser.
+    const db = new mod.SessionIDB();
+    log('SessionIDB constructed: ok');
+    // Construct a session (dynamic client registration shape) — must not throw
+    // and must NOT create a SharedWorker.
+    const s = new mod.Session(
+      { redirect_uris: [location.href], client_name: 'Smoke' },
+      { database: db },
+    );
+    log('Session constructed: ok; isActive=' + s.isActive + ' webId=' + s.webId);
+
+    const { AuthManager } = await import('../../web/sol-login.js');
+    const am = AuthManager.shared;
+    // Seat a local owner (localhost) and a remote session; check per-origin routing.
+    am.sessions.set('local', {
+      info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me', issuer: 'http://localhost/' },
+      fetch: (i, init) => fetch(i, init), logout: async () => {},
+    });
+    am.sessions.set('default', {
+      info: { isLoggedIn: true, webId: 'https://alice.solidcommunity.net/profile/card#me', issuer: 'https://solidcommunity.net' },
+      fetch: () => Promise.resolve(new Response('remote')), logout: async () => {},
+    });
+    const localSess = am.getSessionFor('http://localhost/dk-pod/x.ttl');
+    const remoteSess = am.getSessionFor('https://alice.solidcommunity.net/x.ttl');
+    log('local routes to owner: ' + (localSess?.info?.webId?.includes('localhost')));
+    log('remote routes to remote: ' + (remoteSess?.info?.webId?.includes('solidcommunity')));
+    log('RESULT: ' + ((typeof mod.Session === 'function' && localSess?.info?.webId?.includes('localhost') && remoteSess?.info?.webId?.includes('solidcommunity')) ? 'PASS' : 'FAIL'));
+  } catch (e) {
+    log('ERROR: ' + (e?.message || e));
+    log('RESULT: FAIL');
+  }
+</script>

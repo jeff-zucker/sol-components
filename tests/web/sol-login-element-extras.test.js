@@ -6,45 +6,23 @@
  * companion components (sol-include, sol-query).
  */
 
-import { __setSession } from '@inrupt/solid-client-authn-browser';
+import { __resetMock, __loginCalls } from '@uvdsl/solid-oidc-client-browser';
 import { jest } from '@jest/globals';
-import { AuthManager, SolLogin } from '../../web/sol-login.js';
+import { SolLogin } from '../../web/sol-login.js';
 import { getAuthFetch } from '../../core/auth-fetch.js';
-
-// All MockSession instances ever made — lets the click-flow tests find the
-// "real" session that received .login() even when AuthManager replaced the
-// pre-seeded one inside setSideOrigin.
-const ALL_SESSIONS = [];
-
-class MockSession {
-  constructor(opts, id) {
-    this.id     = id;
-    this.info   = { isLoggedIn: false, webId: null, issuer: null };
-    this.fetch  = (input, init) => globalThis.fetch(input, init);
-    this._loginCalls  = [];
-    this._logoutCount = 0;
-    ALL_SESSIONS.push(this);
-  }
-  async handleIncomingRedirect() {}
-  async login(opts) { this._loginCalls.push(opts); }
-  async logout()    { this._logoutCount += 1; this.info.isLoggedIn = false; this.info.webId = null; }
-}
-function totalLoginCalls() {
-  return ALL_SESSIONS.reduce((n, s) => n + s._loginCalls.length, 0);
-}
 
 beforeAll(() => {
   if (typeof globalThis.fetch === 'undefined') {
     globalThis.fetch = async () => ({ ok: true, status: 200 });
   }
-  __setSession(MockSession);
   window.__SolSuppressDefineWarn = true;
 });
 
-function mkLogin(side) {
+beforeEach(() => __resetMock());
+
+function mkLogin() {
   const el = document.createElement('sol-login');
   el._manualInit = true;
-  if (side) el.setAttribute('side', side);
   document.body.appendChild(el);
   return el;
 }
@@ -52,30 +30,39 @@ function mkLogin(side) {
 // All <sol-login> elements share one AuthManager whose session Map is a
 // module-level singleton — clear it between tests so sessions don't leak.
 function clearSessions() {
-  document.createElement('sol-login').auth.sessions.clear();
+  const el = document.createElement('sol-login');
+  el.auth.sessions.clear();
+  el.auth._oidc = null;
+}
+
+/** Seat a logged-in session-shaped object into the shared manager. */
+function seat(auth, tag, webId, issuer, fetchFn) {
+  const session = {
+    info: { isLoggedIn: true, webId, issuer },
+    fetch: fetchFn || ((i, init) => globalThis.fetch(i, init)),
+    logout: async () => { session.info.isLoggedIn = false; session.info.webId = null; },
+  };
+  auth.sessions.set(tag, session);
+  return session;
 }
 
 // ── Click flow on the main button ────────────────────────────────────────────
 
 describe('SolLogin — click flow', () => {
   let el;
-  beforeEach(() => { el = mkLogin(); });
+  beforeEach(() => { clearSessions(); el = mkLogin(); });
   afterEach(() => el.remove());
 
   test('clicking Log in opens the issuer dropdown when not logged in', () => {
-    const btn = el.shadowRoot.querySelector('.auth-btn');
-    btn.click();
-    const dd = el.shadowRoot.querySelector('.dropdown');
-    expect(dd.classList.contains('open')).toBe(true);
+    el.shadowRoot.querySelector('.auth-btn').click();
+    expect(el.shadowRoot.querySelector('.dropdown').classList.contains('open')).toBe(true);
   });
 
-  test('clicking Log out (when logged in) calls session.logout', async () => {
-    const session = el.auth.sessionFor('default', 'https://ex.com');
-    session.info = { isLoggedIn: true, webId: 'https://ex.com/me', issuer: 'https://ex.com' };
+  test('clicking Log out (when logged in) logs the session out', async () => {
+    seat(el.auth, 'default', 'https://ex.com/me', 'https://ex.com');
     await el.initialize();
     expect(el.shadowRoot.querySelector('.auth-btn').textContent).toBe('Log out');
     el.shadowRoot.querySelector('.auth-btn').click();
-    // logout is async; wait a microtask for state to settle.
     await Promise.resolve();
     await Promise.resolve();
     expect(el.isLoggedIn).toBe(false);
@@ -84,71 +71,54 @@ describe('SolLogin — click flow', () => {
   test('clicking the same button twice toggles the dropdown closed', () => {
     const btn = el.shadowRoot.querySelector('.auth-btn');
     btn.click();
-    const dd = el.shadowRoot.querySelector('.dropdown');
-    expect(dd.classList.contains('open')).toBe(true);
+    expect(el.shadowRoot.querySelector('.dropdown').classList.contains('open')).toBe(true);
     btn.click();
-    expect(dd.classList.contains('open')).toBe(false);
+    expect(el.shadowRoot.querySelector('.dropdown').classList.contains('open')).toBe(false);
   });
 
-  test('typing an issuer URL and pressing Enter calls session.login', async () => {
-    const before = totalLoginCalls();
+  test('typing an issuer URL and pressing Enter starts a login', async () => {
     el.shadowRoot.querySelector('.auth-btn').click();
     const input = el.shadowRoot.querySelector('.issuer-input');
     input.value = 'https://solidcommunity.net';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    // login() chain is async — flush microtasks + a tick.
     await new Promise(r => setTimeout(r, 0));
-    expect(totalLoginCalls()).toBeGreaterThan(before);
+    expect(__loginCalls.length).toBeGreaterThan(0);
+    expect(__loginCalls[0].idp).toBe('https://solidcommunity.net');
   });
 
-  test('Go button posts the same login call as Enter', async () => {
-    const before = totalLoginCalls();
+  test('Go button starts the same login as Enter', async () => {
     el.shadowRoot.querySelector('.auth-btn').click();
-    const input = el.shadowRoot.querySelector('.issuer-input');
-    input.value = 'https://login.inrupt.com';
+    el.shadowRoot.querySelector('.issuer-input').value = 'https://login.inrupt.com';
     el.shadowRoot.querySelector('.custom-row .sol-btn').click();
     await new Promise(r => setTimeout(r, 0));
-    expect(totalLoginCalls()).toBeGreaterThan(before);
+    expect(__loginCalls.length).toBeGreaterThan(0);
   });
 });
 
-// ── side-scoped click basis (dk synthetic owner session) ───────────────────
-// dk registers a synthetic local-owner session under 'default' (logged in,
-// covers only the local pod, no login/logout OIDC methods). A side-tagged
-// redirect-mode login button must NOT read that as "I'm logged in" — that
-// turned the phone's Log in tap into a silent logout().
+// ── click basis vs the synthetic local owner ───────────────────────────────
+// dk registers a synthetic local-owner session under 'local' (logged in,
+// covers only the local pod, no OIDC methods). The login button reflects only
+// the 'default' (remote) session — the owner must not read as "logged in" and
+// turn a Log in tap into a silent logout.
 
-describe('SolLogin — redirect click flow with a foreign default session', () => {
-  const owner = () => ({
-    info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me', issuer: 'http://localhost/' },
-    fetch: (i, init) => globalThis.fetch(i, init),
-    logout: async () => {},
-  });
-
+describe('SolLogin — button ignores the local owner', () => {
   afterEach(() => { clearSessions(); document.body.innerHTML = ''; });
 
-  test('a side-tagged button still opens the dropdown', () => {
-    const el = mkLogin('left');
-    el.auth.sessions.set('default', owner());
+  test('a Log in button still opens the dropdown with an owner present', () => {
+    clearSessions();
+    const el = mkLogin();
+    seat(el.auth, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
     el.shadowRoot.querySelector('.auth-btn').click();
     expect(el.shadowRoot.querySelector('.dropdown').classList.contains('open')).toBe(true);
   });
 
-  test('a side-tagged login registers its session under the side tag', async () => {
-    const el = mkLogin('left');
-    el.auth.sessions.set('default', owner());
-    await el.login('https://idp.example/');
-    const side = el.auth.sessions.get('left');
-    expect(side?._loginCalls?.length).toBe(1);
-    expect(el.auth.sessions.get('default').info.webId)
-      .toBe('http://localhost/dk-pod/profile/card#me');   // owner untouched
-  });
-
-  test('a default-side button still reflects the shared logged-in session', async () => {
+  test('an interactive login leaves the owner untouched', async () => {
+    clearSessions();
     const el = mkLogin();
-    el.auth.sessions.set('default', owner());
-    await el.initialize();
-    expect(el.shadowRoot.querySelector('.auth-btn').textContent).toBe('Log out');
+    const owner = seat(el.auth, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
+    await el.login('https://idp.example/');
+    expect(__loginCalls.length).toBe(1);
+    expect(el.auth.sessions.get('local')).toBe(owner);   // owner untouched
   });
 });
 
@@ -156,19 +126,18 @@ describe('SolLogin — redirect click flow with a foreign default session', () =
 
 describe('SolLogin — issuer quickpick rendering', () => {
   let el;
-  beforeEach(() => { el = mkLogin(); });
+  beforeEach(() => { clearSessions(); el = mkLogin(); });
   afterEach(() => el.remove());
 
-  test('clicking a quickpick triggers login for that issuer', async () => {
+  test('clicking a quickpick starts a login for that issuer', async () => {
     el.setAttribute('issuers', 'https://solidcommunity.net');
     el.shadowRoot.querySelector('.auth-btn').click();
     const item = el.shadowRoot.querySelector('.issuer-item');
-    expect(item).toBeTruthy();
     expect(item.textContent).toBe('solidcommunity.net');
-    const before = totalLoginCalls();
     item.click();
     await new Promise(r => setTimeout(r, 0));
-    expect(totalLoginCalls()).toBeGreaterThan(before);
+    expect(__loginCalls.length).toBeGreaterThan(0);
+    expect(__loginCalls[0].idp).toBe('https://solidcommunity.net');
   });
 });
 
@@ -179,99 +148,59 @@ describe('getAuthFetch — auto-discovery', () => {
   afterEach(()  => { document.body.innerHTML = ''; });
 
   test('returns a function when no <sol-login> on page', () => {
-    const fn = getAuthFetch('https://my.pod/data');
-    expect(typeof fn).toBe('function');
+    expect(typeof getAuthFetch('https://my.pod/data')).toBe('function');
   });
 
-  test('returned wrapper invokes the matching session.fetch', async () => {
+  test('returned wrapper invokes the covering session.fetch', async () => {
     const a = mkLogin();
-    const customFetch = jest.fn(async () => ({ ok: true, status: 200, body: 'hi' }));
-    const session = a.auth.sessionFor('default', 'https://my.pod');
-    session.info  = { isLoggedIn: true, webId: 'https://my.pod/me', issuer: 'https://my.pod' };
-    session.fetch = customFetch;
-    const fn = getAuthFetch('https://my.pod/data');
-    await fn('https://my.pod/data');
+    const customFetch = jest.fn(async () => ({ ok: true, status: 200 }));
+    seat(a.auth, 'default', 'https://my.pod/me', 'https://my.pod', customFetch);
+    await getAuthFetch('https://my.pod/data')('https://my.pod/data');
     expect(customFetch).toHaveBeenCalledTimes(1);
   });
 
-  test('explicit element option targets the chosen <sol-login>', async () => {
-    // Two logins on distinct sides → two independent sessions (the Map is
-    // keyed by side). getAuthFetch targets a session via the element's side.
-    const first  = mkLogin('a');
-    const second = mkLogin('b');
-
-    const customFetchA = jest.fn(async () => ({ ok: true, body: 'a' }));
-    const sessA = first.auth.sessionFor('a', 'https://a.pod');
-    sessA.info  = { isLoggedIn: true, webId: 'https://a.pod/me', issuer: 'https://a.pod' };
-    sessA.fetch = customFetchA;
-
-    const customFetchB = jest.fn(async () => ({ ok: true, body: 'b' }));
-    const sessB = second.auth.sessionFor('b', 'https://b.pod');
-    sessB.info  = { isLoggedIn: true, webId: 'https://b.pod/me', issuer: 'https://b.pod' };
-    sessB.fetch = customFetchB;
-
-    // No element → auto-discovery; the URL's origin selects session A.
-    await getAuthFetch('https://a.pod/data')('https://a.pod/data');
-    expect(customFetchA).toHaveBeenCalledTimes(1);
-    expect(customFetchB).not.toHaveBeenCalled();
-
-    // Explicit element → its side ("b") selects session B directly.
-    customFetchA.mockClear();
-    await getAuthFetch('https://b.pod/data', { element: second })('https://b.pod/data');
-    expect(customFetchB).toHaveBeenCalledTimes(1);
-    expect(customFetchA).not.toHaveBeenCalled();
-  });
-
-  test('falls back to global fetch when no session covers the URL', () => {
+  test('routes to the session covering the URL (local vs remote)', async () => {
     const a = mkLogin();
-    a.auth.sessionFor('default', 'https://other.pod');
-    const fn = getAuthFetch('https://my.pod/data');
-    // Bound global fetch — at minimum a function we can call.
-    expect(typeof fn).toBe('function');
+    const localFetch = jest.fn(async () => ({ ok: true }));
+    const remoteFetch = jest.fn(async () => ({ ok: true }));
+    seat(a.auth, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/', localFetch);
+    seat(a.auth, 'default', 'https://alice.solidcommunity.net/card#me', 'https://solidcommunity.net', remoteFetch);
+
+    await getAuthFetch('http://localhost/dk-pod/x')('http://localhost/dk-pod/x');
+    expect(localFetch).toHaveBeenCalledTimes(1);
+    expect(remoteFetch).not.toHaveBeenCalled();
+
+    await getAuthFetch('https://alice.solidcommunity.net/x')('https://alice.solidcommunity.net/x');
+    expect(remoteFetch).toHaveBeenCalledTimes(1);
   });
 });
 
 // ── _authFetch on sol-query honors the `login=` selector ─────────────────────
 
 describe('SolQuery._authFetch — login selector', () => {
-  // Lazy-import so the global stubs above are in place first.
   let SolQuery;
   beforeAll(async () => {
     ({ SolQuery } = await import('../../web/sol-query.js'));
   });
   beforeEach(() => { document.body.innerHTML = ''; clearSessions(); });
 
-  test('selector="#alt" picks the targeted login element', async () => {
-    const primary = mkLogin('primary'); primary.id = 'primary';
-    const alt     = mkLogin('alt');     alt.id     = 'alt';
-
+  test('login="#alt" routes through the covering session', async () => {
+    const alt = mkLogin(); alt.id = 'alt';
     const fA = jest.fn(async () => ({ ok: true, status: 200 }));
-    const sA = alt.auth.sessionFor('alt', 'https://alt.pod');
-    sA.info  = { isLoggedIn: true, webId: 'https://alt.pod/me', issuer: 'https://alt.pod' };
-    sA.fetch = fA;
-
-    const fP = jest.fn(async () => ({ ok: true, status: 200 }));
-    const sP = primary.auth.sessionFor('primary', 'https://primary.pod');
-    sP.info  = { isLoggedIn: true, webId: 'https://primary.pod/me', issuer: 'https://primary.pod' };
-    sP.fetch = fP;
+    seat(alt.auth, 'default', 'https://alt.pod/me', 'https://alt.pod', fA);
 
     const q = document.createElement('sol-query');
     q.setAttribute('login', '#alt');
     document.body.appendChild(q);
-    // A URL covered by neither pod's domain: only the explicitly targeted
-    // #alt session can serve it, so the selector must route by side.
-    await q._authFetch('https://neutral.example/data')('https://neutral.example/data');
+    await q._authFetch('https://alt.pod/data')('https://alt.pod/data');
     expect(fA).toHaveBeenCalledTimes(1);
-    expect(fP).not.toHaveBeenCalled();
     q.remove();
   });
 
   test('no login attribute → auto-discovery uses the first <sol-login>', async () => {
     const first = mkLogin(); first.id = 'first';
     const fF = jest.fn(async () => ({ ok: true, status: 200 }));
-    const sF = first.auth.sessionFor('default', 'https://first.pod');
-    sF.info  = { isLoggedIn: true, webId: 'https://first.pod/me', issuer: 'https://first.pod' };
-    sF.fetch = fF;
+    seat(first.auth, 'default', 'https://first.pod/me', 'https://first.pod', fF);
 
     const q = document.createElement('sol-query');
     document.body.appendChild(q);
@@ -281,15 +210,13 @@ describe('SolQuery._authFetch — login selector', () => {
   });
 });
 
-// ── initialize(): single-flight + resilient paint + side-scoped event ────────
-// Boot paths overlap: the embedding component's mount AND the host's own
-// redirect handler both call initialize(). Two concurrent runs raced the OIDC
-// code exchange and could leave "Log in" painted on a logged-in session.
+// ── initialize(): single-flight + resilient paint ────────────────────────────
 
 describe('SolLogin — initialize()', () => {
   afterEach(() => { clearSessions(); document.body.innerHTML = ''; });
 
   test('is single-flight: concurrent callers share one redirect pass', async () => {
+    clearSessions();
     const el = mkLogin();
     let calls = 0;
     let release;
@@ -303,29 +230,22 @@ describe('SolLogin — initialize()', () => {
   });
 
   test('paints the button even when redirect processing throws', async () => {
+    clearSessions();
     const el = mkLogin();
-    const s = el.auth.sessionFor('default', 'https://ex.com');
-    s.info = { isLoggedIn: true, webId: 'https://ex.com/me', issuer: 'https://ex.com' };
+    seat(el.auth, 'default', 'https://ex.com/me', 'https://ex.com');
     el.auth.handleIncomingRedirect = async () => { throw new Error('code already consumed'); };
     await el.initialize();
     expect(el.shadowRoot.querySelector('.auth-btn').textContent).toBe('Log out');
   });
 
-  test('announces the SIDE session, not a synthetic first-logged-in default', async () => {
-    const el = mkLogin('left');
-    // dk-style synthetic owner on 'default' — always logged in.
-    el.auth.sessions.set('default', {
-      info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me', issuer: 'http://localhost/' },
-      fetch: (i, init) => globalThis.fetch(i, init),
-      logout: async () => {},
-    });
-    const left = el.auth.sessionFor('left', 'https://idp.example');
-    left.info = { isLoggedIn: true, webId: 'https://me.idp.example/card#me', issuer: 'https://idp.example' };
+  test('announces the default session on login', async () => {
+    clearSessions();
+    const el = mkLogin();
+    seat(el.auth, 'default', 'https://me.idp.example/card#me', 'https://idp.example');
     const seen = [];
     el.addEventListener('sol-login', (e) => seen.push(e.detail));
     await el.initialize();
     expect(seen.length).toBe(1);
     expect(seen[0].webId).toBe('https://me.idp.example/card#me');
-    expect(seen[0].side).toBe('left');
   });
 });

@@ -9,7 +9,7 @@
 
     "solid-ui":                              { "version": "^3.1.0", "cdn": "https://esm.sh/solid-ui@3" },
     "solid-logic":                           { "version": "^4.0.6", "cdn": "https://esm.sh/solid-logic@4" },
-    "@inrupt/solid-client-authn-browser":    { "version": "^4.0.0", "cdn": "https://esm.sh/@inrupt/solid-client-authn-browser@4" },
+    "@uvdsl/solid-oidc-client-browser":      { "version": "^0.2.3", "cdn": "https://esm.sh/@uvdsl/solid-oidc-client-browser@0.2", "entry": "tools/vendor-entries/uvdsl-solid-oidc.mjs" },
     "n3":                                    { "version": "^2.0.3", "cdn": "https://esm.sh/n3@2" },
     "rdf-validate-shacl":                    { "version": "^0.6.5", "cdn": "https://esm.sh/rdf-validate-shacl@0.6" }
   }

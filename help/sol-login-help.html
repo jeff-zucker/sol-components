@@ -31,8 +31,6 @@
   <div class="demo-strip">
     <span class="demo-strip-label">Live demo:</span>
     <sol-login visible
-               mode="popup"
-               popup-callback="../popup-auth-callback.html"
                issuers="https://solidcommunity.net,https://login.inrupt.com,https://solidweb.org"
     ></sol-login>
     <span class="demo-strip-log" id="login-log">(no events yet — click the button or trigger an authed fetch elsewhere)</span>
@@ -41,7 +39,7 @@
     (function () {
       const log = document.getElementById('login-log');
       document.addEventListener('sol-login',  (e) => { log.textContent = `sol-login: ${e.detail.webId} via ${e.detail.issuer}`; });
-      document.addEventListener('sol-logout', (e) => { log.textContent = `sol-logout: side=${e.detail.side || 'default'}`; });
+      document.addEventListener('sol-logout', () => { log.textContent = 'sol-logout'; });
     })();
   </script>
 
@@ -67,24 +65,14 @@
               quick-pick buttons (for example
               <code>https://solidcommunity.net</code>). Without it the user is
               asked to type one in.</td></tr>
-      <tr><td><code>mode</code></td>
-          <td>How the sign-in happens. <code>redirect</code> (the default) takes
-              the whole page to the provider and back. <code>popup</code> opens
-              a small window instead, so your page never reloads and anything the
-              user had on screen stays put.</td></tr>
-      <tr><td><code>popup-callback</code></td>
-          <td>The address of the little page the popup returns to after signing
-              in. Only needed with <code>mode="popup"</code>.</td></tr>
       <tr><td><code>visible</code></td>
           <td>Keep the button on screen at all times. Without it the component
               stays hidden and only appears when a sign-in is needed.</td></tr>
-      <tr><td><code>side</code></td>
-          <td>A name for this login. Give two <code>&lt;sol-login&gt;</code> tags
-              different <code>side</code> values (in popup mode) to be signed
-              into two different pods at the same time — for example a left pod
-              and a right pod.</td></tr>
     </tbody>
   </table>
+
+  <p>Signing in takes the whole page to the provider and back. The user is
+  signed into one Solid account at a time.</p>
 
   <h2>Examples</h2>
   <pre><code>&lt;!-- the simplest version: asks the user which provider to use --&gt;
@@ -92,19 +80,6 @@
 
   <pre><code>&lt;!-- offer ready-made sign-in buttons --&gt;
 &lt;sol-login issuers="https://solidcommunity.net, https://login.inrupt.com"&gt;&lt;/sol-login&gt;</code></pre>
-
-  <pre><code>&lt;!-- sign in via a popup, so the page doesn't reload --&gt;
-&lt;sol-login
-
-    mode="popup"
-    popup-callback="popup-auth-callback.html"
-    issuers="https://solidcommunity.net,https://login.inrupt.com"
-
-&gt;&lt;/sol-login&gt;</code></pre>
-
-  <pre><code>&lt;!-- two logins at once, one per pod --&gt;
-&lt;sol-login mode="popup" side="left"  issuers="…"&gt;&lt;/sol-login&gt;
-&lt;sol-login mode="popup" side="right" issuers="…"&gt;&lt;/sol-login&gt;</code></pre>
 
   <p>Once a <code>&lt;sol-login&gt;</code> is on the page and the user signs in,
   the other data components automatically use that access — you don't have to

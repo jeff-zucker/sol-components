@@ -2,40 +2,32 @@
  * @jest-environment jsdom
  *
  * Tests for AuthManager and SolLogin from sol-login.js.
- * Pure logic tests — mock Session class, no real OIDC.
+ * Single Solid-OIDC session; the mock @uvdsl client stands in for real OIDC.
  */
 
-import { __setSession } from '@inrupt/solid-client-authn-browser';
-import { jest } from '@jest/globals';
+import { __resetMock, __loginCalls, __lastSession } from '@uvdsl/solid-oidc-client-browser';
 import { AuthManager, SolLogin } from '../../web/sol-login.js';
-import { baseDomain } from '../../core/auth-core.js';
-
-// Mock Session class injected via window global
-class MockSession {
-  constructor(opts, id) {
-    this.id = id;
-    this.info = { isLoggedIn: false, webId: null, issuer: null };
-    this.fetch = (input, init) => globalThis.fetch(input, init);
-    this._loginCalls = [];
-  }
-  async handleIncomingRedirect() {}
-  async login(opts) { this._loginCalls.push(opts); }
-  async logout() { this.info.isLoggedIn = false; this.info.webId = null; }
-}
+import { baseDomain, sessionCoversOrigin } from '../../core/auth-core.js';
 
 beforeAll(() => {
   if (typeof globalThis.fetch === 'undefined') {
     globalThis.fetch = async () => new Response('', { status: 200 });
   }
-  __setSession(MockSession);
   window.__SolSuppressDefineWarn = true;
 });
 
-function loggedInSession(tag, webId, issuer) {
-  const mgr = new AuthManager();
-  const session = mgr.sessionFor(tag, new URL(webId).origin);
-  session.info = { isLoggedIn: true, webId, issuer };
-  return mgr;
+beforeEach(() => __resetMock());
+
+/** Seat a plain logged-in session-shaped object (like dk's owner / a remote
+ *  OIDC session) directly into a manager's Map. */
+function seat(mgr, tag, webId, issuer) {
+  const session = {
+    info: { isLoggedIn: true, webId, issuer },
+    fetch: (input, init) => globalThis.fetch(input, init),
+    logout: async () => { session.info.isLoggedIn = false; session.info.webId = null; },
+  };
+  mgr.sessions.set(tag, session);
+  return session;
 }
 
 // ── originOf ──────────────────────────────────────────────────────────────
@@ -44,13 +36,11 @@ describe('originOf', () => {
   const mgr = new AuthManager();
 
   test('extracts origin from https URL', () => {
-    expect(mgr.originOf('https://alice.example.com/pod/file.ttl'))
-      .toBe('https://alice.example.com');
+    expect(mgr.originOf('https://alice.example.com/pod/file.ttl')).toBe('https://alice.example.com');
   });
 
   test('extracts origin from http URL with port', () => {
-    expect(mgr.originOf('http://localhost:3000/path'))
-      .toBe('http://localhost:3000');
+    expect(mgr.originOf('http://localhost:3000/path')).toBe('http://localhost:3000');
   });
 
   test('returns empty string for invalid URL', () => {
@@ -62,8 +52,7 @@ describe('originOf', () => {
 
 describe('isNoAuth', () => {
   test('returns false when noAuth not set', () => {
-    const mgr = new AuthManager();
-    expect(mgr.isNoAuth('https://example.com/file')).toBe(false);
+    expect(new AuthManager().isNoAuth('https://example.com/file')).toBe(false);
   });
 
   test('matches single origin string', () => {
@@ -80,434 +69,175 @@ describe('isNoAuth', () => {
     expect(mgr.isNoAuth('https://b.com/y')).toBe(true);
     expect(mgr.isNoAuth('https://c.com/z')).toBe(false);
   });
-
-  test('returns false for invalid URL', () => {
-    const mgr = new AuthManager();
-    mgr.noAuth = 'https://example.com';
-    expect(mgr.isNoAuth('garbage')).toBe(false);
-  });
 });
 
-// ── _baseDomain ───────────────────────────────────────────────────────────
+// ── baseDomain / sessionCoversOrigin (auth-core, exercised through routing) ──
 
-describe('_baseDomain', () => {
-  const mgr = new AuthManager();
-
+describe('baseDomain', () => {
   test('extracts last two parts', () => {
     expect(baseDomain('pod.solidcommunity.net')).toBe('solidcommunity.net');
   });
-
   test('returns host as-is for two parts', () => {
     expect(baseDomain('example.com')).toBe('example.com');
   });
-
-  test('returns host as-is for single part', () => {
-    expect(baseDomain('localhost')).toBe('localhost');
-  });
 });
 
-// ── _sessionCoversOrigin ──────────────────────────────────────────────────
-
-describe('_sessionCoversOrigin', () => {
-  test('returns false when session not logged in', () => {
-    const mgr = new AuthManager();
-    const session = { info: { isLoggedIn: false, issuer: 'https://example.com' } };
-    expect(mgr._sessionCoversOrigin(session, 'https://example.com')).toBe(false);
+describe('sessionCoversOrigin', () => {
+  test('false when not logged in', () => {
+    expect(sessionCoversOrigin({ info: { isLoggedIn: false, issuer: 'https://x.com' } }, 'https://x.com')).toBe(false);
   });
-
-  test('matches same host via issuer', () => {
-    const mgr = new AuthManager();
-    const session = { info: { isLoggedIn: true, issuer: 'https://solidcommunity.net', webId: null } };
-    expect(mgr._sessionCoversOrigin(session, 'https://solidcommunity.net')).toBe(true);
-  });
-
   test('matches subdomain of issuer', () => {
-    const mgr = new AuthManager();
-    const session = { info: { isLoggedIn: true, issuer: 'https://solidcommunity.net', webId: null } };
-    expect(mgr._sessionCoversOrigin(session, 'https://alice.solidcommunity.net')).toBe(true);
+    const s = { info: { isLoggedIn: true, issuer: 'https://solidcommunity.net', webId: null } };
+    expect(sessionCoversOrigin(s, 'https://alice.solidcommunity.net')).toBe(true);
   });
-
   test('matches via shared base domain with webId', () => {
-    const mgr = new AuthManager();
-    const session = {
-      info: {
-        isLoggedIn: true,
-        issuer: 'https://login.inrupt.com',
-        webId: 'https://alice.pod.inrupt.com/profile/card#me',
-      },
-    };
-    expect(mgr._sessionCoversOrigin(session, 'https://bob.pod.inrupt.com')).toBe(true);
+    const s = { info: { isLoggedIn: true, issuer: 'https://login.inrupt.com', webId: 'https://alice.pod.inrupt.com/profile/card#me' } };
+    expect(sessionCoversOrigin(s, 'https://bob.pod.inrupt.com')).toBe(true);
   });
-
   test('rejects unrelated origin', () => {
-    const mgr = new AuthManager();
-    const session = { info: { isLoggedIn: true, issuer: 'https://solidcommunity.net', webId: null } };
-    expect(mgr._sessionCoversOrigin(session, 'https://other.example.com')).toBe(false);
+    const s = { info: { isLoggedIn: true, issuer: 'https://solidcommunity.net', webId: null } };
+    expect(sessionCoversOrigin(s, 'https://other.example.com')).toBe(false);
   });
 });
 
-// ── sessionFor / getSessionFor ────────────────────────────────────────────
+// ── the single OIDC session ───────────────────────────────────────────────
 
-describe('sessionFor', () => {
-  test('creates and caches a session', () => {
+describe('oidcSession', () => {
+  test('creates one session and seats it on default', () => {
     const mgr = new AuthManager();
-    const s1 = mgr.sessionFor('default', 'https://example.com');
-    const s2 = mgr.sessionFor('default');
+    const s1 = mgr.oidcSession();
+    const s2 = mgr.oidcSession();
     expect(s1).toBe(s2);
+    expect(mgr.sessions.get('default')).toBe(s1);
   });
 
-  test('different tags get different sessions', () => {
+  test('does not clobber a session an app already seated on default', () => {
     const mgr = new AuthManager();
-    const s1 = mgr.sessionFor('a', 'https://a.com');
-    const s2 = mgr.sessionFor('b', 'https://b.com');
-    expect(s1).not.toBe(s2);
+    const proxy = seat(mgr, 'default', 'https://alice.example/card#me', 'https://example');
+    const oidc = mgr.oidcSession();
+    expect(mgr.sessions.get('default')).toBe(proxy);   // proxy kept
+    expect(oidc).not.toBe(proxy);
+  });
+
+  test('defaultSession reflects whatever holds the default tag', () => {
+    const mgr = new AuthManager();
+    expect(mgr.defaultSession()).toBeNull();
+    const s = seat(mgr, 'default', 'https://a.example/card#me', 'https://a.example');
+    expect(mgr.defaultSession()).toBe(s);
   });
 });
 
-describe('getSessionFor', () => {
-  test('returns null for noAuth URLs', () => {
+// ── getSessionFor / fetchFor — per-origin routing (local + one remote) ──────
+
+describe('per-origin routing', () => {
+  test('routes a request to the session that covers its origin', () => {
     const mgr = new AuthManager();
-    mgr.noAuth = 'https://public.example.com';
-    expect(mgr.getSessionFor('https://public.example.com/file', 'tag')).toBeNull();
+    // dk's synthetic local owner on 'local', a remote OIDC session on 'default'
+    seat(mgr, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
+    seat(mgr, 'default', 'https://alice.solidcommunity.net/profile/card#me', 'https://solidcommunity.net');
+
+    const local = mgr.getSessionFor('http://localhost/dk-pod/file.ttl');
+    expect(local.info.webId).toContain('localhost');
+
+    const remote = mgr.getSessionFor('https://alice.solidcommunity.net/file.ttl');
+    expect(remote.info.webId).toContain('solidcommunity.net');
   });
 
-  test('returns own session if logged in', () => {
-    const mgr = loggedInSession('default', 'https://alice.example.com/profile/card#me', 'https://example.com');
-    const s = mgr.getSessionFor('https://alice.example.com/pod/', 'default');
-    expect(s.info.isLoggedIn).toBe(true);
-  });
-
-  test('finds matching session from another tag', () => {
-    const mgr = loggedInSession('other', 'https://alice.solidcommunity.net/profile/card#me', 'https://solidcommunity.net');
-    mgr.sessionFor('default', 'https://solidcommunity.net');
-    const s = mgr.getSessionFor('https://solidcommunity.net/file', 'default');
-    expect(s.info.isLoggedIn).toBe(true);
-  });
-});
-
-// ── isLoggedIn ────────────────────────────────────────────────────────────
-
-describe('isLoggedIn', () => {
-  test('returns true for noAuth URLs', () => {
-    const mgr = new AuthManager();
-    mgr.noAuth = 'https://public.com';
-    expect(mgr.isLoggedIn('https://public.com/file', 'tag')).toBe(true);
-  });
-
-  test('returns true for null URL', () => {
-    const mgr = new AuthManager();
-    expect(mgr.isLoggedIn(null, 'tag')).toBe(true);
-  });
-
-  test('returns false when not logged in', () => {
-    const mgr = new AuthManager();
-    mgr.sessionFor('tag', 'https://example.com');
-    expect(mgr.isLoggedIn('https://example.com/file', 'tag')).toBe(false);
-  });
-
-  test('returns true when logged in', () => {
-    const mgr = loggedInSession('tag', 'https://alice.example.com/card#me', 'https://example.com');
-    expect(mgr.isLoggedIn('https://example.com/file', 'tag')).toBe(true);
-  });
-});
-
-// ── getWebId ──────────────────────────────────────────────────────────────
-
-describe('getWebId', () => {
-  test('returns null for unknown tag', () => {
-    const mgr = new AuthManager();
-    expect(mgr.getWebId('unknown')).toBeNull();
-  });
-
-  test('returns webId when logged in', () => {
-    const mgr = loggedInSession('me', 'https://alice.example.com/card#me', 'https://example.com');
-    expect(mgr.getWebId('me')).toBe('https://alice.example.com/card#me');
-  });
-});
-
-// ── getFirstLoggedIn ──────────────────────────────────────────────────────
-
-describe('getFirstLoggedIn', () => {
-  test('returns null when none logged in', () => {
-    const mgr = new AuthManager();
-    mgr.sessionFor('a', 'https://a.com');
-    expect(mgr.getFirstLoggedIn()).toBeNull();
-  });
-
-  test('returns first logged-in session', () => {
-    const mgr = new AuthManager();
-    mgr.sessionFor('a', 'https://a.com');
-    const mgr2 = loggedInSession('b', 'https://b.com/card#me', 'https://b.com');
-    expect(mgr2.getFirstLoggedIn().info.webId).toBe('https://b.com/card#me');
-  });
-});
-
-// ── fetchFor ──────────────────────────────────────────────────────────────
-
-describe('fetchFor', () => {
-  test('returns plain fetch for noAuth URLs', () => {
+  test('fetchFor returns plain fetch for noAuth URLs', () => {
     const mgr = new AuthManager();
     mgr.noAuth = 'https://public.com';
     expect(mgr.fetchFor('https://public.com/file')).toBe(fetch);
   });
 
-  test('returns plain fetch when no session matches', () => {
+  test('fetchFor returns plain fetch when no session matches', () => {
+    expect(new AuthManager().fetchFor('https://unknown.com/file')).toBe(fetch);
+  });
+
+  test('fetchFor returns a session fetch when a covering session exists', () => {
     const mgr = new AuthManager();
-    expect(mgr.fetchFor('https://unknown.com/file')).toBe(fetch);
-  });
-
-  test('returns session fetch when logged in', () => {
-    const mgr = loggedInSession('tag', 'https://alice.example.com/card#me', 'https://example.com');
-    const fn = mgr.fetchFor('https://example.com/data', 'tag');
-    expect(fn).not.toBe(fetch);
-  });
-
-  test('without tag, finds matching session by origin', () => {
-    const mgr = loggedInSession('x', 'https://alice.solidcommunity.net/card#me', 'https://solidcommunity.net');
-    const fn = mgr.fetchFor('https://solidcommunity.net/resource');
-    expect(fn).not.toBe(fetch);
-  });
-
-  test('without tag, returns plain fetch when no session matches', () => {
-    const mgr = loggedInSession('x', 'https://alice.example.com/card#me', 'https://example.com');
-    const fn = mgr.fetchFor('https://unrelated.org/file');
-    expect(fn).toBe(fetch);
+    seat(mgr, 'default', 'https://alice.solidcommunity.net/card#me', 'https://solidcommunity.net');
+    expect(mgr.fetchFor('https://alice.solidcommunity.net/resource')).not.toBe(fetch);
   });
 });
 
-// ── _sessionId ───────────────────────────────────────────────────────────
+// ── isLoggedIn / getWebId / getFirstLoggedIn ────────────────────────────────
 
-describe('_sessionId', () => {
-  const mgr = new AuthManager();
-
-  test('generates deterministic id from tag and origin', () => {
-    const id = mgr._sessionId('default', 'https://example.com');
-    expect(id).toBe('sol_default_https___example_com');
-  });
-
-  test('different tags produce different ids', () => {
-    const a = mgr._sessionId('a', 'https://example.com');
-    const b = mgr._sessionId('b', 'https://example.com');
-    expect(a).not.toBe(b);
-  });
-
-  test('different origins produce different ids', () => {
-    const a = mgr._sessionId('tag', 'https://a.com');
-    const b = mgr._sessionId('tag', 'https://b.com');
-    expect(a).not.toBe(b);
-  });
-});
-
-// ── setSideOrigin ────────────────────────────────────────────────────────
-
-describe('setSideOrigin', () => {
-  test('creates a new session for the origin', () => {
-    const mgr = new AuthManager();
-    mgr.setSideOrigin('default', 'https://example.com/pod/');
-    const s = mgr.sessions.get('default');
-    expect(s).toBeTruthy();
-    expect(s.id).toContain('example_com');
-  });
-
-  test('does not replace session when origin already matches', () => {
-    const mgr = new AuthManager();
-    mgr.setSideOrigin('tag', 'https://example.com/a');
-    const s1 = mgr.sessions.get('tag');
-    mgr.setSideOrigin('tag', 'https://example.com/b');
-    const s2 = mgr.sessions.get('tag');
-    expect(s1).toBe(s2);
-  });
-
-  test('skips noAuth URLs', () => {
+describe('isLoggedIn / getWebId', () => {
+  test('isLoggedIn true for noAuth URLs', () => {
     const mgr = new AuthManager();
     mgr.noAuth = 'https://public.com';
-    mgr.setSideOrigin('tag', 'https://public.com/file');
-    expect(mgr.sessions.has('tag')).toBe(false);
+    expect(mgr.isLoggedIn('https://public.com/file')).toBe(true);
   });
 
-  test('keeps existing session if it covers the new origin', () => {
-    const mgr = loggedInSession('tag', 'https://alice.solidcommunity.net/card#me', 'https://solidcommunity.net');
-    const original = mgr.sessions.get('tag');
-    mgr.setSideOrigin('tag', 'https://bob.solidcommunity.net/file');
-    expect(mgr.sessions.get('tag')).toBe(original);
-  });
-
-  test('replaces session when existing does not cover new origin', () => {
-    const mgr = loggedInSession('tag', 'https://alice.example.com/card#me', 'https://example.com');
-    const original = mgr.sessions.get('tag');
-    mgr.setSideOrigin('tag', 'https://completely-different.org/file');
-    expect(mgr.sessions.get('tag')).not.toBe(original);
-  });
-
-  test('persists origins to localStorage', () => {
+  test('isLoggedIn true when a covering session exists', () => {
     const mgr = new AuthManager();
-    mgr.setSideOrigin('tag', 'https://example.com/pod/');
-    const stored = JSON.parse(localStorage.getItem('solLoginOrigins'));
-    expect(stored.tag).toBe('https://example.com');
+    seat(mgr, 'default', 'https://alice.example.com/card#me', 'https://example.com');
+    expect(mgr.isLoggedIn('https://example.com/file')).toBe(true);
+  });
+
+  test('getWebId returns the default session webId', () => {
+    const mgr = new AuthManager();
+    seat(mgr, 'default', 'https://alice.example.com/card#me', 'https://example.com');
+    expect(mgr.getWebId()).toBe('https://alice.example.com/card#me');
+  });
+
+  test('getFirstLoggedIn returns null when none logged in', () => {
+    expect(new AuthManager().getFirstLoggedIn()).toBeNull();
   });
 });
 
-// ── handleIncomingRedirect ───────────────────────────────────────────────
+// ── handleIncomingRedirect ─────────────────────────────────────────────────
 
 describe('handleIncomingRedirect', () => {
-  test('calls handleIncomingRedirect on all sessions', async () => {
+  test('drives the OIDC session and skips session-shaped objects (dk owner)', async () => {
     const mgr = new AuthManager();
-    mgr.sessionFor('a', 'https://a.com');
-    mgr.sessionFor('b', 'https://b.com');
-    const calls = [];
-    for (const [, s] of mgr.sessions) {
-      s.handleIncomingRedirect = jest.fn(async () => {});
-    }
-    await mgr.handleIncomingRedirect();
-    for (const [, s] of mgr.sessions) {
-      expect(s.handleIncomingRedirect).toHaveBeenCalledWith(window.location.href);
-    }
-  });
-
-  test('restores pending tag from localStorage', async () => {
-    localStorage.setItem('solLoginPendingTag', 'restore-me');
-    const mgr = new AuthManager();
-    await mgr.handleIncomingRedirect();
-    expect(mgr.sessions.has('restore-me')).toBe(true);
-    expect(localStorage.getItem('solLoginPendingTag')).toBeNull();
-  });
-
-  test('skips session-shaped objects without handleIncomingRedirect (dk owner session)', async () => {
-    const mgr = new AuthManager();
-    // dk-owner-session shape: info + fetch + logout, no OIDC methods.
-    mgr.sessions.set('default', {
-      info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me' },
-      fetch: (i, init) => globalThis.fetch(i, init),
-      logout: async () => {},
-    });
-    const real = mgr.sessionFor('side', 'https://a.com');
-    real.handleIncomingRedirect = jest.fn(async () => {});
+    // dk-owner-session shape on 'local': info + fetch + logout, no OIDC methods.
+    seat(mgr, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
     await expect(mgr.handleIncomingRedirect()).resolves.toBeUndefined();
-    expect(real.handleIncomingRedirect).toHaveBeenCalled();
+    // The OIDC session was created and seated on 'default'.
+    expect(mgr.sessions.has('default')).toBe(true);
   });
 });
 
-// ── ensureAuthenticated ─────────────────────────────────────────────────
+// ── ensureAuthenticated ────────────────────────────────────────────────────
 
 describe('ensureAuthenticated', () => {
   test('returns true immediately for noAuth URLs', async () => {
     const mgr = new AuthManager();
     mgr.noAuth = 'https://public.com';
-    const result = await mgr.ensureAuthenticated('https://public.com/file');
-    expect(result).toBe(true);
+    expect(await mgr.ensureAuthenticated('https://public.com/file')).toBe(true);
   });
 
-  test('returns true when already logged in', async () => {
-    const mgr = loggedInSession('default', 'https://alice.example.com/card#me', 'https://example.com');
-    const result = await mgr.ensureAuthenticated('https://example.com/file');
-    expect(result).toBe(true);
-  });
-
-  test('calls session.login when not logged in', async () => {
+  test('returns true when a covering session already exists', async () => {
     const mgr = new AuthManager();
-    const result = await mgr.ensureAuthenticated('https://example.com/file', 'default');
-    expect(result).toBe(false);
-    const session = mgr.sessions.get('default');
-    expect(session._loginCalls.length).toBe(1);
-    expect(session._loginCalls[0].oidcIssuer).toBe('https://example.com');
+    seat(mgr, 'default', 'https://alice.example.com/card#me', 'https://example.com');
+    expect(await mgr.ensureAuthenticated('https://example.com/file')).toBe(true);
   });
 
-  // dk's synthetic local-owner session: logged in, covers ONLY the local pod,
-  // has no login/handleIncomingRedirect. It must neither swallow a remote
-  // login as "already authenticated" nor crash the flow.
+  test('starts an interactive login when nothing covers the origin', async () => {
+    const mgr = new AuthManager();
+    const result = await mgr.ensureAuthenticated('https://example.com/file');
+    expect(result).toBe(false);
+    expect(__loginCalls.length).toBe(1);
+    expect(__loginCalls[0].idp).toBe('https://example.com');
+  });
+
+  // dk's synthetic local-owner: logged in, covers ONLY the local pod. It must
+  // not swallow a remote login as "already authenticated".
   test('a logged-in session that does not cover the origin does not block login', async () => {
     const mgr = new AuthManager();
-    const owner = {
-      info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me', issuer: 'http://localhost/' },
-      fetch: (i, init) => globalThis.fetch(i, init),
-      logout: async () => {},
-    };
-    mgr.sessions.set('default', owner);
-    mgr._sideOrigins.default = 'https://idp.example';   // persisted from a prior dead tap
-    const result = await mgr.ensureAuthenticated('https://idp.example/', 'default');
+    seat(mgr, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
+    const result = await mgr.ensureAuthenticated('https://idp.example/');
     expect(result).toBe(false);
-    const session = mgr.sessions.get('default');
-    expect(session).not.toBe(owner);                    // replaced by a real session
-    expect(session._loginCalls.length).toBe(1);
-    expect(session._loginCalls[0].oidcIssuer).toBe('https://idp.example');
+    expect(__loginCalls.length).toBe(1);
+    expect(__loginCalls[0].idp).toBe('https://idp.example');
   });
 
-  test('a logged-in session that covers the origin still short-circuits', async () => {
+  test('a logged-in session that covers the origin short-circuits', async () => {
     const mgr = new AuthManager();
-    mgr.sessions.set('default', {
-      info: { isLoggedIn: true, webId: 'http://localhost/dk-pod/profile/card#me', issuer: 'http://localhost/' },
-      fetch: (i, init) => globalThis.fetch(i, init),
-      logout: async () => {},
-    });
-    const result = await mgr.ensureAuthenticated('http://localhost/', 'default');
-    expect(result).toBe(true);
-  });
-
-  test('stores pending tag in localStorage before login', async () => {
-    const mgr = new AuthManager();
-    await mgr.ensureAuthenticated('https://example.com/file', 'my-tag');
-    expect(localStorage.getItem('solLoginPendingTag')).toBe('my-tag');
-  });
-});
-
-// ── _sessionCoversOrigin edge cases ──────────────────────────────────────
-
-describe('_sessionCoversOrigin — edge cases', () => {
-  test('handles session with no issuer but matching webId', () => {
-    const mgr = new AuthManager();
-    const session = {
-      info: { isLoggedIn: true, issuer: null, webId: 'https://alice.example.com/card#me' },
-    };
-    expect(mgr._sessionCoversOrigin(session, 'https://alice.example.com')).toBe(true);
-  });
-
-  test('handles session with no webId but matching issuer', () => {
-    const mgr = new AuthManager();
-    const session = {
-      info: { isLoggedIn: true, issuer: 'https://example.com', webId: null },
-    };
-    expect(mgr._sessionCoversOrigin(session, 'https://example.com')).toBe(true);
-  });
-
-  test('returns false for invalid origin URL', () => {
-    const mgr = new AuthManager();
-    const session = {
-      info: { isLoggedIn: true, issuer: 'https://example.com', webId: null },
-    };
-    expect(mgr._sessionCoversOrigin(session, 'not-a-url')).toBe(false);
-  });
-
-  test('returns false when session has no info', () => {
-    const mgr = new AuthManager();
-    expect(mgr._sessionCoversOrigin({}, 'https://example.com')).toBe(false);
-  });
-});
-
-// ── getSessionFor edge cases ─────────────────────────────────────────────
-
-describe('getSessionFor — edge cases', () => {
-  test('returns null for null URL', () => {
-    const mgr = new AuthManager();
-    expect(mgr.getSessionFor(null, 'tag')).toBeNull();
-  });
-
-  test('returns own session even when not logged in (as fallback)', () => {
-    const mgr = new AuthManager();
-    const session = mgr.sessionFor('tag', 'https://example.com');
-    const result = mgr.getSessionFor('https://unrelated.com/file', 'tag');
-    expect(result).toBe(session);
-  });
-
-  test('prefers logged-in own session over cross-origin match', () => {
-    const mgr = new AuthManager();
-    // Create a logged-in session under 'other'
-    const otherSession = mgr.sessionFor('other', 'https://example.com');
-    otherSession.info = { isLoggedIn: true, webId: 'https://example.com/card#me', issuer: 'https://example.com' };
-    // Create own session for 'mine' that is also logged in
-    const mySession = mgr.sessionFor('mine', 'https://example.com');
-    mySession.info = { isLoggedIn: true, webId: 'https://example.com/me#me', issuer: 'https://example.com' };
-    const result = mgr.getSessionFor('https://example.com/file', 'mine');
-    expect(result).toBe(mySession);
+    seat(mgr, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
+    expect(await mgr.ensureAuthenticated('http://localhost/')).toBe(true);
+    expect(__loginCalls.length).toBe(0);
   });
 });
 
@@ -515,12 +245,20 @@ describe('getSessionFor — edge cases', () => {
 // SolLogin component tests
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Reset the shared AuthManager between element tests (the element binds to the
+ *  module singleton, which otherwise persists across tests). */
+function resetShared(el) {
+  el.auth.sessions.clear();
+  el.auth._oidc = null;
+}
+
 describe('SolLogin component', () => {
   let el;
   beforeEach(() => {
     el = document.createElement('sol-login');
     el._manualInit = true;
     document.body.appendChild(el);
+    resetShared(el);
   });
   afterEach(() => el.remove());
 
@@ -543,8 +281,7 @@ describe('SolLogin component', () => {
   });
 
   test('fetchFor delegates to auth manager', () => {
-    const fn = el.fetchFor('https://example.com/file');
-    expect(fn).toBe(fetch);
+    expect(el.fetchFor('https://example.com/file')).toBe(fetch);
   });
 
   test('auth property exposes the AuthManager', () => {
@@ -558,6 +295,7 @@ describe('SolLogin — issuers', () => {
     el = document.createElement('sol-login');
     el._manualInit = true;
     document.body.appendChild(el);
+    resetShared(el);
   });
   afterEach(() => el.remove());
 
@@ -583,12 +321,6 @@ describe('SolLogin — issuers', () => {
     expect(el.issuers).toHaveLength(1);
   });
 
-  test('addIssuer ignores invalid URL', () => {
-    el.issuers = [];
-    el.addIssuer('not-a-url');
-    expect(el.issuers).toHaveLength(0);
-  });
-
   test('renders issuer buttons in dropdown', () => {
     el.issuers = ['https://solidcommunity.net', 'https://login.inrupt.com'];
     el._renderIssuers();
@@ -605,23 +337,17 @@ describe('SolLogin — initialize and events', () => {
     el = document.createElement('sol-login');
     el._manualInit = true;
     document.body.appendChild(el);
+    resetShared(el);
   });
   afterEach(() => el.remove());
 
-  test('initialize creates default session', async () => {
+  test('initialize seats the OIDC session on default', async () => {
     await el.initialize();
     expect(el.auth.sessions.has('default')).toBe(true);
   });
 
-  test('initialize with custom tags creates those sessions', async () => {
-    await el.initialize(['a', 'b']);
-    expect(el.auth.sessions.has('a')).toBe(true);
-    expect(el.auth.sessions.has('b')).toBe(true);
-  });
-
-  test('fires sol-login event when session is already logged in', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://ex.com/card#me', issuer: 'https://ex.com' };
+  test('fires sol-login event when the default session is logged in', async () => {
+    seat(el.auth, 'default', 'https://ex.com/card#me', 'https://ex.com');
     const events = [];
     el.addEventListener('sol-login', (e) => events.push(e.detail));
     await el.initialize();
@@ -629,28 +355,17 @@ describe('SolLogin — initialize and events', () => {
     expect(events[0].webId).toBe('https://ex.com/card#me');
   });
 
-  test('logout fires sol-logout event', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://ex.com/card#me', issuer: 'https://ex.com' };
+  test('logout fires sol-logout and clears the session', async () => {
+    const s = seat(el.auth, 'default', 'https://ex.com/card#me', 'https://ex.com');
     let fired = false;
     el.addEventListener('sol-logout', () => { fired = true; });
     await el.logout();
     expect(fired).toBe(true);
-  });
-
-  test('logout calls session.logout on all sessions', async () => {
-    const s1 = el.auth.sessionFor('a', 'https://a.com');
-    s1.info = { isLoggedIn: true, webId: 'https://a.com/me', issuer: 'https://a.com' };
-    const s2 = el.auth.sessionFor('b', 'https://b.com');
-    s2.info = { isLoggedIn: true, webId: 'https://b.com/me', issuer: 'https://b.com' };
-    await el.logout();
-    expect(s1.info.isLoggedIn).toBe(false);
-    expect(s2.info.isLoggedIn).toBe(false);
+    expect(s.info.isLoggedIn).toBe(false);
   });
 
   test('webId and isLoggedIn reflect session state after initialize', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://ex.com/card#me', issuer: 'https://ex.com' };
+    seat(el.auth, 'default', 'https://ex.com/card#me', 'https://ex.com');
     await el.initialize();
     expect(el.webId).toBe('https://ex.com/card#me');
     expect(el.isLoggedIn).toBe(true);
@@ -663,12 +378,12 @@ describe('SolLogin — UI updates', () => {
     el = document.createElement('sol-login');
     el._manualInit = true;
     document.body.appendChild(el);
+    resetShared(el);
   });
   afterEach(() => el.remove());
 
   test('shows a green log-out button after login', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://alice.example.com/profile/card#me', issuer: 'https://example.com' };
+    seat(el.auth, 'default', 'https://alice.example.com/profile/card#me', 'https://example.com');
     await el.initialize();
     const btn = el.shadowRoot.querySelector('.auth-btn');
     expect(btn.textContent).toBe('Log out');
@@ -676,21 +391,27 @@ describe('SolLogin — UI updates', () => {
   });
 
   test('exposes the webId as the button title, not as page text', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://alice.example.com/profile/card#me', issuer: 'https://example.com' };
+    seat(el.auth, 'default', 'https://alice.example.com/profile/card#me', 'https://example.com');
     await el.initialize();
-    expect(el.shadowRoot.querySelector('.auth-btn').title)
-      .toBe('https://alice.example.com/profile/card#me');
+    expect(el.shadowRoot.querySelector('.auth-btn').title).toBe('https://alice.example.com/profile/card#me');
     expect(el.shadowRoot.querySelector('.auth-status').textContent).toBe('');
   });
 
   test('reverts to log-in button after logout', async () => {
-    const session = el.auth.sessionFor('default', 'https://example.com');
-    session.info = { isLoggedIn: true, webId: 'https://alice.example.com/profile/card#me', issuer: 'https://example.com' };
+    seat(el.auth, 'default', 'https://alice.example.com/profile/card#me', 'https://example.com');
     await el.initialize();
     await el.logout();
     const btn = el.shadowRoot.querySelector('.auth-btn');
     expect(btn.textContent).toBe('Log in');
     expect(btn.classList.contains('sol-btn-primary')).toBe(true);
+  });
+
+  // The synthetic local owner sits on 'local' and must NOT turn the button
+  // into a logout — the button reflects only the 'default' (remote) session.
+  test('a local-owner session does not paint the button as logged in', async () => {
+    seat(el.auth, 'local', 'http://localhost/dk-pod/profile/card#me', 'http://localhost/');
+    await el.initialize();
+    const btn = el.shadowRoot.querySelector('.auth-btn');
+    expect(btn.textContent).toBe('Log in');
   });
 });

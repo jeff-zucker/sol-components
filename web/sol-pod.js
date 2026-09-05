@@ -59,10 +59,7 @@ function editorKeysToken(uri) {
  * @extends HTMLElement
  * @attr {string} source - pod storage URL, or comma/space-separated list of URLs (discovers from origin if omitted)
  * @attr {string} login - CSS selector for a sol-login element
- * @attr {string} login-mode - forwarded to the built-in sol-login as its `mode` ("redirect" | "popup")
- * @attr {string} login-callback - forwarded to the built-in sol-login as its `popup-callback`
  * @attr {string} issuers - comma-separated OIDC issuer origins, forwarded to the built-in sol-login
- * @attr {string} side - auth session tag; also forwarded to the built-in sol-login as its `side`
  * @attr {string} pod-click-action - callback when an item is activated (gear / Enter / single click on a file)
  * @attr {string} data-handler - default sol-* component for file viewing
  * @attr {string} gear-icon - icon for BOTH the per-item action button and
@@ -154,10 +151,11 @@ class SolPod extends HTMLElement {
   }
 
   /**
-   * Auth session tag for this pod ('left' / 'right' in podz, etc).
-   * Passed to the linked sol-login's fetchFor() so multi-session setups
-   * pick the right session. When unset, fetchFor falls back to
-   * origin-coverage matching — back-compatible for single-session pages.
+   * Opaque instance key ('left' / 'right' in podz, etc). Scopes this pod's
+   * remembered last-container path so two pods sharing a group each recall
+   * their own place. Not an auth tag — authenticated fetch is routed by
+   * request origin (the local pod and one remote pod resolve to different
+   * sessions automatically).
    */
   get side() { return this._side; }
   set side(v) { this._side = v || null; }
@@ -252,14 +250,7 @@ class SolPod extends HTMLElement {
         embeddedLogin.remove();
       } else {
         this._loginEl = embeddedLogin;
-        // Forward this pod's login config to the built-in <sol-login> so a
-        // host can opt into popup mode / a side tag / a callback page /
-        // a starting issuer list.
-        const lm = this.getAttribute('login-mode');
-        if (lm) embeddedLogin.setAttribute('mode', lm);
-        if (sideAttr) embeddedLogin.setAttribute('side', sideAttr);
-        const lc = this.getAttribute('login-callback');
-        if (lc) embeddedLogin.setAttribute('popup-callback', lc);
+        // Forward this pod's starting issuer list to the built-in <sol-login>.
         const iss = this.getAttribute('issuers');
         if (iss) embeddedLogin.setAttribute('issuers', iss);
         const reload = () => { if (this._currentPath) this.loadContainer(this._currentPath); };
@@ -416,7 +407,7 @@ class SolPod extends HTMLElement {
 
   _fetchFor(url) {
     const login = this._login || this._loginEl;
-    if (login?.fetchFor) return login.fetchFor(url, this._side);
+    if (login?.fetchFor) return login.fetchFor(url);
     return fetch;
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "sol-components",
-  "version": "2.9.0",
+  "version": "3.0.0",
   "description": "Web components and Node.js tools for querying, including, and editing RDF/Linked Data on Solid Pods",
   "license": "MIT",
   "type": "module",
@@ -70,7 +70,7 @@
   },
   "peerDependencies": {
     "@comunica/query-sparql": "^5.1.3",
-    "@inrupt/solid-client-authn-browser": "^4.0.0",
+    "@uvdsl/solid-oidc-client-browser": "^0.2.3",
     "@inrupt/solid-client-authn-node": "^3.0.0",
     "jsdom": "^26.1.0",
     "openid-client": "^5.0.0",
@@ -80,7 +80,7 @@
     "@comunica/query-sparql": {
       "optional": true
     },
-    "@inrupt/solid-client-authn-browser": {
+    "@uvdsl/solid-oidc-client-browser": {
       "optional": true
     },
     "@inrupt/solid-client-authn-node": {
@@ -97,6 +97,7 @@
     }
   },
   "devDependencies": {
+    "@uvdsl/solid-oidc-client-browser": "^0.2.3",
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0",
     "@eslint/js": "^8.57.1",
@@ -130,7 +131,7 @@
       "^openid-client$": "<rootDir>/tests/__mocks__/openid-client.js",
       "^dompurify$": "<rootDir>/tests/__mocks__/dompurify.js",
       "^marked$": "<rootDir>/tests/__mocks__/marked.js",
-      "^@inrupt/solid-client-authn-browser$": "<rootDir>/tests/__mocks__/solid-client-authn-browser.js"
+      "^@uvdsl/solid-oidc-client-browser$": "<rootDir>/tests/__mocks__/solid-oidc-client-browser.js"
     },
     "setupFiles": [
       "<rootDir>/tests/setup.js"

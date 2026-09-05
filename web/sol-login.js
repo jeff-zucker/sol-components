@@ -8,7 +8,8 @@
  *   <sol-login></sol-login>
  *   <sol-login issuers="https://solidcommunity.net,https://login.inrupt.com"></sol-login>
  *
- * Imports @inrupt/solid-client-authn-browser via core/inrupt-global (imdow.solidClientAuthn
+ * Uses @uvdsl/solid-oidc-client-browser via core/oidc-global. One Solid
+ * account at a time: interactive login is a full-page OIDC redirect.
  */
 
 import { CSS, sheet as LOGIN_SHEET } from './styles/sol-login-css.js';
@@ -17,7 +18,6 @@ import { define } from '../core/define.js';
 import { rdf } from '../core/rdf.js';
 import {
   originOf,
-  baseDomain,
   sessionCoversOrigin,
   isNoAuth as _isNoAuth,
   getSessionFor as _getSessionFor,
@@ -27,38 +27,33 @@ import {
   getFirstLoggedIn as _getFirstLoggedIn,
   kitchenLoggedIn,
 } from '../core/auth-core.js';
-import { PopupProxySession } from '../core/popup-proxy.js';
 import { solFetch } from '../core/auth-fetch.js';
 import { register as registerService, root as swcRoot } from '../core/services.js';
-import { inrupt } from '../core/inrupt-global.js';
-
-function getSessionClass() {
-  // The inrupt library arrives as an IMPORT through the page's import map
-  // (single shared instance) — the old window.solidClientAuthn probes are
-  // gone (2026-07-14).
-  const SessionClass = inrupt?.Session;
-  if (SessionClass) return SessionClass;
-  throw new Error('sol-login: @inrupt/solid-client-authn-browser did not resolve — is it in the import map?');
-}
+import { OidcSession } from '../core/oidc-global.js';
 
 class AuthManager {
-  /** The page-wide singleton. Every `<sol-login>` instance binds to
-   *  this same AuthManager so sessions established by any embedded app
-   *  (podz left/right, future apps) are visible to shell-level code
-   *  without DOM probing. */
+  /** The page-wide singleton. Every `<sol-login>` instance binds to this same
+   *  AuthManager so a session established by any embedded app is visible to
+   *  shell-level code without DOM probing.
+   *
+   *  The `sessions` Map holds at most one interactive Solid-OIDC session (the
+   *  user's remote account, on tag 'default') alongside any session-SHAPED
+   *  objects an app seats — dk's synthetic local-owner (on 'local') and a
+   *  remembered-IdP proxy. Routing between them is by request origin
+   *  (sessionCoversOrigin), so a pod browser can be "logged in" to the local
+   *  pod and one remote pod at once. */
   static get shared() { return sharedAuth; }
 
   constructor() {
     this.sessions = new Map();
     this._noAuth = null;
-    try {
-      this._sideOrigins = JSON.parse(localStorage.getItem('solLoginOrigins') || '{}');
-    } catch (e) { this._sideOrigins = {}; }
+    this._oidc = null;
+    // Elements register their repaint here so a background token expiry (which
+    // flips the session inactive) can flip every login button back to "Log in".
+    this._repainters = new Set();
   }
 
-  set noAuth(v) {
-    this._noAuth = v;
-  }
+  set noAuth(v) { this._noAuth = v; }
 
   _noAuthConfig() {
     return this._noAuth ?? window.SolidAppContext?.noAuth;
@@ -70,62 +65,49 @@ class AuthManager {
 
   originOf(url) { return originOf(url); }
 
-  _sessionId(tag, origin) {
-    return `sol_${tag}_${origin.replace(/[^a-z0-9]/gi, '_')}`;
-  }
-
-  _makeSession(sessionId) {
-    const SessionClass = getSessionClass();
-    return new SessionClass({}, sessionId);
-  }
-
-  sessionFor(tag, origin) {
-    if (this.sessions.has(tag)) return this.sessions.get(tag);
-    const org = origin || this._sideOrigins[tag];
-    const sessionId = org ? this._sessionId(tag, org) : `sol_${tag}_unset`;
-    const session = this._makeSession(sessionId);
-    this.sessions.set(tag, session);
-    return session;
-  }
-
-  setSideOrigin(tag, url) {
-    if (this.isNoAuth(url)) return;
-    const origin = this.originOf(url);
-    if (this._sideOrigins[tag] === origin) return;
-    const existing = this.sessions.get(tag);
-    if (existing && this._sessionCoversOrigin(existing, origin)) {
-      this._sideOrigins[tag] = origin;
-      this._persistOrigins();
-      return;
+  /** The page's single OIDC session, created on first use and seated on
+   *  'default' (unless an app already seated its own session there — a
+   *  remembered-IdP proxy). */
+  oidcSession() {
+    if (!this._oidc) {
+      this._oidc = new OidcSession('Solid App');
+      this._oidc.onChange(() => this._repaintAll());
+      if (!this.sessions.has('default')) this.sessions.set('default', this._oidc);
     }
-    this._sideOrigins[tag] = origin;
-    this._persistOrigins();
-    const sessionId = this._sessionId(tag, origin);
-    this.sessions.set(tag, this._makeSession(sessionId));
+    return this._oidc;
   }
 
-  _persistOrigins() {
-    try { localStorage.setItem('solLoginOrigins', JSON.stringify(this._sideOrigins)); } catch (e) {}
+  /** The session the login button reflects — whatever holds the 'default'
+   *  tag (the OIDC session or a remembered-IdP proxy). NOT the synthetic
+   *  local-owner (on 'local'): there is no "log out of the local pod". */
+  defaultSession() {
+    return this.sessions.get('default') || null;
   }
 
-  _sessionCoversOrigin(session, origin) {
-    return sessionCoversOrigin(session, origin);
+  registerRepaint(fn) { this._repainters.add(fn); }
+  unregisterRepaint(fn) { this._repainters.delete(fn); }
+  _repaintAll() { for (const fn of this._repainters) { try { fn(); } catch (_) {} } }
+
+  // Routing is by request ORIGIN, not by a session tag: passing no tag makes
+  // these helpers pick the session that COVERS the origin (sessionCoversOrigin)
+  // and nothing else. So a request to the local pod uses the synthetic owner
+  // and a request to the remote pod uses the OIDC session — both live at once —
+  // and a request to an origin no session covers falls back to plain fetch
+  // rather than attaching a token cross-origin.
+  getSessionFor(url) {
+    return _getSessionFor(this.sessions, url, undefined, this._noAuthConfig());
   }
 
-  getSessionFor(url, tag) {
-    return _getSessionFor(this.sessions, url, tag, this._noAuthConfig());
+  fetchFor(url) {
+    return makeFetchFor(this.sessions, url, undefined, this._noAuthConfig(), fetch);
   }
 
-  fetchFor(url, tag) {
-    return makeFetchFor(this.sessions, url, tag, this._noAuthConfig(), fetch);
+  isLoggedIn(url) {
+    return isLoggedInFor(this.sessions, url, undefined, this._noAuthConfig());
   }
 
-  isLoggedIn(url, tag) {
-    return isLoggedInFor(this.sessions, url, tag, this._noAuthConfig());
-  }
-
-  getWebId(tag) {
-    return _getWebId(this.sessions, tag);
+  getWebId() {
+    return _getWebId(this.sessions, 'default');
   }
 
   getFirstLoggedIn() {
@@ -133,145 +115,64 @@ class AuthManager {
   }
 
   async handleIncomingRedirect() {
-    const pendingTag = localStorage.getItem('solLoginPendingTag');
-    localStorage.removeItem('solLoginPendingTag');
-
-    // Ensure the session that initiated login exists so it can process the redirect.
-    if (pendingTag) {
-      this.sessionFor(pendingTag);
+    // Complete an in-flight redirect / silently restore the OIDC session.
+    // Session-SHAPED objects an app seated (synthetic owner, proxy) have no
+    // handleIncomingRedirect — skip them.
+    const oidc = this.oidcSession();
+    try {
+      await oidc.handleIncomingRedirect();
+    } catch (e) {
+      console.warn('[sol-login] session restore failed:', e?.message || e);
     }
-
-    // The map can hold session-SHAPED objects that are not OIDC sessions —
-    // dk's synthetic local-owner session, popup proxies — which have no
-    // handleIncomingRedirect. Skip them instead of crashing initialize().
-    for (const [, session] of this.sessions) {
-      if (typeof session.handleIncomingRedirect !== 'function') continue;
-      await session.handleIncomingRedirect(window.location.href);
-    }
-
-    // Tier-1 boot restore (redirect mode): after a full app restart the
-    // session map starts empty, but solid-client-authn kept the last
-    // session's tokens in localStorage under its deterministic
-    // sol_<tag>_<origin> id — reachable again through the persisted
-    // side-origins. Recreate THE stored session and ask for a silent
-    // restore: with a refresh token this completes with no UI and no
-    // navigation; without one it may bounce via the IdP (prompt=none),
-    // and a failed bounce is one-shot (the host clears the stored state
-    // on an ?error= callback — dk's wormhole guard does).
-    let storedId = null;
-    try { storedId = localStorage.getItem('solidClientAuthn:currentSession'); } catch (_) {}
-    if (storedId) {
-      for (const [tag, origin] of Object.entries(this._sideOrigins)) {
-        if (this._sessionId(tag, origin) !== storedId) continue;
-        // The tag may be held by a non-OIDC session-shaped object — dk's
-        // synthetic local owner sits on 'default' at every boot. Restore
-        // into a REAL session constructed off-map, and seat it on the tag
-        // only when the restore actually logs in: a failed restore must
-        // leave the synthetic (and local-pod fetches) untouched.
-        let session = this.sessions.get(tag);
-        const isOidc = session && typeof session.handleIncomingRedirect === 'function';
-        if (isOidc && session.info?.isLoggedIn) break;      // already live
-        if (!isOidc) session = this._makeSession(storedId);
-        try {
-          await session.handleIncomingRedirect({ restorePreviousSession: true, url: window.location.href });
-        } catch (e) {
-          console.warn('[sol-login] session restore failed:', e?.message || e);
-        }
-        if (session.info?.isLoggedIn && this.sessions.get(tag) !== session) {
-          this.sessions.set(tag, session);
-        }
-        break;
+    for (const [tag, session] of this.sessions) {
+      if (tag === 'default') continue;
+      if (typeof session.handleIncomingRedirect === 'function') {
+        try { await session.handleIncomingRedirect(); } catch (_) {}
       }
     }
   }
 
-  async ensureAuthenticated(url, tag = 'default') {
+  async ensureAuthenticated(url) {
     if (this.isNoAuth(url)) return true;
     const origin = this.originOf(url);
-    this.setSideOrigin(tag, url);
-    let session = this.sessionFor(tag, origin);
-    // Already signed in only counts when the session COVERS the requested
-    // origin. dk's synthetic local-owner session holds 'default' with
-    // isLoggedIn=true but covers just the local pod — it must not swallow a
-    // login to a remote issuer (the tap would silently do nothing).
-    if (session.info.isLoggedIn && sessionCoversOrigin(session, origin)) return true;
-
+    // Already covered by a seated session — the synthetic owner covers the
+    // local pod, the OIDC/proxy session covers its own account's origins.
     for (const [, s] of this.sessions) {
       if (sessionCoversOrigin(s, origin)) return true;
     }
-
-    // The tag may be held by a session-shaped object that cannot run an OIDC
-    // login (synthetic owner session, popup proxy). Mint a real session for
-    // this origin in its place before starting the flow.
-    if (typeof session.login !== 'function') {
-      session = this._makeSession(this._sessionId(tag, origin));
-      this.sessions.set(tag, session);
-    }
-
-    try { localStorage.setItem('solLoginPendingTag', tag); } catch (e) {}
-    const redirectUrl = window.location.origin + window.location.pathname;
-    await session.login({ oidcIssuer: origin, redirectUrl, clientName: 'Solid App' });
+    // Start an interactive login. This is a full-page redirect to the issuer;
+    // the return trip is completed by handleIncomingRedirect() on load.
+    await this.oidcSession().login(origin);
     return false;
   }
 }
 
-// All <sol-login> instances on a page share one AuthManager so that
-// podz's per-side login elements register into a single session Map.
-// Single-login pages are unaffected (one consumer of the singleton).
+// All <sol-login> instances on a page share one AuthManager.
 const sharedAuth = new AuthManager();
 
-// Environments with no multi-window support — Android System WebView (the
-// engine under Flutter/Cordova app shells; "; wv)" UA token) — cannot run
-// popup-mode login at all: window.open() there is swallowed or becomes a
-// same-frame navigation, so the popup ↔ opener postMessage contract never
-// completes, and by the time window.open returns the shell may already be
-// navigating away — too late to react. So detect up front and coerce popup
-// mode back to the classic full-page redirect. Such shells already route the
-// redirect round-trip: the IdP lands back on this page, where initialize()'s
-// handleIncomingRedirect completes the session. Electron (which turns login
-// popups into real windows) and desktop browsers carry no "wv" token and are
-// unaffected.
-function popupsUnavailable() {
-  try { return /;\s*wv\)/.test(navigator.userAgent); } catch (e) { return false; }
-}
-
 // Publish auth to the ecosystem: expose AuthManager on the global (consumers in
-// core/auth-fetch.js + web/sol-include.js already READ window.SolidWebComponents
-// .AuthManager but nothing assigned it — this closes that gap), and register the
-// `auth` host-service so any component reaches the signed-in fetch via
-// window.SolidWebComponents.{auth,fetch} without importing swc.
+// core/auth-fetch.js + web/sol-include.js READ window.SolidWebComponents
+// .AuthManager) and register the `auth` host-service so any component reaches
+// the signed-in fetch via window.SolidWebComponents.{auth,fetch}.
 try {
   swcRoot().AuthManager = AuthManager;
   registerService('auth', {
     manager: sharedAuth,
     fetch: solFetch,
-    fetchFor: (url, tag) => sharedAuth.fetchFor(url, tag),
+    fetchFor: (url) => sharedAuth.fetchFor(url),
   });
 } catch (_) { /* no window / pre-registration race — harmless */ }
 
 /**
  * Solid OIDC login web component.
  *
- * Shows a log-in/log-out button with issuer dropdown. Manages OIDC sessions
- * via @inrupt/solid-client-authn-browser and provides authenticated fetch.
- *
- * Two modes (the `mode` attribute):
- *   - "redirect" (default) — classic full-page OIDC redirect. One session
- *     per page. Unchanged behavior for existing consumers.
- *   - "popup" — login happens in a popup window that holds the real
- *     Session; the parent talks to it via a PopupProxySession. Lets
- *     multiple <sol-login side="..."> elements hold independent sessions
- *     in one tab. See core/popup-proxy.js and popup-auth-callback.html.
- *     In environments that cannot open popup windows at all (Android
- *     System WebView under app shells — see popupsUnavailable()), popup
- *     mode is coerced back to "redirect" automatically.
+ * Shows a log-in/log-out button with an issuer dropdown. One Solid account at
+ * a time; interactive login is a full-page OIDC redirect handled by
+ * @uvdsl/solid-oidc-client-browser.
  *
  * @class SolLogin
  * @extends HTMLElement
  * @attr {string} issuers - comma-separated list of known OIDC issuer origins
- * @attr {string} mode - "redirect" (default) | "popup"
- * @attr {string} side - session tag for this element (popup mode); default "default"
- * @attr {string} popup-callback - URL of the popup callback page (popup mode)
  * @attr {string} external-auth - set automatically when another same-origin
  *                 window/tab/iframe reports a login over BroadcastChannel
  *                 ('sol-auth'). Pure visual signal — CSS in sol-login-css.js
@@ -281,22 +182,19 @@ try {
  *
  * Cross-window auth signaling: every sol-login opens a
  * BroadcastChannel('sol-auth') in connectedCallback. Own login/logout events
- * are rebroadcast on the channel; foreign login messages set the
- * `external-auth` attribute (and clear it on logout) — unless this element
- * already has its own logged-in session, in which case foreign signals are
- * ignored. A `hello` ping on connect asks existing windows to announce
- * themselves so newly-mounted elements pick up state established before
- * they existed. Used by dk-solidos's iframe (broadcasts mashlib's session
- * via pages/solidos-host.html) and any other same-origin sol-login.
+ * are rebroadcast on the channel; a foreign login message sets the
+ * `external-auth` attribute (cleared on logout) unless this element already
+ * has its own logged-in session. Used by dk-solidos's iframe and any other
+ * same-origin sol-login.
  *
  * @property {Function} fetchFor - fetchFor(url) returns authenticated fetch
  * @property {string} webId - logged-in user's WebID
  * @property {boolean} isLoggedIn - whether a session is active
- * @fires sol-login - detail: { webId, issuer, side }
- * @fires sol-logout - detail: { side }
+ * @fires sol-login - detail: { webId, issuer }
+ * @fires sol-logout
  */
 class SolLogin extends HTMLElement {
-  static get observedAttributes() { return ['issuers', 'mode', 'side', 'popup-callback']; }
+  static get observedAttributes() { return ['issuers']; }
 
   constructor() {
     super();
@@ -304,43 +202,23 @@ class SolLogin extends HTMLElement {
     this._auth = sharedAuth;
     this._issuers = [];
     this._initialized = false;
-    this._mode = 'redirect';
-    this._side = 'default';
-    // Default to this module's own packaged callback page (sc ships it next
-    // to this file under web/). Resolving against import.meta.url means
-    // consumers no longer need to vendor their own copy or set popup-callback;
-    // the loader import()s this module by URL, so import.meta.url is the real
-    // served path. An explicit `popup-callback` attribute still overrides it.
-    this._popupCallback = new URL('./popup-auth-callback.html', import.meta.url).href;
-    this._popupWindow = null;
-    this._popupMsgHandler = null;
     this._initPromise = null;
+    this._repaint = () => this._updateUI();
   }
 
   get auth() { return this._auth; }
 
-  /** The session for this element's side (popup mode), if any. */
-  _sideSession() {
-    return this._auth.sessions.get(this._side) || null;
-  }
-
   get webId() {
-    const s = this._mode === 'popup'
-      ? this._sideSession()
-      : this._auth.getFirstLoggedIn();
-    return s?.info?.webId || null;
+    return this._auth.defaultSession()?.info?.webId || null;
   }
 
   get isLoggedIn() {
     if (kitchenLoggedIn()) return true;
-    if (this._mode === 'popup') {
-      return !!this._sideSession()?.info?.isLoggedIn;
-    }
-    return !!this._auth.getFirstLoggedIn();
+    return !!this._auth.defaultSession()?.info?.isLoggedIn;
   }
 
-  fetchFor(url, tag) {
-    return this._auth.fetchFor(url, tag);
+  fetchFor(url) {
+    return this._auth.fetchFor(url);
   }
 
   set issuers(arr) {
@@ -363,38 +241,31 @@ class SolLogin extends HTMLElement {
   connectedCallback() {
     if (!this._initialized) {
       this._initialized = true;
-      this._mode = (this.getAttribute('mode') || 'redirect').toLowerCase();
-      if (this._mode === 'popup' && popupsUnavailable()) this._mode = 'redirect';
-      this._side = this.getAttribute('side') || 'default';
-      const cb = this.getAttribute('popup-callback');
-      if (cb) this._popupCallback = cb;
       this._render();
       const attr = this.getAttribute('issuers');
       if (attr) this._issuers = attr.split(',').map(s => s.trim()).filter(Boolean);
-      // Self-listeners broadcast our own login/logout to the
-      // same-origin BroadcastChannel so other windows / iframes light
-      // up their login button green ('external-auth' attribute).
+      // Self-listeners broadcast our own login/logout to the same-origin
+      // BroadcastChannel so other windows / iframes light up their login
+      // button green ('external-auth' attribute).
       this.addEventListener('sol-login',  (e) => this._broadcastLogin(e));
       this.addEventListener('sol-logout', ()  => this._broadcastLogout());
     }
     this._attachAuthNeededListener();
     this._setupAuthChannel();
+    this._auth.registerRepaint(this._repaint);
     // Kick the auth boot from the element itself: the module-load
     // bootSolLogin() below only catches a sol-login already in the DOM when
     // sol-login.js is imported — one mounted later (dk's chrome builds after
     // the loader ran) was never initialized, so redirect-callback processing
-    // and the Tier-1 boot session restore silently never happened.
-    // initialize() is single-flight, so hosts that call it themselves
-    // (podz) are unaffected; set _manualInit to opt out entirely.
+    // and the boot session restore silently never happened. initialize() is
+    // single-flight, so hosts that call it themselves are unaffected; set
+    // _manualInit to opt out entirely.
     if (!this._manualInit) Promise.resolve().then(() => this.initialize()).catch(() => {});
   }
 
   disconnectedCallback() {
-    if (this._popupMsgHandler) {
-      window.removeEventListener('message', this._popupMsgHandler);
-      this._popupMsgHandler = null;
-    }
     this._detachAuthNeededListener();
+    this._auth.unregisterRepaint(this._repaint);
     if (this._authChannel) {
       this._authChannel.close();
       this._authChannel = null;
@@ -404,33 +275,24 @@ class SolLogin extends HTMLElement {
   /* ── cross-window auth signaling ───────────────────────────────────
    * BroadcastChannel('sol-auth') carries login/logout across every
    * same-origin tab, window, and iframe (including mashlib in the
-   * dk-solidos iframe, which broadcasts via pages/solidos-host.html).
-   * On receipt of a foreign login, if THIS sol-login has no own
-   * logged-in session, we set the `external-auth` attribute — pure
-   * CSS in sol-login-css.js paints the button green to invite the
-   * user to log in here too. */
+   * dk-solidos iframe). On receipt of a foreign login, if THIS sol-login
+   * has no own logged-in session, we set the `external-auth` attribute —
+   * CSS in sol-login-css.js paints the button green to invite the user to
+   * log in here too. */
   _setupAuthChannel() {
     if (this._authChannel) return;
     if (typeof BroadcastChannel === 'undefined') return;
     try { this._authChannel = new BroadcastChannel('sol-auth'); }
     catch (_) { return; }
     this._authChannel.addEventListener('message', (e) => this._onAuthMessage(e));
-    // Ask any already-logged-in window to announce itself, so our
-    // newly-connected element doesn't miss state established before
-    // we mounted.
     try { this._authChannel.postMessage({ type: 'hello' }); } catch (_) {}
   }
 
   _broadcastLogin(e) {
     if (!this._authChannel) return;
     try {
-      this._authChannel.postMessage({
-        type: 'login',
-        webId: e?.detail?.webId,
-        side: e?.detail?.side ?? this._side,
-      });
+      this._authChannel.postMessage({ type: 'login', webId: e?.detail?.webId });
     } catch (_) {}
-    // We're now the source; clear any prior external-auth on self.
     this.removeAttribute('external-auth');
   }
 
@@ -443,14 +305,9 @@ class SolLogin extends HTMLElement {
     const d = e?.data;
     if (!d || typeof d !== 'object') return;
     if (d.type === 'hello') {
-      // Reply to newcomers if we hold a session.
       const s = this._auth.getFirstLoggedIn();
       if (s && this._authChannel) {
-        try {
-          this._authChannel.postMessage({
-            type: 'login', webId: s.info?.webId, side: this._side,
-          });
-        } catch (_) {}
+        try { this._authChannel.postMessage({ type: 'login', webId: s.info?.webId }); } catch (_) {}
       }
       return;
     }
@@ -458,25 +315,17 @@ class SolLogin extends HTMLElement {
       if (this._auth.getFirstLoggedIn()) return;
       this.setAttribute('external-auth', d.webId || '');
     } else if (d.type === 'logout') {
-      // Conservative: clear immediately. If a different window is
-      // still logged in, its next 'hello' / 'login' event repaints.
       this.removeAttribute('external-auth');
     }
   }
 
   /* ── sol-auth-needed listener ──────────────────────────────────────
-   * Components save through solFetch (core/auth-fetch.js); when a
-   * request returns 401, solFetch dispatches `sol-auth-needed` and
-   * waits for someone to resolve its detail promise. We listen on
-   * `document`, pick the default issuer (own `issuer` attribute, then
-   * `<sol-default default-issuer>`, then the first entry in our list),
-   * run the existing login flow, and resolve the promise on success or
-   * give-up.
-   *
-   * Concurrent prompts are coalesced — multiple solFetch callers that
-   * hit 401 in the same window will share one login attempt rather
-   * than stacking popups.
-   */
+   * Components save through solFetch (core/auth-fetch.js); when a request
+   * returns 401, solFetch dispatches `sol-auth-needed` and waits for someone
+   * to resolve its detail promise. We listen on `document`, pick the default
+   * issuer (own `issuer` attribute, then `<sol-default default-issuer>`, then
+   * the first entry in our list), run the login flow, and resolve on success
+   * or give-up. Concurrent prompts are coalesced. */
 
   _attachAuthNeededListener() {
     if (this._authNeededHandler) return;
@@ -499,15 +348,8 @@ class SolLogin extends HTMLElement {
   }
 
   async _handleAuthNeeded(e) {
-    const { resolve, reject, side } = e.detail || {};
+    const { resolve, reject } = e.detail || {};
     if (typeof resolve !== 'function') return;
-
-    // Side-scoped routing: if the event names a side, only the matching
-    // <sol-login> handles it. Untagged events (no side) fall through to
-    // every listener — first to settle wins, others no-op. This keeps
-    // left/right pod chips from both popping their dropdowns for the
-    // same authTag-bearing 401.
-    if (side && side !== this._side) return;
 
     if (this._pendingAuthPromise) {
       try { resolve(await this._pendingAuthPromise); }
@@ -518,16 +360,9 @@ class SolLogin extends HTMLElement {
     const issuer = this._resolveDefaultIssuer();
     if (!issuer) { resolve(false); return; }
 
-    // Surface the element for the duration of the auth flow so the
-    // user can pick a different issuer (the picker dropdown lives in
-    // sol-login's own UI). `active` is the CSS hook in
-    // styles/sol-login-css.js — :host([active]) flips display back on.
+    // Surface the element for the duration of the auth flow so the user can
+    // pick a different issuer. `active` is the CSS hook in sol-login-css.js.
     this.setAttribute('active', '');
-
-    // Open the dropdown so the issuer list is visible while auto-login
-    // is running. The user can click a different issuer to switch
-    // (which closes the in-flight popup and opens a fresh one — see
-    // _popupLogin's reissue handling).
     requestAnimationFrame(() => {
       this._showSwitchHint(issuer);
       this._toggleDropdown();
@@ -536,17 +371,18 @@ class SolLogin extends HTMLElement {
     this._pendingAuthPromise = new Promise((res) => {
       const cleanup = () => {
         this.removeEventListener('sol-login', onLogin);
-        this.removeEventListener('sol-popup-blocked', onFail);
         this.removeAttribute('active');
         this._closeDropdown();
         this._hideSwitchHint();
         this._pendingAuthPromise = null;
       };
-      const onLogin = () => { cleanup(); res(true);  };
-      const onFail  = () => { cleanup(); res(false); };
+      const onLogin = () => { cleanup(); res(true); };
       this.addEventListener('sol-login', onLogin);
-      this.addEventListener('sol-popup-blocked', onFail);
-      Promise.resolve(this.login(issuer)).catch(() => onFail());
+      // login() is a full-page redirect: the promise below rarely settles in
+      // this page (we navigate away and the return trip resolves it via the
+      // sol-login event after initialize()). onLogin covers the no-navigation
+      // cases (already covered, or a synchronous failure).
+      Promise.resolve(this.login(issuer)).catch(() => { cleanup(); res(false); });
     });
 
     try { resolve(await this._pendingAuthPromise); }
@@ -558,258 +394,109 @@ class SolLogin extends HTMLElement {
     if (name === 'issuers' && this._initialized) {
       this._issuers = (newV || '').split(',').map(s => s.trim()).filter(Boolean);
       this._renderIssuers();
-    } else if (name === 'mode' && this._initialized) {
-      this._mode = (newV || 'redirect').toLowerCase();
-      if (this._mode === 'popup' && popupsUnavailable()) this._mode = 'redirect';
-    } else if (name === 'side' && this._initialized) {
-      this._side = newV || 'default';
-      this._updateUI();
-    } else if (name === 'popup-callback' && newV) {
-      this._popupCallback = newV;
     }
   }
 
-  async login(issuerUrl, tag = this._side) {
-    if (this._mode === 'popup') {
-      return this._popupLogin(issuerUrl);
-    }
-    // Default the session tag to this element's side (usually 'default'): a
-    // side-tagged element (podz left/right) coerced to redirect mode must not
-    // fight over the 'default' tag — on dk that slot holds the synthetic
-    // local-owner session.
-    await this._auth.ensureAuthenticated(issuerUrl, tag);
+  /** Start an interactive login for `issuerUrl` (full-page redirect). The
+   *  second parameter is accepted and ignored for backward compatibility with
+   *  callers that passed a session tag. */
+  async login(issuerUrl) {
+    await this._auth.ensureAuthenticated(issuerUrl);
   }
 
-  /**
-   * Popup-mode login. Opens the callback page in a popup that runs the
-   * OIDC redirect on its own; when it posts back `logged-in`, we wrap the
-   * popup in a PopupProxySession and register it under this element's side.
-   */
-  _popupLogin(issuerUrl) {
-    let issuer = issuerUrl;
-    try { issuer = new URL(issuerUrl).href; } catch (e) {
-      this._setStatusMessage('Invalid issuer URL', true);
-      return;
-    }
-
-    // Reuse vs. reissue: if a popup is already open for this side and
-    // the issuer matches, just refocus. If the caller is switching to
-    // a different issuer (e.g. user clicked another option in the
-    // dropdown while auto-login was in flight), close the old popup
-    // and open a fresh one with the new issuer URL.
-    if (this._popupWindow && !this._popupWindow.closed) {
-      if (this._popupIssuer === issuer) {
-        this._popupWindow.focus();
-        return;
-      }
-      try { this._popupWindow.close(); } catch (e) {}
-      this._popupWindow = null;
-    }
-
-    // Optional display/clientName hint for the (generic) callback page.
-    const label = this.getAttribute('client-name') || this.getAttribute('label');
-    const url = this._popupCallback +
-      (this._popupCallback.includes('?') ? '&' : '?') +
-      'side=' + encodeURIComponent(this._side) +
-      '&issuer=' + encodeURIComponent(issuer) +
-      (label ? '&label=' + encodeURIComponent(label) : '');
-    const features = 'popup=yes,width=480,height=620';
-    const w = window.open(url, 'sol-login-' + this._side, features);
-    if (!w) {
-      this._setStatusMessage('Popup blocked — allow popups and retry', true);
-      this.dispatchEvent(new CustomEvent('sol-popup-blocked', {
-        bubbles: true, composed: true, detail: { side: this._side },
-      }));
-      return;
-    }
-    this._popupWindow = w;
-    this._popupIssuer = issuer;
-    this._setStatusMessage('Signing in…');
-    // Auto-login also wants the hint updated as the user re-picks.
-    if (this.hasAttribute('active')) this._showSwitchHint(issuer);
-
-    if (!this._popupMsgHandler) {
-      this._popupMsgHandler = (e) => this._onPopupMessage(e);
-      window.addEventListener('message', this._popupMsgHandler);
-    }
+  initialize() {
+    // Single-flight: an embedding component's mount and the host's own boot
+    // path may both call initialize(). Concurrent callers share one run so the
+    // OIDC redirect code is exchanged exactly once.
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = this._doInitialize();
+    return this._initPromise;
   }
 
-  _onPopupMessage(e) {
-    // The auth popup posts from our own origin. Reject a mismatched (present)
-    // origin so a foreign window can't forge a 'logged-in' message and inject a
-    // session. An empty origin (jsdom in tests) is allowed through.
-    const expected = (typeof window !== 'undefined' && window.location)
-      ? window.location.origin : null;
-    if (e.origin && expected && e.origin !== expected) return;
-    const d = e.data;
-    if (!d || d.source !== 'sol-popup-auth') return;
-    if (d.side && d.side !== this._side) return;
+  async _doInitialize() {
+    // The button must ALWAYS end up painted from the real session state, even
+    // when redirect processing throws (e.g. an already-consumed code).
+    try {
+      await this._auth.handleIncomingRedirect();
+    } catch (e) {
+      console.warn('[sol-login] incoming-redirect processing failed:', e?.message || e);
+    }
+    this._updateUI();
+    this._integrateWithRdflib();
 
-    if (d.type === 'logged-in') {
-      const proxy = new PopupProxySession(this._popupWindow, {
-        webId: d.webId, sessionId: d.sessionId, issuer: d.issuer,
-        clientId: null, side: this._side,
-      }, window.location.origin);
-      proxy.addEventListener('logout', () => {
-        if (this._auth.sessions.get(this._side) === proxy) {
-          this._auth.sessions.delete(this._side);
-        }
-        this._popupWindow = null;
-        this._updateUI();
-        this.dispatchEvent(new CustomEvent('sol-logout', {
-          bubbles: true, composed: true, detail: { side: this._side },
-        }));
-      });
-      this._auth.sessions.set(this._side, proxy);
-      this._updateUI();
+    const session = this._auth.defaultSession();
+    if (session?.info?.isLoggedIn) {
       this.dispatchEvent(new CustomEvent('sol-login', {
         bubbles: true, composed: true,
-        detail: { webId: d.webId, issuer: d.issuer, side: this._side },
+        detail: { webId: session.info.webId, issuer: session.info.issuer },
       }));
-      this._integrateWithRdflib();
-    } else if (d.type === 'login-failed') {
-      this._popupWindow = null;
-      this._setStatusMessage('Sign-in failed', true);
     }
   }
 
-initialize(tags = ['default']) {
-  // Single-flight: the embedding component's mount (sol-pod) and the host's
-  // own boot path (podz handleRedirect) BOTH call initialize(). Two
-  // concurrent runs raced the OIDC code exchange — one consumed the ?code,
-  // the other errored or no-oped and could paint the button from a
-  // not-yet-logged-in snapshot, leaving "Log in" on a logged-in session.
-  // Concurrent callers now share one run.
-  if (this._initPromise) return this._initPromise;
-  this._initPromise = this._doInitialize(tags);
-  return this._initPromise;
-}
-
-async _doInitialize(tags = ['default']) {
-  if (this._mode === 'popup') {
-    // PR 1: no cross-reload persistence — nothing to restore on boot.
-    this._updateUI();
-    this._integrateWithRdflib();
-    return;
-  }
-  for (const tag of tags) {
-    this._auth.sessionFor(tag);
-  }
-  // The button must ALWAYS end up painted from the real session state, even
-  // when redirect processing throws (e.g. an already-consumed code).
-  try {
-    await this._auth.handleIncomingRedirect();
-  } catch (e) {
-    console.warn('[sol-login] incoming-redirect processing failed:', e?.message || e);
-  }
-  this._updateUI();
-  this._integrateWithRdflib();
-
-  // Announce the session THIS element displays (its own side first) — on a
-  // host with a synthetic always-on session under 'default' (dk's local
-  // owner), getFirstLoggedIn() would announce the owner instead of the user
-  // who just completed the redirect, and listeners like sol-pod's
-  // storage adoption would walk the wrong profile.
-  const session = this._displaySession() || this._auth.getFirstLoggedIn();
-  if (session?.info?.isLoggedIn) {
-    this.dispatchEvent(new CustomEvent('sol-login', {
-      bubbles: true, composed: true,
-      detail: {
-        webId: session.info.webId,
-        issuer: session.info.issuer,
-        side: this._side,
-      }
-    }));
-  }
-}
-
-async logout() {
-  if (this._mode === 'popup') {
-    // Log out only this element's side.
-    const session = this._sideSession();
-    if (session) {
+  async logout() {
+    const session = this._auth.defaultSession();
+    if (session?.info?.isLoggedIn && typeof session.logout === 'function') {
       try { await session.logout(); } catch (e) {}
-      this._auth.sessions.delete(this._side);
     }
-    this._popupWindow = null;
     this._updateUI();
     this._integrateWithRdflib();
-    this.dispatchEvent(new CustomEvent('sol-logout', {
-      bubbles: true, composed: true, detail: { side: this._side },
-    }));
-    return;
-  }
-  for (const [, session] of this._auth.sessions) {
-    if (session.info?.isLoggedIn) {
-      await session.logout();
-    }
-  }
-  this._updateUI();
-  this._integrateWithRdflib();
-  this.dispatchEvent(new CustomEvent('sol-logout', { bubbles: true, composed: true }));
-}
-
-_integrateWithRdflib() {
-  const win = typeof window !== 'undefined' ? window : {};
-
-  // Route rdflib's Fetcher (and anything else we patch) through solFetch
-  // so a 401 from UpdateManager-driven saves (sol-form), sol-query SPARQL
-  // calls, sol-include document loads, etc. triggers `sol-auth-needed`
-  // and gets the chrome's login UX + auto-retry. solFetch internally
-  // calls am.fetchFor under the hood, so an already-authenticated
-  // request still goes through the right session.
-  const authFetchWrapper = (uri, options = {}) => solFetch(uri, options);
-
-  const patchFetcherCtor = (FetcherCtor) => {
-    if (!FetcherCtor?.prototype) return;
-    const proto = FetcherCtor.prototype;
-    if (!proto._originalFetch) {
-      proto._originalFetch = proto.fetch || proto._fetch || fetch;
-    }
-    if (proto.fetch)  proto.fetch  = authFetchWrapper;
-    if (proto._fetch) proto._fetch = authFetchWrapper;
-  };
-
-  const patchFetcherInstance = (fetcher) => {
-    if (!fetcher) return;
-    if (!fetcher._originalFetch) {
-      fetcher._originalFetch = fetcher.fetch || fetcher._fetch || fetch;
-    }
-    if (fetcher.fetch)  fetcher.fetch  = authFetchWrapper;
-    if (fetcher._fetch) fetcher._fetch = authFetchWrapper;
-  };
-
-  // 1. Patch Fetcher constructors (host-page global + our singleton) so any
-  //    future `new Fetcher(...)` call gets auth.
-  patchFetcherCtor(win.$rdf?.Fetcher);
-  if (rdf.isReady()) patchFetcherCtor(rdf.Fetcher);
-
-  // 2. Adopt an external shared store if one is already on the page. This
-  //    makes our components and solid-logic / solid-ui / mashlib share one
-  //    rdflib graph (same cache, same subscriptions), so data loaded by
-  //    either side is visible to the other.
-  //    Probes solid-logic (`window.SolidLogic.store`), solid-ui / mashlib
-  //    (`window.UI.store`), and the older `window.panes.store` surface.
-  const externalStore =
-       win.SolidLogic?.store
-    || win.UI?.store
-    || win.panes?.store
-    || null;
-  if (externalStore && rdf.isReady()) rdf.useStore(externalStore);
-
-  // 2b. If nothing was on the page, publish our singleton upward so
-  //     mashlib/solid-ui/solid-logic loaded *after* us share our graph.
-  if (!externalStore && rdf.isReady() && !win.SolidLogic) {
-    win.SolidLogic = { store: rdf.store, fetcher: rdf.storeFetcher };
+    this.dispatchEvent(new CustomEvent('sol-logout', { bubbles: true, composed: true }));
   }
 
-  // 3. Patch any already-instantiated Fetcher instances hanging off the
-  //    shared store(s), so existing rdflib code paths also get auth.
-  patchFetcherInstance(win.SolidLogic?.store?.fetcher);
-  patchFetcherInstance(win.UI?.store?.fetcher);
-  patchFetcherInstance(win.panes?.store?.fetcher);
-  if (rdf.isReady()) patchFetcherInstance(rdf._fetcher);
-}
+  _integrateWithRdflib() {
+    const win = typeof window !== 'undefined' ? window : {};
+
+    // Route rdflib's Fetcher (and anything else we patch) through solFetch so a
+    // 401 from UpdateManager-driven saves (sol-form), sol-query SPARQL calls,
+    // sol-include document loads, etc. triggers `sol-auth-needed` and gets the
+    // chrome's login UX + auto-retry. solFetch calls am.fetchFor under the
+    // hood, so an already-authenticated request still uses the right session.
+    const authFetchWrapper = (uri, options = {}) => solFetch(uri, options);
+
+    const patchFetcherCtor = (FetcherCtor) => {
+      if (!FetcherCtor?.prototype) return;
+      const proto = FetcherCtor.prototype;
+      if (!proto._originalFetch) {
+        proto._originalFetch = proto.fetch || proto._fetch || fetch;
+      }
+      if (proto.fetch)  proto.fetch  = authFetchWrapper;
+      if (proto._fetch) proto._fetch = authFetchWrapper;
+    };
+
+    const patchFetcherInstance = (fetcher) => {
+      if (!fetcher) return;
+      if (!fetcher._originalFetch) {
+        fetcher._originalFetch = fetcher.fetch || fetcher._fetch || fetch;
+      }
+      if (fetcher.fetch)  fetcher.fetch  = authFetchWrapper;
+      if (fetcher._fetch) fetcher._fetch = authFetchWrapper;
+    };
+
+    // 1. Patch Fetcher constructors (host-page global + our singleton).
+    patchFetcherCtor(win.$rdf?.Fetcher);
+    if (rdf.isReady()) patchFetcherCtor(rdf.Fetcher);
+
+    // 2. Adopt an external shared store if one is already on the page, so our
+    //    components and solid-logic / solid-ui / mashlib share one rdflib graph.
+    const externalStore =
+         win.SolidLogic?.store
+      || win.UI?.store
+      || win.panes?.store
+      || null;
+    if (externalStore && rdf.isReady()) rdf.useStore(externalStore);
+
+    // 2b. If nothing was on the page, publish our singleton upward so mashlib/
+    //     solid-ui/solid-logic loaded AFTER us share our graph.
+    if (!externalStore && rdf.isReady() && !win.SolidLogic) {
+      win.SolidLogic = { store: rdf.store, fetcher: rdf.storeFetcher };
+    }
+
+    // 3. Patch any already-instantiated Fetcher instances on the shared store.
+    patchFetcherInstance(win.SolidLogic?.store?.fetcher);
+    patchFetcherInstance(win.UI?.store?.fetcher);
+    patchFetcherInstance(win.panes?.store?.fetcher);
+    if (rdf.isReady()) patchFetcherInstance(rdf._fetcher);
+  }
 
   _render() {
     const s = this.shadowRoot;
@@ -839,30 +526,16 @@ _integrateWithRdflib() {
   }
 
   _handleClick() {
-    // Decide login-vs-logout from THIS element's displayed session — the same
-    // basis as _updateUI — NOT the global `isLoggedIn` getter, which returns
-    // true whenever the host reports a "kitchen"/owner session. Using the
-    // getter made a popup-mode button that still shows "Log in" wrongly call
-    // logout() on click: no dropdown opened, so it looked like nothing happened.
-    // Redirect mode is side-scoped for the same reason: on dk, 'default' holds
-    // the synthetic local-owner session, and a first-logged-in basis turned a
-    // side-tagged Log in button into a silent logout().
-    const session = this._displaySession();
-    if (session && session.info && session.info.isLoggedIn) {
+    // Decide login-vs-logout from the 'default'-tag session — NOT the global
+    // isLoggedIn getter, which returns true whenever the host reports a
+    // kitchen/owner session (the local owner sits on 'local' and must never
+    // turn this button into a logout).
+    const session = this._auth.defaultSession();
+    if (session?.info?.isLoggedIn) {
       this.logout();
     } else {
       this._toggleDropdown();
     }
-  }
-
-  /** The session this element's button/label reflects: its own side's session,
-   *  falling back (redirect mode only) to any logged-in session when this
-   *  element's side has none and the side IS the shared 'default' tag. */
-  _displaySession() {
-    if (this._mode === 'popup') return this._sideSession();
-    const own = this._sideSession();
-    if (own?.info?.isLoggedIn) return own;
-    return this._side === 'default' ? this._auth.getFirstLoggedIn() : own;
   }
 
   _toggleDropdown() {
@@ -901,10 +574,9 @@ _integrateWithRdflib() {
     if (dd) dd.classList.remove('open');
   }
 
-  /** Insert (or update) a tiny hint at the top of the dropdown that
-   *  names the default issuer auto-login is using and prompts the user
-   *  to pick another to switch. Idempotent — calling twice updates
-   *  the hint text instead of stacking it. */
+  /** Insert (or update) a tiny hint at the top of the dropdown that names the
+   *  default issuer auto-login is using and prompts the user to pick another
+   *  to switch. Idempotent. */
   _showSwitchHint(defaultIssuer) {
     const dd = this.shadowRoot.querySelector('.dropdown');
     if (!dd) return;
@@ -950,45 +622,44 @@ _integrateWithRdflib() {
     await this.login(issuer);
   }
 
-/** Show a transient message in the status span (overwritten by _updateUI). */
-_setStatusMessage(msg, isErr) {
-  const status = this.shadowRoot && this.shadowRoot.querySelector('.auth-status');
-  if (!status) return;
-  status.textContent = msg;
-  status.className = 'auth-status' + (isErr ? ' auth-error' : '');
-}
-
-_updateUI() {
-  const status = this.shadowRoot.querySelector('.auth-status');
-  const btn = this.shadowRoot.querySelector('.auth-btn');
-  if (!status || !btn) return;
-
-  const session = this._displaySession();
-  // The WebID is surfaced only as the button's hover title, never as
-  // visible page text.
-  status.textContent = '';
-  if (session && session.info && session.info.isLoggedIn) {
-    status.className = 'auth-status logged-in';
-    btn.textContent = 'Log out';
-    btn.className = 'sol-btn sol-btn-sm auth-btn logged-in';
-    btn.title = session.info.webId || '';
-  } else {
-    status.className = 'auth-status';
-    btn.textContent = 'Log in';
-    btn.className = 'sol-btn sol-btn-sm sol-btn-primary auth-btn';
-    btn.title = '';
+  /** Show a transient message in the status span (overwritten by _updateUI). */
+  _setStatusMessage(msg, isErr) {
+    const status = this.shadowRoot && this.shadowRoot.querySelector('.auth-status');
+    if (!status) return;
+    status.textContent = msg;
+    status.className = 'auth-status' + (isErr ? ' auth-error' : '');
   }
-}
+
+  _updateUI() {
+    const status = this.shadowRoot.querySelector('.auth-status');
+    const btn = this.shadowRoot.querySelector('.auth-btn');
+    if (!status || !btn) return;
+
+    const session = this._auth.defaultSession();
+    // The WebID is surfaced only as the button's hover title, never as visible
+    // page text.
+    status.textContent = '';
+    if (session?.info?.isLoggedIn) {
+      status.className = 'auth-status logged-in';
+      btn.textContent = 'Log out';
+      btn.className = 'sol-btn sol-btn-sm auth-btn logged-in';
+      btn.title = session.info.webId || '';
+    } else {
+      status.className = 'auth-status';
+      btn.textContent = 'Log in';
+      btn.className = 'sol-btn sol-btn-sm sol-btn-primary auth-btn';
+      btn.title = '';
+    }
+  }
 }
 
 define('sol-login', SolLogin);
 
-// Complete an OIDC redirect on load. The element is defined just above, so it is
-// already upgraded when this runs. When sol-login.js is imported lazily (e.g. by
-// component-interop, after manifests load) DOMContentLoaded has already fired —
-// so run immediately in that case instead of waiting for an event that will
-// never come. (Set `_manualInit` on the element to opt out and call initialize()
-// yourself.)
+// Complete an OIDC redirect on load. The element is defined just above, so it
+// is already upgraded when this runs. When sol-login.js is imported lazily
+// (e.g. by component-interop, after manifests load) DOMContentLoaded has
+// already fired — so run immediately in that case. (Set `_manualInit` on the
+// element to opt out and call initialize() yourself.)
 function bootSolLogin() {
   const login = document.querySelector('sol-login');
   if (login && !login._manualInit) return login.initialize();

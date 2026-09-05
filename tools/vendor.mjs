@@ -83,19 +83,26 @@ function pkgJsonPath(name) {
   return resolvePath(root, 'node_modules', name, 'package.json');
 }
 
-function isUpToDate(name) {
+function isUpToDate(name, entryPath) {
   if (force) return false;
   const out = resolvePath(outDir, flatName(name) + '.js');
   if (!existsSync(out)) return false;
   const pkg = pkgJsonPath(name);
   if (!existsSync(pkg)) return false;
   if (statSync(out).mtimeMs < statSync(pkg).mtimeMs) return false;
+  // A dep vendored through a repo-local entry file (see `entry` in
+  // external-deps.json) also rebuilds when that entry changes.
+  if (entryPath && existsSync(entryPath) && statSync(out).mtimeMs < statSync(entryPath).mtimeMs) return false;
   return true;
 }
 
-async function vendorOne(name, depList) {
+async function vendorOne(name, info, depList) {
   const out = resolvePath(outDir, flatName(name) + '.js');
-  if (isUpToDate(name)) {
+  // A dep may name a repo-local `entry` module (a thin re-export barrel that
+  // selects exactly which of the package's builds/exports to vendor). Rollup
+  // takes that file as its input instead of the bare package specifier.
+  const entryPath = info.entry ? resolvePath(root, info.entry) : null;
+  if (isUpToDate(name, entryPath)) {
     console.log(`[vendor] skip ${name} (up to date)`);
     return;
   }
@@ -112,7 +119,7 @@ async function vendorOne(name, depList) {
   };
 
   const bundle = await rollup({
-    input: name,
+    input: entryPath || name,
     external: (id) => others.some(d => id === d || id.startsWith(d + '/')),
     plugins: [
       stubNodeBuiltins(),
@@ -136,7 +143,7 @@ async function vendorOne(name, depList) {
 const depList = Object.keys(deps);
 let failures = 0;
 for (const name of depList) {
-  try { await vendorOne(name, depList); }
+  try { await vendorOne(name, deps[name], depList); }
   catch (err) {
     failures++;
     console.error(`[vendor] FAIL ${name}: ${err.message}`);
