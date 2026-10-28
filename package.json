@@ -119,6 +119,7 @@
     "rdf-ext": "^2.6.0",
     "rdf-validate-shacl": "^0.6.5",
     "rollup": "^4.13.0",
+    "shaclc-write": "^1.6.3",
     "solid-logic": "^6.0.0",
     "solid-ui": "^5.0.1"
   },
