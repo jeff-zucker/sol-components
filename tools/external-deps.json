@@ -2,7 +2,7 @@
   "_doc": "Single source of truth for external runtime dependencies. Used by tools/build-importmaps.mjs and tools/vendor.mjs. The CDN major-version pin should match the major version that npm install actually resolves into node_modules; otherwise CDN mode and offline mode behave differently. List entries even for deps used by components that aren't yet in web/sol-full.js — the importmap covers them so the offline page won't 404 when a component is added. All-ESM: vendor.mjs emits one ESM file per dep (`<flat-name>.js`); the importmap binds the bare specifier to it, so every module shares one instance. No UMD outputs — the `<script>`-tag drop-in path is retired. Comunica is on jsDelivr `+esm` because esm.sh cannot build it — every target/flag combination throws at evaluation.",
   "deps": {
     "rdflib":                                { "version": "^2.3.6", "cdn": "https://esm.sh/rdflib@2" },
-    "dompurify":                             { "version": "^3.4.0", "cdn": "https://esm.sh/dompurify@3" },
+    "dompurify":                             { "version": "^3.4.17", "cdn": "https://esm.sh/dompurify@3" },
     "ical.js":                               { "version": "^2.2.1", "cdn": "https://esm.sh/ical.js@2" },
     "marked":                                { "version": "^4",     "cdn": "https://esm.sh/marked@4" },
     "@comunica/query-sparql":                { "version": "^5.1.3", "cdn": "https://cdn.jsdelivr.net/npm/@comunica/query-sparql@5/+esm" },

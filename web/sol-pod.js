@@ -23,6 +23,7 @@ import {
   discoverOwnerWebIds, getStoragesFromWebIds, staleProviderRoots,
 } from '../core/pod-ops.js';
 import { getRegistry } from '../core/pod-registry.js';
+import { escapeHtml } from '../core/utils.js';
 import './sol-modal.js';   // modal shell is part of sol-pod's own UX
 import './sol-login.js';   // built-in login button in the pod header
 import { loadConfig } from './utils/rdf-config.js';
@@ -724,7 +725,7 @@ class SolPod extends HTMLElement {
 
   _showMessage(msg, isError) {
     const tw = this.shadowRoot.querySelector('.tree-wrapper');
-    if (tw) tw.innerHTML = `<div class="empty${isError ? ' error' : ''}">${msg}</div>`;
+    if (tw) tw.innerHTML = `<div class="empty${isError ? ' error' : ''}">${escapeHtml(msg)}</div>`;
   }
 
   /**
@@ -823,7 +824,7 @@ class SolPod extends HTMLElement {
       const msg = this._filterText
         ? `No matches for "${this._filterText}"`
         : (allItems.length === 0 ? 'Empty container' : 'No matches');
-      tw.innerHTML = `<div class="empty">${msg}</div>`;
+      tw.innerHTML = `<div class="empty">${escapeHtml(msg)}</div>`;
       this._focusIndex = -1;
       return;
     }

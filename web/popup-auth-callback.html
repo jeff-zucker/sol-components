@@ -141,6 +141,10 @@ function parkWindow() {
 
 // ---- fetch proxy --------------------------------------------------------
 window.addEventListener('message', async (e) => {
+  // The host app posts from our own origin. Reject a mismatched (present)
+  // origin so a foreign window holding a handle to this popup can't drive an
+  // authenticated fetch. An empty origin (jsdom in tests) is allowed through.
+  if (e.origin && e.origin !== openerOrigin) return;
   const d = e.data;
   if (!d || d.source !== PARENT_SRC) return;
   if (d.side && d.side !== side) return;
