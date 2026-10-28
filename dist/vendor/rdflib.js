@@ -1,3 +1,4 @@
+/*! vendored rdflib@2.4.1 */
 if (typeof globalThis.process === "undefined") {
   globalThis.process = {
     env: {}, browser: true, version: "", versions: { node: "" },
@@ -6837,10 +6838,13 @@ function requireErrors () {
 	 * @class
 	 * @param {string} message
 	 * @param {any} [locator]
+	 * @param {Error} [cause]
+	 * The error that caused this one, e.g. a `DOMException` thrown while building the DOM.
 	 */
-	function ParseError(message, locator) {
+	function ParseError(message, locator, cause) {
 		this.message = message;
 		this.locator = locator;
+		this.cause = cause;
 		if (Error.captureStackTrace) Error.captureStackTrace(this, ParseError);
 	}
 	extendError(ParseError);
@@ -6941,7 +6945,7 @@ function requireGrammar () {
 					return isStr ? part : part.source;
 				})
 				.join(''),
-			UNICODE_SUPPORT ? 'mu' : 'm'
+			UNICODE_SUPPORT ? 'u' : ''
 		);
 	}
 
@@ -7030,6 +7034,9 @@ function requireGrammar () {
 	// https://www.w3.org/TR/xml11/#NT-Name
 	// `[5] Name ::= NameStartChar (NameChar)*`
 	var Name = reg(NameStartChar, NameChar, '*');
+	// Full-string anchored matcher for requireWellFormed serializer checks
+	// https://w3c.github.io/DOM-Parsing/#xml-serializing-a-document-node
+	var Name_exact = reg('^', Name, '$');
 	/*
 	https://www.w3.org/TR/xml11/#NT-Names
 	`[6] Names ::= Name (#x20 Name)*`
@@ -7088,6 +7095,9 @@ function requireGrammar () {
 	// `[4] NCName ::= Name - (Char* ':' Char*)`
 	// An XML Name, minus the ":"
 	var NCName = reg(NCNameStartChar, NCNameChar, '*');
+	// Full-string anchored matcher for requireWellFormed serializer checks
+	// https://w3c.github.io/DOM-Parsing/#xml-serializing-a-document-node
+	var NCName_exact = reg('^', NCName, '$');
 
 	/**
 	https://www.w3.org/TR/xml-names/#ns-qualnames
@@ -7120,7 +7130,11 @@ function requireGrammar () {
 	 ```
 	 target /xml/i is not excluded!
 	*/
-	var PI = reg(/^<\?/, '(', Name, ')', regg(S, '(', Char, '*?)'), '?', /\?>/);
+	// The `(?!S)` after the leading `S+` asserts the data starts with a non-whitespace
+	// character (greedy `S+` already consumes all separating whitespace), pruning the
+	// `S+`/`Char*?` whitespace overlap that otherwise makes an unterminated PI (no `?>`)
+	// backtrack quadratically. The lookahead is non-capturing, so the data stays group 2.
+	var PI = reg(/^<\?/, '(', Name, ')', regg(S, '(?!', _SChar, ')(', Char, '*?)'), '?', /\?>/);
 
 	// https://www.w3.org/TR/xml11/#NT-PubidChar
 	// `[13] PubidChar ::= #x20 | #xD | #xA | [a-zA-Z0-9] | [-'()+,./:=?;!*#@$_%]`
@@ -7387,6 +7401,8 @@ function requireGrammar () {
 	grammar.ExternalID = ExternalID;
 	grammar.ExternalID_match = ExternalID_match;
 	grammar.Name = Name;
+	grammar.Name_exact = Name_exact;
+	grammar.NCName_exact = NCName_exact;
 	grammar.NotationDecl = NotationDecl;
 	grammar.Reference = Reference;
 	grammar.PEReference = PEReference;
@@ -7901,7 +7917,22 @@ function requireDom () {
 	 * @see https://webidl.spec.whatwg.org/#dfn-supported-property-names
 	 * @constructs NamedNodeMap
 	 */
-	function NamedNodeMap() {}
+	/**
+	 * A live collection of an element's attributes, keyed by name.
+	 *
+	 * The numbered entries and `length` are the sole authority for attribute order.
+	 * A separate two-level null-prototype membership index (`namespaceURI` ->
+	 * `localName` -> `Attr`, with the null/empty namespace held in its own bucket)
+	 * lets the parse-time de-duplication in `setNamedItem` resolve an existing
+	 * attribute in O(1) instead of scanning the list, so building an element with M
+	 * attributes costs O(M) rather than O(M^2). The index never reorders attributes.
+	 */
+	function NamedNodeMap() {
+		// namespaceURI (non-empty string) -> (localName -> Attr)
+		this._nsIndex = Object.create(null);
+		// localName -> Attr, for the null / empty-string namespace
+		this._noNsIndex = Object.create(null);
+	}
 	/**
 	 * Returns the index of a node within the list.
 	 *
@@ -7920,6 +7951,70 @@ function requireDom () {
 				return i;
 			}
 			i++;
+		}
+	}
+	/**
+	 * Returns the second-level index bucket (`localName` -> `Attr`) for a namespace,
+	 * replicating `getNamedItemNS`'s falsy-namespace normalization: `null`,
+	 * `undefined` and `''` all resolve to the dedicated null-namespace bucket, kept separate from
+	 * any real URI (so a namespace URI equal to the string `"null"`
+	 * cannot collide with the null namespace). Both levels are null-prototype objects, so an
+	 * attribute named `__proto__` or `constructor` is an ordinary key.
+	 *
+	 * @param {NamedNodeMap} map
+	 * @param {string | null | undefined} namespaceURI
+	 * @param {boolean} create
+	 * Create the bucket if it does not exist yet.
+	 * @returns {Object | undefined}
+	 * @private
+	 */
+	function _nnmBucket(map, namespaceURI, create) {
+		if (!namespaceURI) {
+			return map._noNsIndex;
+		}
+		var bucket = map._nsIndex[namespaceURI];
+		if (!bucket && create) {
+			bucket = map._nsIndex[namespaceURI] = Object.create(null);
+		}
+		return bucket;
+	}
+	/**
+	 * Looks up an attribute by namespace and local name through the membership index.
+	 *
+	 * @param {NamedNodeMap} map
+	 * @param {string | null | undefined} namespaceURI
+	 * @param {string} localName
+	 * @returns {Attr | null}
+	 * The matching attribute, or `null` when absent.
+	 * @private
+	 */
+	function _nnmIndexFind(map, namespaceURI, localName) {
+		var bucket = _nnmBucket(map, namespaceURI, false);
+		var found = bucket && bucket[localName];
+		return found ? found : null;
+	}
+	/**
+	 * Records `attr` in the membership index under its namespace and local name,
+	 * replacing any previous attribute with the same key.
+	 *
+	 * @param {NamedNodeMap} map
+	 * @param {Attr} attr
+	 * @private
+	 */
+	function _nnmIndexAdd(map, attr) {
+		_nnmBucket(map, attr.namespaceURI, true)[attr.localName] = attr;
+	}
+	/**
+	 * Removes `attr` from the membership index.
+	 *
+	 * @param {NamedNodeMap} map
+	 * @param {Attr} attr
+	 * @private
+	 */
+	function _nnmIndexRemove(map, attr) {
+		var bucket = _nnmBucket(map, attr.namespaceURI, false);
+		if (bucket) {
+			delete bucket[attr.localName];
 		}
 	}
 	/**
@@ -7943,6 +8038,10 @@ function requireDom () {
 			list[list.length] = newAttr;
 			list.length++;
 		}
+		// Keep the membership index in sync with the ordered list. On replacement
+		// `oldAttr` shares `newAttr`'s (namespace, localName) key, so this overwrites
+		// its entry; on append it adds a new one.
+		_nnmIndexAdd(list, newAttr);
 		if (el) {
 			newAttr.ownerElement = el;
 			var doc = el.ownerDocument;
@@ -7973,6 +8072,7 @@ function requireDom () {
 				list[i] = list[++i];
 			}
 			list.length = lastIndex;
+			_nnmIndexRemove(list, attr);
 			if (el) {
 				var doc = el.ownerDocument;
 				if (doc) {
@@ -8030,7 +8130,10 @@ function requireDom () {
 			if (el && el !== this._ownerElement) {
 				throw new DOMException(DOMException.INUSE_ATTRIBUTE_ERR);
 			}
-			var oldAttr = this.getNamedItemNS(attr.namespaceURI, attr.localName);
+			// Resolve any existing attribute with the same (namespace, localName)
+			// through the O(1) membership index rather than an O(M) scan — this is the
+			// parse-dedup hot path (`setAttributeNode` per attribute during parse).
+			var oldAttr = _nnmIndexFind(this, attr.namespaceURI, attr.localName);
 			if (oldAttr === attr) {
 				return attr;
 			}
@@ -8759,9 +8862,38 @@ function requireDom () {
 					while (child) {
 						var next = child.nextSibling;
 						if (next !== null && next.nodeType === TEXT_NODE && child.nodeType === TEXT_NODE) {
-							node.removeChild(next);
-							child.appendData(next.data);
-							// Do not advance child: re-check new nextSibling for another text run
+							// Merge the whole run of adjacent text nodes at once: gather the
+							// following text siblings' data, unlink them in a single pass, and
+							// re-index the child list a single time. Per-sibling `removeChild`
+							// (each an O(K) re-index) plus per-sibling `appendData` (each an O(K)
+							// string rebuild) is O(K^2) over a long run of single-character text
+							// nodes; this keeps it O(K). The first text node of the run survives
+							// and carries the concatenated data, preserving node identity and
+							// locator semantics.
+							var tail = [];
+							var sibling = next;
+							while (sibling !== null && sibling.nodeType === TEXT_NODE) {
+								tail.push(sibling.data);
+								sibling = sibling.nextSibling;
+							}
+							// `sibling` is now the first non-text node after the run, or null.
+							var removed = child.nextSibling;
+							while (removed !== sibling) {
+								var following = removed.nextSibling;
+								removed.parentNode = null;
+								removed.previousSibling = null;
+								removed.nextSibling = null;
+								removed = following;
+							}
+							child.nextSibling = sibling;
+							if (sibling !== null) {
+								sibling.previousSibling = child;
+							} else {
+								node.lastChild = child;
+							}
+							child.appendData(tail.join('')); // single O(K) string rebuild
+							_onUpdateChild(node.ownerDocument, node); // single O(K) re-index
+							child = sibling;
 						} else {
 							child = next;
 						}
@@ -9814,10 +9946,10 @@ function requireDom () {
 		 * "InvalidCharacterError".
 		 *
 		 * Note: When the resulting document is serialized with `requireWellFormed: true`, the
-		 * serializer throws `InvalidStateError` if `.target` contains `:` or is an ASCII
-		 * case-insensitive match for `"xml"`, or if `.data` contains `?>` or characters outside the
-		 * XML Char production (W3C DOM Parsing §3.2.1.7). Without that option the data is emitted
-		 * verbatim.
+		 * serializer throws `InvalidStateError` if `.target` is not a valid XML `NCName` (a `Name`
+		 * with no colon) or is an ASCII case-insensitive match for `"xml"`, or if `.data` contains
+		 * `?>` or characters outside the XML Char production (W3C DOM Parsing §3.2.1.7). Without that
+		 * option the target and data are emitted verbatim.
 		 *
 		 * @param {string} target
 		 * @param {string} data
@@ -9872,19 +10004,29 @@ function requireDom () {
 		 * The current implementation does not fill the `childNodes` with those of the corresponding
 		 * `Entity`
 		 *
+		 * The `name` is validated against the XML `Name` production at creation time; an invalid name
+		 * throws `InvalidCharacterError`. When the resulting node is serialized with
+		 * `requireWellFormed: true`, the serializer re-validates `nodeName` against the XML `Name`
+		 * production and throws `InvalidStateError` if a later `nodeName` mutation made it invalid;
+		 * without that option the name is emitted verbatim.
+		 *
+		 * __This implementation differs from the specification:__ xmldom does not expand entities —
+		 * the parser resolves entity references inline and never constructs `EntityReference` nodes,
+		 * so this method is the only producer.
+		 *
 		 * @deprecated
 		 * In DOM Level 4.
 		 * @param {string} name
 		 * The name of the entity to reference. No namespace well-formedness checks are performed.
 		 * @returns {EntityReference}
 		 * @throws {DOMException}
-		 * With code `INVALID_CHARACTER_ERR` when `name` is not valid.
+		 * With code `INVALID_CHARACTER_ERR` when `name` is not a valid XML `Name`.
 		 * @throws {DOMException}
 		 * with code `NOT_SUPPORTED_ERR` when the document is of type `html`
 		 * @see https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-392B75AE
 		 */
 		createEntityReference: function (name) {
-			if (!g.Name.test(name)) {
+			if (!g.Name_exact.test(name)) {
 				throw new DOMException(DOMException.INVALID_CHARACTER_ERR, 'not a valid xml name "' + name + '"');
 			}
 			if (this.type === 'html') {
@@ -10260,6 +10402,12 @@ function requireDom () {
 	/**
 	 * @class DocumentType
 	 * @augments Node
+	 * @property {string} name
+	 * The doctype name, stored verbatim. Declared `readonly` by the WHATWG DOM spec; xmldom does
+	 * not enforce this constraint — direct property writes succeed and the written value is
+	 * serialized verbatim. When serialized with `requireWellFormed: true`, the serializer
+	 * validates the value against the XML `Name` production and throws `InvalidStateError` if it
+	 * does not match.
 	 * @property {string} publicId
 	 * The external subset public identifier, stored verbatim (including surrounding quotes).
 	 * Declared `readonly` by the WHATWG DOM spec; xmldom does not enforce this constraint —
@@ -10278,7 +10426,7 @@ function requireDom () {
 	 * direct property writes succeed and the written value is serialized verbatim.
 	 * When serialized with `requireWellFormed: true`, the serializer throws `InvalidStateError`
 	 * if the value contains `"]>"`.
-	 * @see https://developer.mozilla.org/en-US/docs/Web/API/DocumentType MDN
+	 * @see https://developer.mozilla.org/docs/Web/API/DocumentType MDN
 	 * @see https://dom.spec.whatwg.org/#interface-documenttype WHATWG DOM
 	 * @prettierignore
 	 */
@@ -10300,6 +10448,21 @@ function requireDom () {
 	Entity.prototype.nodeType = ENTITY_NODE;
 	_extends(Entity, Node);
 
+	/**
+	 * Represents an EntityReference node, serialized as `&nodeName;`.
+	 *
+	 * `nodeName` is the referenced entity's name, stored verbatim. When serialized with
+	 * `requireWellFormed: true`, the serializer validates `nodeName` against the XML `Name`
+	 * production and throws `InvalidStateError` if it does not match; without that option the name
+	 * is emitted verbatim between `&` and `;`.
+	 *
+	 * __This implementation differs from the specification:__ xmldom does not expand entities —
+	 * the parser resolves entity references inline and never constructs `EntityReference` nodes,
+	 * so the only producer is {@link Document#createEntityReference}.
+	 *
+	 * @class
+	 * @see https://www.w3.org/TR/xml/#NT-Name
+	 */
 	function EntityReference(symbol) {
 		checkSymbol(symbol);
 	}
@@ -10343,8 +10506,11 @@ function requireDom () {
 	 * - W3C DOM Parsing §3.2.1.1 requires well-formedness checks on Element `localName`s,
 	 * prefixes,
 	 * and attribute serialization (duplicate attributes, namespace declarations, attribute value
-	 * characters) when `requireWellFormed` is `true`. These checks are **not implemented** in this
-	 * release — see the tracking issue filed against the next breaking milestone.
+	 * characters) when `requireWellFormed` is `true`. Element and attribute qualified names (which
+	 * cover the namespace prefix) are validated against the XML `QName` production; the remaining
+	 * §3.2.1.1 checks (duplicate attributes, namespace-declaration consistency) and creation-time
+	 * name validation are **not implemented** in this release — see the tracking issue filed
+	 * against the next breaking milestone.
 	 *
 	 * @param {Node} node
 	 * @param {Object | function} [options]
@@ -10360,16 +10526,22 @@ function requireDom () {
 	 * @throws {DOMException}
 	 * With name `InvalidStateError` when `requireWellFormed` is `true` and any of the following
 	 * conditions hold:
+	 * - an Element's qualified name (including any namespace prefix) is not a valid XML QName
+	 * - an attribute's qualified name (including a synthesized `xmlns:` namespace declaration) is
+	 * not a valid XML QName
 	 * - CDATASection data contains `"]]>"`
 	 * - Text data contains characters outside the XML Char production
 	 * - a Comment node's data contains `--` anywhere or ends with `-`
-	 * - a ProcessingInstruction's target contains `:` or is an ASCII case-insensitive match for
-	 * `"xml"`, or its data contains `?>` or characters outside the XML Char production
+	 * - a ProcessingInstruction's target is not a valid XML `NCName` (a `Name` with no colon) or is
+	 * an ASCII case-insensitive match for `"xml"`, or its data contains `?>` or characters outside
+	 * the XML Char production
+	 * - a DocumentType's `name` is not a valid XML `Name` (XML 1.0 production [5])
 	 * - a DocumentType's `publicId` is non-empty and does not match the XML `PubidLiteral`
 	 * production (W3C DOM Parsing §3.2.1.3; XML 1.0 production [12])
 	 * - a DocumentType's `systemId` is non-empty and does not match the XML `SystemLiteral`
 	 * production (W3C DOM Parsing §3.2.1.3; XML 1.0 production [11])
 	 * - a DocumentType's `internalSubset` contains `"]>"`
+	 * - an EntityReference's `nodeName` is not a valid XML `Name` (XML 1.0 production [5])
 	 * - the Document has no `documentElement`
 	 * @see https://developer.mozilla.org/docs/Web/API/XMLSerializer/serializeToString
 	 * @see https://html.spec.whatwg.org/#dom-xmlserializer-serializetostring
@@ -10455,7 +10627,13 @@ function requireDom () {
 	 * @see https://w3c.github.io/DOM-Parsing/#serializing-an-element-s-attributes
 	 * @prettierignore
 	 */
-	function addSerializedAttribute(buf, qualifiedName, value) {
+	function addSerializedAttribute(buf, qualifiedName, value, requireWellFormed) {
+		if (requireWellFormed && !g.QName_exact.test(qualifiedName)) {
+			throw new DOMException(
+				'The attribute name "' + qualifiedName + '" is not a valid XML QName',
+				DOMExceptionName.InvalidStateError
+			);
+		}
 		buf.push(' ', qualifiedName, '="', value.replace(/[<>&"\t\n\r]/g, _xmlEncoder), '"');
 	}
 
@@ -10527,6 +10705,13 @@ function requireDom () {
 								}
 							}
 
+							if (requireWellFormed && !g.QName_exact.test(prefixedNodeName)) {
+								throw new DOMException(
+									'The element name "' + prefixedNodeName + '" is not a valid XML QName',
+									DOMExceptionName.InvalidStateError
+								);
+							}
+
 							buf.push('<', prefixedNodeName);
 
 							// Build a fresh namespace snapshot for this element's children.
@@ -10551,7 +10736,7 @@ function requireDom () {
 								if (needNamespaceDefine(attr, isHTML, childNamespaces)) {
 									var attrPrefix = attr.prefix || '';
 									var uri = attr.namespaceURI;
-									addSerializedAttribute(buf, attrPrefix ? 'xmlns:' + attrPrefix : 'xmlns', uri);
+									addSerializedAttribute(buf, attrPrefix ? 'xmlns:' + attrPrefix : 'xmlns', uri, requireWellFormed);
 									childNamespaces.push({ prefix: attrPrefix, namespace: uri });
 								}
 								// Apply nodeFilter and serialize the attribute.
@@ -10560,7 +10745,7 @@ function requireDom () {
 									if (typeof filteredAttr === 'string') {
 										buf.push(filteredAttr);
 									} else {
-										addSerializedAttribute(buf, filteredAttr.name, filteredAttr.value);
+										addSerializedAttribute(buf, filteredAttr.name, filteredAttr.value, requireWellFormed);
 									}
 								}
 							}
@@ -10569,7 +10754,7 @@ function requireDom () {
 							if (nodeName === prefixedNodeName && needNamespaceDefine(n, isHTML, childNamespaces)) {
 								var nodePrefix = n.prefix || '';
 								var uri = n.namespaceURI;
-								addSerializedAttribute(buf, nodePrefix ? 'xmlns:' + nodePrefix : 'xmlns', uri);
+								addSerializedAttribute(buf, nodePrefix ? 'xmlns:' + nodePrefix : 'xmlns', uri, requireWellFormed);
 								childNamespaces.push({ prefix: nodePrefix, namespace: uri });
 							}
 
@@ -10613,7 +10798,7 @@ function requireDom () {
 							// Pass namespaces through; each child element will slice independently.
 							return { ns: namespaces };
 						case ATTRIBUTE_NODE:
-							addSerializedAttribute(buf, n.name, n.value);
+							addSerializedAttribute(buf, n.name, n.value, requireWellFormed);
 							return null;
 						case TEXT_NODE:
 							/*
@@ -10673,6 +10858,12 @@ function requireDom () {
 							var pubid = n.publicId;
 							var sysid = n.systemId;
 							if (requireWellFormed) {
+								if (!g.Name_exact.test(n.name)) {
+									throw new DOMException(
+										'The doctype name "' + n.name + '" is not a valid XML Name',
+										DOMExceptionName.InvalidStateError
+									);
+								}
 								if (pubid && !g.PubidLiteral_match.test(pubid)) {
 									throw new DOMException('DocumentType publicId is not a valid PubidLiteral', DOMExceptionName.InvalidStateError);
 								}
@@ -10699,8 +10890,11 @@ function requireDom () {
 							return null;
 						case PROCESSING_INSTRUCTION_NODE:
 							if (requireWellFormed) {
-								if (n.target.indexOf(':') !== -1 || n.target.toLowerCase() === 'xml') {
-									throw new DOMException('The ProcessingInstruction target is not well-formed', DOMExceptionName.InvalidStateError);
+								if (!g.NCName_exact.test(n.target) || n.target.toLowerCase() === 'xml') {
+									throw new DOMException(
+										'The processing instruction target "' + n.target + '" is not a valid XML NCName or is reserved',
+										DOMExceptionName.InvalidStateError
+									);
 								}
 								if (g.InvalidChar.test(n.data)) {
 									throw new DOMException(
@@ -10715,6 +10909,12 @@ function requireDom () {
 							buf.push('<?', n.target, ' ', n.data, '?>');
 							return null;
 						case ENTITY_REFERENCE_NODE:
+							if (requireWellFormed && !g.Name_exact.test(n.nodeName)) {
+								throw new DOMException(
+									'The entity reference name "' + n.nodeName + '" is not a valid XML Name',
+									DOMExceptionName.InvalidStateError
+								);
+							}
 							buf.push('&', n.nodeName, ';');
 							return null;
 						//case ENTITY_NODE:
@@ -10920,6 +11120,27 @@ function requireDom () {
 							this.nodeValue = data;
 					}
 				},
+			});
+
+			Object.defineProperty(CharacterData.prototype, 'data', {
+				get: function () {
+					return this._data != null ? this._data : '';
+				},
+				set: function (v) {
+					this._data = v;
+					this.length = typeof v === 'string' ? v.length : 0;
+				},
+			});
+
+			Object.defineProperty(CharacterData.prototype, 'nodeValue', {
+				get: function () {
+					return this.data;
+				},
+				set: function (v) {
+					this.data = v;
+				},
+				enumerable: true,
+				configurable: true,
 			});
 
 			Object.defineProperty(Element.prototype, 'children', {
@@ -13289,6 +13510,10 @@ function requireSax () {
 						var doc = domBuilder.doc;
 						var text = doc.createTextNode(source.substring(start));
 						if (doc.documentElement) {
+							// `return errorHandler.error` is not a common pattern,
+							// it is usually only used with `.fatalError`s.
+							// In this case it is intentional, because it allows to stop parsing
+							// and returning doc after reporting the extra content that will not be part of the document.
 							return errorHandler.error('Extra content at the end of the document');
 						}
 						doc.appendChild(text);
@@ -13311,9 +13536,27 @@ function requireSax () {
 						if (!tagNameRaw) {
 							return errorHandler.fatalError('end tag name missing');
 						}
-						var tagNameMatch = end > 0 && g.reg('^', g.QName_group, g.S_OPT, '$').exec(tagNameRaw);
+						var endTagNameStrict = g.reg('^', g.QName_group, g.S_OPT, '$');
+						var tagNameMatch = end > 0 && endTagNameStrict.exec(tagNameRaw);
 						if (!tagNameMatch) {
-							return errorHandler.fatalError('end tag name contains invalid characters: "' + tagNameRaw + '"');
+							var leadingTagNameMatch = end > 0 && g.reg('^', g.QName_group).exec(tagNameRaw);
+							if (isHTML && leadingTagNameMatch) {
+								errorHandler.warning('end tag name contains invalid trailing characters: "' + tagNameRaw + '"');
+								tagNameMatch = leadingTagNameMatch;
+							} else if (
+								// Backward compatibility, remove this whole `else if` arm in the next breaking release
+								// (XML then falls through to the `fatalError` below, for a clean mode split: XML fatal,
+								// HTML warning). A valid end-tag name followed by a line break and trailing content was
+								// silently accepted while `reg` still used the `m` flag; re-adding `m` here matches exactly
+								// those inputs, kept recoverable and reported.
+								leadingTagNameMatch &&
+								new RegExp(endTagNameStrict.source, endTagNameStrict.flags + 'm').test(tagNameRaw)
+							) {
+								errorHandler.error('end tag name is followed by a line break and trailing content: "' + tagNameRaw + '"');
+								tagNameMatch = leadingTagNameMatch;
+							} else {
+								return errorHandler.fatalError('end tag name contains invalid characters: "' + tagNameRaw + '"');
+							}
 						}
 						if (!domBuilder.currentElement && !domBuilder.doc.documentElement) {
 							// not enough information to provide a helpful error message,
@@ -13398,7 +13641,9 @@ function requireSax () {
 				if (e instanceof ParseError) {
 					throw e;
 				} else if (e instanceof DOMException) {
-					throw new ParseError(e.name + ': ' + e.message, domBuilder.locator, e);
+					// A DOMException raised while building the DOM is not-well-formed input,
+					// so it is wrapped into a ParseError and reported before being thrown.
+					return errorHandler.fatalError('Error constructing the DOM: ' + e.name + ': ' + e.message, e);
 				}
 				errorHandler.error('element parse error: ' + e);
 				end = -1;
@@ -13453,6 +13698,15 @@ function requireSax () {
 		var s = S_TAG; //status
 		while (true) {
 			var c = source.charAt(p);
+			if (s === S_TAG && c === '<') {
+				// A `<` can never occur inside a tag name. Without this guard the scan runs
+				// on to the next `>` (or EOF) before `setTagName` rejects the whole slice, so
+				// a document with many `<` inside a malformed tag makes each one-character
+				// recovery step re-scan to the distant `>` — O(n^2). Stopping at the `<` keeps
+				// each recovery step bounded. The candidate scanned so far is reported raw,
+				// consistent with the sibling invalid-tag-name throw below.
+				throw new Error('unexpected < in tag name: ' + source.slice(start, p));
+			}
 			switch (c) {
 				case '=':
 					if (s === S_ATTR) {
@@ -13463,7 +13717,7 @@ function requireSax () {
 						s = S_EQ;
 					} else {
 						//fatalError: equal must after attrName or space after attrName
-						throw new Error('attribute equal must after attrName'); // No known test case
+						throw new Error('attribute equal must after attrName');
 					}
 					break;
 				case "'":
@@ -13495,7 +13749,7 @@ function requireSax () {
 						s = S_ATTR_END;
 					} else {
 						//fatalError: no equal before
-						throw new Error('attribute value must after "="'); // No known test case
+						throw new Error('attribute value must after "="');
 					}
 					break;
 				case '/':
@@ -13515,7 +13769,7 @@ function requireSax () {
 							break;
 						//case S_EQ:
 						default:
-							throw new Error("attribute invalid close char('/')"); // No known test case
+							throw new Error("attribute invalid close char('/')");
 					}
 					break;
 				case '': //end document
@@ -13652,7 +13906,13 @@ function requireSax () {
 				//hack!!
 				if (localNSMap == null) {
 					localNSMap = Object.create(null);
-					_copy(currentNSMap, (currentNSMap = Object.create(null)));
+					// Derive the child scope's namespace map by prototype-chain inheritance
+					// instead of a flat copy: lookups inherit ancestor prefixes transparently,
+					// so a document nesting N scopes retains O(N) map entries rather than
+					// sum(1..N) = O(N^2). `localNSMap` stays a flat own-only record of the
+					// prefixes declared at THIS element, so own-property enumeration
+					// (endPrefixMapping below) still reports only local declarations.
+					currentNSMap = Object.create(currentNSMap);
 				}
 				currentNSMap[nsPrefix] = localNSMap[nsPrefix] = value;
 				a.uri = NAMESPACE.XMLNS;
@@ -13709,7 +13969,22 @@ function requireSax () {
 		// TODO: https://html.spec.whatwg.org/#cdata-rcdata-restrictions
 		var isEscapableRaw = isHTMLEscapableRawTextElement(tagName);
 		if (isEscapableRaw || isHTMLRawTextElement(tagName)) {
-			var elEndStart = source.indexOf('</' + tagName + '>', elStartEnd);
+			// The closing tag of a raw-text element matches case-insensitively
+			// (WHATWG HTML §13.2.5.14 RAWTEXT end tag name state). A case-sensitive
+			// search that missed the closing tag would return -1 and the `substring`
+			// below would treat -1 as a backward slice from position 0, re-emitting all
+			// prior source and amplifying output quadratically across repeated elements.
+			// The regex is anchored to `elStartEnd` via `lastIndex` so it scans forward
+			// only (O(distance), not the whole source).
+			var closeTag = new RegExp('</' + tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '>', 'ig');
+			closeTag.lastIndex = elStartEnd;
+			var match = closeTag.exec(source);
+			var elEndStart = match ? match.index : -1;
+			if (elEndStart < 0) {
+				// No closing tag: never slice with a -1 end index. Leave the element to
+				// the parse loop's normal recovery instead of back-capturing the source.
+				return elStartEnd + 1;
+			}
 			var text = source.substring(elStartEnd + 1, elEndStart);
 
 			if (isEscapableRaw) {
@@ -14299,6 +14574,9 @@ function requireDomParser () {
 	 * - Any `fatalError` throws a `ParseError` which prevents further processing.
 	 * - Any error thrown by `onError` is converted to a `ParseError` which prevents further
 	 * processing - If no `Document` was created during parsing it is reported as a `fatalError`.
+	 * - A `DOMException` raised while building the DOM (e.g. an unbound namespace prefix) is
+	 * reported as a `fatalError` and rethrown as a `ParseError` with the `DOMException` as its
+	 * `cause`.
 	 * *****Warning: By configuring a faulty DOMHandler implementation,
 	 * the specified behavior can completely be broken*****.
 	 *
@@ -14579,14 +14857,16 @@ function requireDomParser () {
 		 *
 		 * @param {string} message
 		 * - The message to be used for reporting and throwing the error.
+		 * @param {Error} [cause]
+		 * The error that caused this fatal error, preserved as the thrown `ParseError`'s `cause`.
 		 * @returns {never}
 		 * This function always throws an error and never returns a value.
 		 * @throws {ParseError}
 		 * Always throws a ParseError with the provided message.
 		 */
-		fatalError: function (message) {
+		fatalError: function (message, cause) {
 			this.reportError('fatalError', message);
-			throw new ParseError(message, this.locator);
+			throw new ParseError(message, this.locator, cause);
 		},
 	};
 
@@ -15354,7 +15634,7 @@ class Serializer {
         return self.atomicTermToN3(x);
       }
       var list = x.elements;
-      var rest = kb.sym(rdfns + 'nill');
+      var rest = kb.sym(rdfns + 'nil');
       for (var i = list.length - 1; i >= 0; i--) {
         var bnode = factory.blankNode();
         str += termToNT(bnode) + ' ' + termToNT(kb.sym(rdfns + 'first')) + ' ' + termToNT(list[i]) + '.\n';
@@ -15711,7 +15991,7 @@ class Serializer {
       if (canSplit) {
         if (this.defaultNamespace && this.defaultNamespace === namesp && this.flags.indexOf('d') < 0) {
           // d -> suppress default
-          if (this.flags.indexOf('k') >= 0 && this.keyords.indexOf(localid) < 0) {
+          if (this.flags.indexOf('k') >= 0 && this.keywords.indexOf(localid) < 0) {
             return localid;
           }
           return ':' + localid;
@@ -21646,7 +21926,7 @@ function parse(str, kb, base, contentType = 'text/turtle', callback) {
   contentType = contentType || TurtleContentType;
   contentType = contentType.split(';')[0];
   try {
-    if (contentType === N3ContentType || contentType === TurtleContentType) {
+    if (contentType === N3ContentType || contentType === TurtleContentType || contentType === NTriplesContentType) {
       var p = createSinkParser(kb, kb, base, base, null, null, '', null);
       p.loadBuf(str);
       executeCallback();
@@ -21697,7 +21977,8 @@ function parse(str, kb, base, contentType = 'text/turtle', callback) {
     'application/sparql-update-single-match': true,
     'application/ld+json': true,
     'application/nquads': true,
-    'application/n-quads': true
+    'application/n-quads': true,
+    'application/n-triples': true
   };
   function executeCallback() {
     if (callback) {
@@ -23077,16 +23358,42 @@ class Fetcher {
     // if metadata flaged clear cache and removeDocument
     const meta = this.appNode;
     const kb = this.store;
-    const requests = kb.statementsMatching(undefined, this.ns.link('requestedURI'), kb.sym(docuri), meta).map(st => st.subject);
+    // The recorded URI is stored as a string literal, not as a node (see
+    // saveRequestMetadata and linkeddata/rdflib.js#427): matching it with
+    // kb.sym() never found the request, so a flagged document was answered from
+    // the cache instead of being refetched (#870).
+    const requests = kb.statementsMatching(undefined, this.ns.link('requestedURI'), kb.rdfFactory.literal(docuri), meta).map(st => st.subject);
+    let answered = false;
+    let usableAnswer = false;
     for (const request of requests) {
       const response = kb.any(request, this.ns.link('response'), null, meta);
-      if (response != undefined) {
-        // ts
-        const quad = kb.statementsMatching(response, this.ns.link('outOfDate'), true, meta);
-        kb.remove(quad);
-        options.force = true;
-        options.clearPreviousData = true;
+      // any() returns null (never undefined) when nothing matches: keep the
+      // loose check so a request that has no recorded answer yet is not
+      // counted as answered.
+      if (response == null) {
+        continue;
       }
+      answered = true;
+      // Every recorded answer that is flagged out-of-date is unusable: the
+      // answer of a previous identity/authorization (flagAuthorizationMetadata).
+      // Read the mark with anyJS, as update-manager.editable does: it is stored
+      // as an xsd:boolean literal and the object position has to stay a
+      // wildcard - any() returns null when all four positions are given, even
+      // when the statement exists.
+      const outOfDate = kb.anyJS(response, this.ns.link('outOfDate'), null, meta);
+      if (!outOfDate) {
+        usableAnswer = true;
+        break;
+      }
+    }
+    if (answered && !usableAnswer) {
+      // Refetch instead of answering from the cache, and keep the marks: an
+      // answer of the previous authorization stays excluded, so it cannot win
+      // over the fresh one — and if the refetch fails the state stays
+      // "unknown" instead of becoming definitive again. Once a fresh answer is
+      // recorded the loop above finds it and later loads are cache hits again.
+      options.force = true;
+      options.clearPreviousData = true;
     }
     const initialisedOptions = this.initFetchOptions(docuri, options);
     return this.pendingFetchPromise(docuri, initialisedOptions.baseURI, initialisedOptions);
@@ -24080,60 +24387,6 @@ _defineProperty(Fetcher, "CONTENT_TYPE_BY_EXT", void 0);
 _defineProperty(Fetcher, "crossSiteProxyTemplate", void 0);
 Fetcher.HANDLERS = defaultHandlers;
 Fetcher.CONTENT_TYPE_BY_EXT = CONTENT_TYPE_BY_EXT;
-
-var jsonparser = (function () {
-  return {
-    parseJSON: function (data, source, store) {
-      var subject, predicate, object;
-      var bnodes = {};
-      var why = store.sym(source);
-      for (var x in data) {
-        if (x.indexOf('_:') === 0) {
-          if (bnodes[x]) {
-            subject = bnodes[x];
-          } else {
-            subject = store.bnode(x);
-            bnodes[x] = subject;
-          }
-        } else {
-          subject = store.sym(x);
-        }
-        var preds = data[x];
-        for (var y in preds) {
-          var objects = preds[y];
-          predicate = store.sym(y);
-          for (var z in objects) {
-            var obj = objects[z];
-            if (obj.type === 'uri') {
-              object = store.sym(obj.value);
-              store.add(subject, predicate, object, why);
-            } else if (obj.type === 'BlankNode') {
-              if (bnodes[obj.value]) {
-                object = bnodes[obj.value];
-              } else {
-                object = store.bnode(obj.value);
-                bnodes[obj.value] = object;
-              }
-              store.add(subject, predicate, object, why);
-            } else if (obj.type === 'Literal') {
-              // var datatype
-              if (obj.datatype) {
-                object = store.literal(obj.value, undefined, store.sym(obj.datatype));
-              } else if (obj.lang) {
-                object = store.literal(obj.value, obj.lang);
-              } else {
-                object = store.literal(obj.value);
-              }
-              store.add(subject, predicate, object, why);
-            } else {
-              throw new Error('error: unexpected termtype: ' + z.type);
-            }
-          }
-        }
-      }
-    }
-  };
-})();
 
 function queryToSPARQL(query) {
   var indent = 0;
@@ -38165,4 +38418,4 @@ var jsonld$1 = /*#__PURE__*/_mergeNamespaces({
   default: jsonld
 }, [jsonldExports]);
 
-export { BlankNode, Collection, ConnectedStore, RDFlibDataFactory as DataFactory, Empty, Fetcher, Formula, IndexedFormula, Literal, LiveStore, createSinkParser as N3Parser, NamedNode, Namespace, NextId, Node$2 as Node, Query, RDFParser, RDFaProcessor, SPARQLToQuery, createSerializer as Serializer, Statement, IndexedFormula as Store, UpdateManager, UpdatesSocket, UpdatesVia, utilsJs as Util, Variable, blankNode, defaultGraph, fetcher, fromNT, graph, isBlankNode, isCollection, isGraph, isLiteral, isNamedNode, isPredicate, isQuad, isRDFObject, isRDFlibObject, isRDFlibPredicate, isRDFlibSubject, isStatement, isStore, isSubject, isTerm, isVariable, jsonparser as jsonParser, lit, literal, log, namedNode, parse, quad, queryToSPARQL, serialize, sparqlUpdateParser, st, namedNode as sym, term, termValue, triple, uri, variable };
+export { BlankNode, Collection, ConnectedStore, RDFlibDataFactory as DataFactory, Empty, Fetcher, Formula, IndexedFormula, Literal, LiveStore, createSinkParser as N3Parser, NamedNode, Namespace, NextId, Node$2 as Node, Query, RDFParser, RDFaProcessor, SPARQLToQuery, createSerializer as Serializer, Statement, IndexedFormula as Store, UpdateManager, UpdatesSocket, UpdatesVia, utilsJs as Util, Variable, blankNode, defaultGraph, fetcher, fromNT, graph, isBlankNode, isCollection, isGraph, isLiteral, isNamedNode, isPredicate, isQuad, isRDFObject, isRDFlibObject, isRDFlibPredicate, isRDFlibSubject, isStatement, isStore, isSubject, isTerm, isVariable, lit, literal, log, namedNode, parse, quad, queryToSPARQL, serialize, sparqlUpdateParser, st, namedNode as sym, term, termValue, triple, uri, variable };

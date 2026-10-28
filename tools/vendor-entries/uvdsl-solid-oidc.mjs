@@ -7,7 +7,7 @@
 // CSP, where serving a module worker is fragile.
 //
 // vendor.mjs rolls this file up into dist/vendor/@uvdsl-solid-oidc-client-browser.js
-// and the importmap binds the bare specifier to it, so every module shares one
-// instance.
-export { SessionCore as Session, SessionEvents } from '@uvdsl/solid-oidc-client-browser/core';
+// and the importmap binds the bare specifier — and its /core subpath, which
+// solid-logic imports for SessionCore — to it, so every module shares one instance.
+export { SessionCore as Session, SessionCore, SessionEvents } from '@uvdsl/solid-oidc-client-browser/core';
 export { SessionIDB } from '@uvdsl/solid-oidc-client-browser/web';

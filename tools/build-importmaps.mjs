@@ -40,6 +40,12 @@ for (const [name, info] of Object.entries(deps)) {
   const flat = name.replace(/\//g, '-');   // @scope/pkg → @scope-pkg
   local.imports[name] = `./vendor/${flat}.js`;
   baked[name]         = `dist/vendor/${flat}.js`;
+  // A listed subpath resolves to the same vendored file (one shared instance).
+  for (const sub of info.subpaths || []) {
+    cdn.imports[`${name}/${sub}`]   = `${info.cdn}/${sub}`;
+    local.imports[`${name}/${sub}`] = `./vendor/${flat}.js`;
+    baked[`${name}/${sub}`]         = `dist/vendor/${flat}.js`;
+  }
 }
 
 // ── swc components — one BARE specifier per web/ module ──────────────────────

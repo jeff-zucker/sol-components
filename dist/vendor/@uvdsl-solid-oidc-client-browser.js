@@ -1,3 +1,4 @@
+/*! vendored @uvdsl/solid-oidc-client-browser@0.2.3 */
 if (typeof globalThis.process === "undefined") {
   globalThis.process = {
     env: {}, browser: true, version: "", versions: { node: "" },
@@ -2852,4 +2853,4 @@ class SessionIDB {
     }
 }
 
-export { SessionCore as Session, SessionEvents$1 as SessionEvents, SessionIDB };
+export { SessionCore as Session, SessionCore, SessionEvents$1 as SessionEvents, SessionIDB };

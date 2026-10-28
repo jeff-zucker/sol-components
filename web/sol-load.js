@@ -46,6 +46,7 @@
       "solid-ui": "dist/vendor/solid-ui.js",
       "solid-logic": "dist/vendor/solid-logic.js",
       "@uvdsl/solid-oidc-client-browser": "dist/vendor/@uvdsl-solid-oidc-client-browser.js",
+      "@uvdsl/solid-oidc-client-browser/core": "dist/vendor/@uvdsl-solid-oidc-client-browser.js",
       "n3": "dist/vendor/n3.js",
       "rdf-validate-shacl": "dist/vendor/rdf-validate-shacl.js",
       "menu-from-rdf": "web/menu-from-rdf.js",

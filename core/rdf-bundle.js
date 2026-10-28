@@ -12,7 +12,7 @@
 // modules the importmap names point at, so instances still dedupe. Real npm
 // packages stay bare so the importmap keeps them to one shared instance.
 import 'solid-logic';
-import 'solid-ui';
+import './solid-ui-global.js';
 import '../web/sol-tree-edit.js';
 import '../web/sol-form.js';
 import '../web/sol-modal.js';

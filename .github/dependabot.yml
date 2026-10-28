@@ -1,0 +1,13 @@
+# Version updates for the RDF stack: a pull request whenever a new rdflib,
+# solid-logic or solid-ui is published. Landing one means rebuilding its bundled
+# copy too; tests/core/vendor-current.test.js fails until that is done.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: rdflib
+      - dependency-name: solid-logic
+      - dependency-name: solid-ui

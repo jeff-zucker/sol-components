@@ -39,9 +39,15 @@ const stubNodeBuiltins = () => ({
   name: 'stub-node-builtins',
   resolveId(id) {
     if (id.startsWith('node:')) return { id: '\0stub:node-builtin', external: false };
+    if (id === 'path') return { id: '\0stub:path', external: false };
     return null;
   },
   load(id) {
+    // path: only extname is reached (mime-types, under solid-ui).
+    if (id === '\0stub:path') {
+      return 'export function extname(p) { const m = /\\.[^./]*$/.exec(String(p)); return m ? m[0] : ""; }\n'
+        + 'export default { extname };';
+    }
     if (id === '\0stub:node-builtin') {
       // diagnostics_channel: `channel()` and `tracingChannel()` (lru-cache, a
       // Comunica transitive dep, calls tracingChannel and would otherwise throw
@@ -130,11 +136,13 @@ async function vendorOne(name, info, depList) {
     onwarn: esmOnwarn,
   });
 
+  // The first line names the version bundled; tests/core/vendor-current.test.js reads it.
+  const version = JSON.parse(readFileSync(pkgJsonPath(name), 'utf8')).version;
   await bundle.write({
     file: out,
     format: 'esm',
     inlineDynamicImports: true,
-    banner: PROCESS_SHIM,
+    banner: `/*! vendored ${name}@${version} */\n${PROCESS_SHIM}`,
   });
 
   await bundle.close();
