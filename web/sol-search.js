@@ -5,8 +5,10 @@
  *
  *   view="button"  — (default) an icon trigger that opens a floating
  *                    panel on click; the panel positions itself flush
- *                    against the right edge of the trigger. Best for
- *                    headers / toolbars where space is tight.
+ *                    against the right edge of the trigger. On a
+ *                    coarse-pointer screen it opens at the top of the
+ *                    viewport instead, clear of the soft keyboard.
+ *                    Best for headers / toolbars where space is tight.
  *   view="inline"  — the search field, Go button, and engine radios are
  *                    rendered directly with no toggle. Best when you
  *                    already have a dedicated strip for search.
@@ -353,7 +355,11 @@ class SolSearch extends HTMLElement {
     const margin = 10;
 
     let left = btn.right - panel.width;
-    let top  = btn.bottom + 4;
+    // Coarse pointer: the trigger usually sits in a bottom bar, and the soft
+    // keyboard covers the lower screen the moment the input takes focus — so
+    // the panel opens at the top of the viewport, out of the keyboard's reach.
+    const coarse = window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+    let top  = coarse ? margin : btn.bottom + 4;
     left = Math.max(margin, Math.min(left, window.innerWidth  - panel.width  - margin));
     top  = Math.max(margin, Math.min(top,  window.innerHeight - panel.height - margin));
 

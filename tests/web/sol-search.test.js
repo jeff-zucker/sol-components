@@ -147,6 +147,43 @@ describe('view layouts', () => {
   });
 });
 
+// ── floating panel placement ─────────────────────────────────────────────────
+
+describe('floating panel placement', () => {
+  /** Mount a button-view search and stub real-looking rects onto its trigger
+   *  and panel (jsdom's own rects are all zeros): a 44px trigger in a bottom
+   *  bar of a 1024×768 viewport, a 300×200 panel. */
+  async function mountWithRects() {
+    const el = await mount();
+    el.$btn.getBoundingClientRect = () =>
+      ({ left: 1000, right: 1044, top: 700, bottom: 744, width: 44, height: 44 });
+    el.$panel.getBoundingClientRect = () =>
+      ({ left: 0, right: 300, top: 0, bottom: 200, width: 300, height: 200 });
+    return el;
+  }
+
+  const origMatchMedia = window.matchMedia;
+  afterEach(() => { window.matchMedia = origMatchMedia; });
+
+  test('fine pointer: drops below the trigger, clamped into the viewport', async () => {
+    window.matchMedia = () => ({ matches: false });
+    const el = await mountWithRects();
+    el.openAtButton();
+    // top = btn.bottom + 4 = 748, clamped to 768 − 200 − 10; left = 1044 − 300,
+    // clamped to 1024 − 300 − 10.
+    expect(el.$panel.style.top).toBe('558px');
+    expect(el.$panel.style.left).toBe('714px');
+  });
+
+  test('coarse pointer: opens at the top of the viewport, clear of the keyboard', async () => {
+    window.matchMedia = (q) => ({ matches: /coarse/.test(q) });
+    const el = await mountWithRects();
+    el.openAtButton();
+    expect(el.$panel.style.top).toBe('10px');
+    expect(el.$panel.style.left).toBe('714px');
+  });
+});
+
 // ── engine list rendering ────────────────────────────────────────────────────
 
 describe('engine list rendering', () => {
@@ -314,9 +351,10 @@ describe('source attribute (RDF engine list)', () => {
  *    a genuine rdflib (matching how feed-fetch.test.js scopes out the RDF
  *    source readers).
  *
- *  - Floating-panel geometry (openAtButton's getBoundingClientRect math).
- *    jsdom reports zero-sized rects, so any position assertion would test
- *    jsdom, not the component. Open/closed state is covered instead.
+ *  - Floating-panel geometry against REAL layout. jsdom reports zero-sized
+ *    rects, so the placement tests above stub the trigger/panel rects and
+ *    assert the component's own math (branch choice + clamping); how those
+ *    rects arise from real layout is browser territory.
  *
  *  - The popup-blocked fall-through (window.open returns null → second
  *    window.open with _blank). The stub always returns a live handle so the

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sol-search phone-panel probe</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../../web/styles/root.css">
+  <!-- Probe for issue data-kitchen#75: a button-view sol-search in a fixed
+       BOTTOM bar (like dk's phone dock). On a coarse pointer the panel must
+       open at the TOP of the viewport, clear of the soft keyboard; with a
+       mouse it still drops from the trigger. -->
+  <script src="../../web/sol-load.js" data-components="sol-search"></script>
+  <style>
+    body { margin: 0; font: 20px Arial, Helvetica, sans-serif;
+           background: #15161a; color: #e7e7ea; min-height: 100vh; }
+    main { padding: 16px; }
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; height: 56px;
+            display: flex; align-items: center; justify-content: space-evenly;
+            background: #101114; border-top: 1px solid #34373d; }
+    .dock sol-search { color: #e7e7ea; font-size: 1.25rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>sol-search phone-panel probe</h1>
+  <p>Tap the ⌕ in the bottom bar. Coarse pointer: the panel opens at the top
+     of the screen. Fine pointer: it drops from the trigger (clamped).</p>
+</main>
+<div class="dock">
+  <sol-search></sol-search>
+</div>
+</body>
+</html>
