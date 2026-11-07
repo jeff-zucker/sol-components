@@ -241,7 +241,7 @@ export const CSS = `
     display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
     min-height: 46px; padding: 6px 12px; margin: 2px 0 0;
     font: inherit; font-size: max(16px, .82em);
-    text-transform: uppercase; letter-spacing: .07em; font-weight: 700;
+    letter-spacing: .07em; font-weight: 700;
     color: var(--text-muted, #8a8a8a);
     background: none; border: 0; border-radius: 11px; cursor: pointer; text-align: left;
   }
