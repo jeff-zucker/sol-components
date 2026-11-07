@@ -127,6 +127,20 @@ describe('SolSolidos — _init scaffold with mashlib present', () => {
     expect(m.initMainPageCalls[0][1]).toBe(window.location.href);
   });
 
+  test('the injected host style forces [hidden] to win inside the embed', () => {
+    // mash.css ships "article, aside, section { display: block }", which as an
+    // author rule defeats the UA's [hidden] { display: none } — the empty
+    // #NavMenu scaffold then paints as a fixed rail covering the app on
+    // narrow screens (data-kitchen #73). The host style must out-rank it.
+    installMashlib();
+    const el = document.createElement('sol-solidos');
+    document.body.appendChild(el);
+    const style = document.getElementById('sol-solidos-style');
+    expect(style).not.toBeNull();
+    expect(style.textContent).toMatch(/sol-solidos \[hidden\]\s*\{\s*display:\s*none\s*!important/);
+    expect(el.querySelector('#NavMenu').hasAttribute('hidden')).toBe(true);
+  });
+
   test('connectedCallback is idempotent — re-appending does not re-init', () => {
     const m = installMashlib();
     const el = document.createElement('sol-solidos');

@@ -29,6 +29,12 @@ const HOST_CSS = `
      one viewport tall, so a deep getEyeFocus scroll would carry the bar off. */
   sol-solidos { display: block; width: 100%; min-height: 100%; }
   sol-solidos > #PageFooter { display: none; }
+  /* mash.css ships a blanket "article, aside, section { display: block }",
+     an author rule that defeats the UA's [hidden] { display: none } — the
+     empty #NavMenu scaffold then paints as a fixed rail covering the whole
+     app on narrow screens (mashlib 3 never fills or toggles it). Inside the
+     embed, hidden means hidden. */
+  sol-solidos [hidden] { display: none !important; }
   /* Opt-in location bar (has-location-bar) — repoint the browser to any URL.
      Sticky so the data browser's own scroll-to-focus (solid-ui getEyeFocus calls
      window.scrollBy on every GotoSubject, scrolling the page down to the selected
