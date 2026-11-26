@@ -27,7 +27,10 @@ const HOST_CSS = `
      content. The location bar is position:sticky and only stays pinned while its
      containing block (this element's box) is in view — a fixed 100% box is just
      one viewport tall, so a deep getEyeFocus scroll would carry the bar off. */
-  sol-solidos { display: block; width: 100%; min-height: 100%; }
+  /* flow-root: the content's banner-clearing top margin must stay inside this
+     box. As a plain block it collapsed through and pushed the whole element
+     down, leaving the frame a banner's height too tall (a page scrollbar). */
+  sol-solidos { display: flow-root; width: 100%; min-height: 100%; }
   sol-solidos > #PageFooter { display: none; }
   /* mash.css ships a blanket "article, aside, section { display: block }",
      an author rule that defeats the UA's [hidden] { display: none } — the
@@ -148,10 +151,15 @@ class SolSolidos extends HTMLElement {
   // a "wormhole" that blanks the frame. Intercept clicks on root/home links and
   // navigate in-app via GotoSubject (which the host can divert) instead.
   _guardBrandLink() {
-    const header = this.querySelector('#mainSolidUiHeader');
-    if (!header) return;
-    header.addEventListener('click', (e) => {
-      const a = (e.composedPath() || []).find((n) => n && n.tagName === 'A' && n.getAttribute && n.getAttribute('href'));
+    if (this._brandGuarded) return;
+    this._brandGuarded = true;
+    // On the document: mashlib 3.1 inserts its banner after init, and solid-ui's
+    // mobile layout re-homes it at body level.
+    document.addEventListener('click', (e) => {
+      const path = e.composedPath() || [];
+      const header = this._header();
+      if (!header || !path.includes(header)) return;
+      const a = path.find((n) => n && n.tagName === 'A' && n.getAttribute && n.getAttribute('href'));
       if (!a) return;
       let url;
       try { url = new URL(a.getAttribute('href'), location.href).href; } catch (_) { return; }
@@ -161,6 +169,15 @@ class SolSolidos extends HTMLElement {
         this._goTo(this._home);
       }
     }, true);
+  }
+
+  // The SolidOS banner: mashlib 3.1 builds its own <solid-panes-header> beside
+  // #MainContent once the page is up; 3.0 filled the #mainSolidUiHeader scaffold.
+  _header() {
+    return this.querySelector(':scope > solid-panes-header')
+      || document.querySelector('solid-panes-header')
+      || this.querySelector(':scope > #mainSolidUiHeader')
+      || document.getElementById('mainSolidUiHeader');
   }
 
   _goTo(uri, { push = true } = {}) {
@@ -345,7 +362,7 @@ class SolSolidos extends HTMLElement {
     }, 500);
   }
 
-  // mashlib's banner (#mainSolidUiHeader) mounts position:fixed;top:0;z-index:110 and
+  // mashlib's banner (see _header) mounts position:fixed;top:0;z-index:110 and
   // would paint over the top of the content — and the location bar when one is on
   // (HOST_CSS keeps the bar on top, z-index 120). This element doesn't use mashlib's
   // own offset (mash.css puts it on an .app-main wrapper this DOM doesn't have), so
@@ -353,35 +370,36 @@ class SolSolidos extends HTMLElement {
   // the main content's top margin clears the banner, and SolidAppContext.scroll —
   // solid-ui getEyeFocus's viewport-top offset, default 52 — tracks the same chrome
   // height so scroll-to-focus lands rows below the banner instead of under it.
-  // The banner upgrades async (custom element) and reflows on the host app's
-  // font-size toggle / viewport resize, so re-fit on whenDefined + a ResizeObserver.
+  // The banner arrives late (mashlib 3.1 inserts it after init), upgrades async
+  // (custom element) and reflows on the host app's font-size toggle / viewport
+  // resize, so re-fit when it lands, on whenDefined, and from a ResizeObserver.
   _fitChrome() {
+    let ro = null, watched = null;
     // Document fallbacks: after solid-ui's mobile body takeover the header /
     // main / bar live at body level, not inside this element (see _keepBarAlive).
     const fit = () => {
       const bar = this._barEl?.isConnected
         ? this._barEl : this.querySelector(':scope > .sol-location-bar');
       const bh = bar ? bar.offsetHeight : 0;
-      const hdr = this.querySelector(':scope > #mainSolidUiHeader')
-        || document.getElementById('mainSolidUiHeader');
+      const hdr = this._header();
+      const hh = hdr ? hdr.offsetHeight : 0;
       const main = this.querySelector(':scope > #MainContent')
         || document.getElementById('MainContent');
       if (hdr) hdr.style.top = `${bh}px`;                       // banner sits below the bar
-      if (main) main.style.marginTop = `${hdr ? hdr.offsetHeight : 0}px`;  // content clears the banner
+      if (main) main.style.marginTop = `${hh}px`;               // content clears the banner
       window.SolidAppContext = window.SolidAppContext || {};
-      window.SolidAppContext.scroll = bh + (hdr ? hdr.offsetHeight : 0);
+      window.SolidAppContext.scroll = bh + hh;
+      if (ro && hdr && hdr !== watched) { ro.observe(hdr); watched = hdr; }
     };
+    try { ro = new ResizeObserver(fit); } catch (_) { /* the static fits below still run */ }
     fit();
     requestAnimationFrame(fit);
-    customElements.whenDefined?.('solid-ui-header').then(() => requestAnimationFrame(fit)).catch(() => {});
-    try {
-      const ro = new ResizeObserver(fit);
-      const bar = this._barEl || this.querySelector(':scope > .sol-location-bar');
-      if (bar) ro.observe(bar);
-      const hdr = this.querySelector(':scope > #mainSolidUiHeader')
-        || document.getElementById('mainSolidUiHeader');
-      if (hdr) ro.observe(hdr);
-    } catch (_) { /* no ResizeObserver — the static fits above still run */ }
+    for (const tag of ['solid-ui-header', 'solid-panes-header']) {
+      customElements.whenDefined?.(tag).then(() => requestAnimationFrame(fit)).catch(() => {});
+    }
+    const bar = this._barEl || this.querySelector(':scope > .sol-location-bar');
+    if (ro && bar) ro.observe(bar);
+    try { new MutationObserver(fit).observe(this, { childList: true }); } catch (_) { /* no observer */ }
   }
 }
 

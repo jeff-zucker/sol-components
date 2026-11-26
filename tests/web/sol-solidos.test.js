@@ -19,7 +19,8 @@
  * that mashlib performs inside the scaffold (we stub mashlib), the global
  * window.fetch auth patch (it's a one-shot global side-effect guarded by a
  * window flag and best left to live e2e), and _fitChrome()'s ResizeObserver/RAF
- * layout measuring (jsdom reports zero box metrics, so nothing real to assert).
+ * layout measuring (jsdom reports zero box metrics; the late-banner tests give
+ * the banner a height by hand).
  */
 
 import SolSolidos from '../../web/sol-solidos.js';
@@ -148,6 +149,65 @@ describe('SolSolidos — _init scaffold with mashlib present', () => {
     el.remove();
     document.body.appendChild(el);            // connected again
     expect(m.initMainPageCalls).toHaveLength(1);  // _ready guard held
+  });
+});
+
+// ── the banner mashlib 3.1 inserts by itself, after init ─────────────────────
+
+describe('SolSolidos — the late <solid-panes-header> banner', () => {
+  // jsdom has no layout: give the banner the height a browser would report.
+  function insertBanner(el, height = 54) {
+    const banner = document.createElement('solid-panes-header');
+    Object.defineProperty(banner, 'offsetHeight', { value: height });
+    el.insertBefore(banner, el.querySelector('#MainContent'));
+    return banner;
+  }
+
+  test('the content clears a banner that arrives after init', async () => {
+    installMashlib();
+    const el = document.createElement('sol-solidos');
+    document.body.appendChild(el);
+    const main = el.querySelector('#MainContent');
+    expect(main.style.marginTop).toBe('0px');          // no banner yet
+    const banner = insertBanner(el);
+    await new Promise((r) => setTimeout(r, 0));          // MutationObserver delivers
+    expect(el._header()).toBe(banner);
+    expect(main.style.marginTop).toBe('54px');
+    expect(window.SolidAppContext.scroll).toBe(54);
+  });
+
+  test('the host style keeps that margin inside the element', () => {
+    installMashlib();
+    document.body.appendChild(document.createElement('sol-solidos'));
+    expect(document.getElementById('sol-solidos-style').textContent)
+      .toMatch(/sol-solidos \{ display: flow-root;/);
+  });
+
+  test('the banner\'s home link stays inside SolidOS', () => {
+    const m = installMashlib();
+    const el = document.createElement('sol-solidos');
+    el.setAttribute('source', 'https://pod.example/');
+    document.body.appendChild(el);
+    const link = document.createElement('a');
+    link.setAttribute('href', '/');
+    insertBanner(el).appendChild(link);
+    const click = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(m.gotoCalls).toContain('https://pod.example/');
+  });
+
+  test('a link elsewhere on the page is left alone', () => {
+    installMashlib();
+    const el = document.createElement('sol-solidos');
+    document.body.appendChild(el);
+    insertBanner(el);
+    const link = document.createElement('a');
+    link.setAttribute('href', '/');
+    el.querySelector('#MainContent').appendChild(link);
+    const click = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
   });
 });
 
