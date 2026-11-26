@@ -1,3 +1,4 @@
+/*! vendored rdf-validate-shacl@0.7.0 */
 if (typeof globalThis.process === "undefined") {
   globalThis.process = {
     env: {}, browser: true, version: "", versions: { node: "" },
@@ -248,7 +249,9 @@ function fromTerm (factory, original) {
   }
 
   if (original.termType === 'Literal') {
-    return factory.literal(original.value, original.language || factory.namedNode(original.datatype.value))
+    return factory.literal(original.value, original.language
+      ? { language: original.language, direction: original.direction }
+      : factory.namedNode(original.datatype.value))
   }
 
   if (original.termType === 'NamedNode') {
@@ -446,7 +449,7 @@ function termToId (term) {
 
     case 'Literal':
       if (term.language) {
-        return `"${term.value}"@${term.language}`
+        return `"${term.value}"@${term.language}${term.direction ? `--${term.direction}` : ''}`
       }
 
       return `"${term.value}"${term.datatype && term.datatype.value !== xsdString ? `^^${term.datatype.value}` : ''}`
@@ -1874,173 +1877,191 @@ var ns = prepareNamespaces();
 var shaclVocabularyFactory = ({ factory }) => {
     const f = factory;
     const ns1 = 'http://www.w3.org/ns/shacl#';
-    const ns2 = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-    const ns3 = 'http://www.w3.org/2002/07/owl#';
-    const ns4 = 'http://www.w3.org/2000/01/rdf-schema#';
-    const ns5 = 'http://www.w3.org/ns/shacl-shacl#';
-    const ns6 = 'http://www.w3.org/2001/XMLSchema#';
-    const ns7 = 'http://datashapes.org/dash#';
+    const ns2 = 'http://purl.org/dc/terms/';
+    const ns3 = 'http://www.w3.org/2001/XMLSchema#';
+    const ns4 = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+    const ns5 = 'http://www.w3.org/2002/07/owl#';
+    const ns6 = 'http://www.w3.org/2000/01/rdf-schema#';
+    const ns7 = 'http://www.w3.org/ns/shacl-shacl#';
+    const ns8 = 'http://datashapes.org/dash#';
     const blankNodes = [];
     for (let i = 0; i < 76; i++) {
         blankNodes.push(f.blankNode());
     }
     return [
-        f.quad(f.namedNode(ns1), f.namedNode(`${ns2}type`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(ns1), f.namedNode(`${ns4}comment`), f.literal('This vocabulary defines terms used in SHACL, the W3C Shapes Constraint Language.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(ns1), f.namedNode(`${ns4}label`), f.literal('W3C Shapes Constraint Language (SHACL) Vocabulary', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns2}creator`), f.literal('W3C Data Shapes Working Group'), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns2}license`), f.literal('https://www.w3.org/copyright/software-license/', f.namedNode(`${ns3}anyURI`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns2}publisher`), f.literal('World Wide Web Consortium'), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns4}type`), f.namedNode(`${ns5}Ontology`), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns6}comment`), f.literal('This vocabulary defines terms used in SHACL, the W3C Shapes Constraint Language.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns6}label`), f.literal('W3C Shapes Constraint Language (SHACL) Vocabulary', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns5}versionIRI`), f.namedNode(`${ns1}1.2`), f.namedNode(ns1)),
         f.quad(f.namedNode(ns1), f.namedNode(`${ns1}declare`), blankNodes[0], f.namedNode(ns1)),
-        f.quad(f.namedNode(ns1), f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(ns5), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns4}comment`), f.literal('The base class of validation results, typically not instantiated directly.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns4}label`), f.literal('Abstract result', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(ns1), f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(ns7), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns6}comment`), f.literal('The base class of validation results, typically not instantiated directly.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns6}label`), f.literal('Abstract result', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AbstractResult`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}and`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to test whether a value node conforms to all members of a provided list of shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('And constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to test whether a value node conforms to all members of a provided list of shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('And constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}AndConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}AndConstraintComponent-and`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all blank nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns4}label`), f.literal('Blank node', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all blank nodes or IRIs.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns4}label`), f.literal('Blank node or IRI', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all blank nodes or literals.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns4}label`), f.literal('Blank node or literal', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all blank nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNode`), f.namedNode(`${ns6}label`), f.literal('Blank node', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all blank nodes or IRIs.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(`${ns6}label`), f.literal('Blank node or IRI', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all blank nodes or literals.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(`${ns6}label`), f.literal('Blank node or literal', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that each value node is an instance of a given type.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Class constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that each value node is an instance of a given type.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Class constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClassConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ClassConstraintComponent-class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}closed`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns6}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}ignoredProperties`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to indicate that focus nodes must only have values for those properties that have been explicitly enumerated via sh:property/sh:path.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Closed constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to indicate that focus nodes must only have values for those properties that have been explicitly enumerated via sh:property/sh:path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Closed constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ClosedConstraintComponent-closed`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ClosedConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ClosedConstraintComponent-ignoredProperties`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('The class of constraint components.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Constraint component', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns4}comment`), f.literal('A count expression is a blank node with exactly one value for the property sh:count which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns4}label`), f.literal('Count Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('The class of constraint components.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns6}comment`), f.literal('A count expression is a blank node with exactly one value for the property sh:count which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns6}label`), f.literal('Count Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns1}property`), blankNodes[1], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}CountExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}count`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DataGraph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DataGraph`), f.namedNode(`${ns6}comment`), f.literal('The class of graphs that typically act in the role of a SHACL data graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DataGraph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DataGraph`), f.namedNode(`${ns6}label`), f.literal('Data graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DataGraph`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Graph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}datatype`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the datatype of all value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Datatype constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the datatype of all value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Datatype constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DatatypeConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}DatatypeConstraintComponent-datatype`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Debug`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Debug`), f.namedNode(`${ns6}comment`), f.literal('The severity for a debug validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Debug`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Debug`), f.namedNode(`${ns6}label`), f.literal('Debug', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}disjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that the set of value nodes is disjoint with the the set of nodes that have the focus node as subject and the value of a given property as predicate.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Disjoint constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that the set of value nodes is disjoint with the the set of nodes that can be reached from the focus node via a given property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Disjoint constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DisjointConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}DisjointConstraintComponent-disjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns4}comment`), f.literal('A distinct expression is a blank node with exactly one value for the property sh:distinct which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns4}label`), f.literal('Distinct Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns6}comment`), f.literal('A distinct expression is a blank node with exactly one value for the property sh:distinct which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns6}label`), f.literal('Distinct Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns1}property`), blankNodes[2], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}DistinctExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}distinct`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}equals`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that the set of value nodes is equal to the set of nodes that have the focus node as subject and the value of a given property as predicate.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Equals constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that the set of value nodes is equal to the set of nodes that can be reached from the focus node using a given property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Equals constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}EqualsConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}EqualsConstraintComponent-equals`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns4}comment`), f.literal('An exists expression is a blank node with exactly one value for sh:exists (which is a well-formed shape).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns4}label`), f.literal('Exists Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns6}comment`), f.literal('An exists expression is a blank node with exactly one value for sh:exists (which is a well-formed shape).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns6}label`), f.literal('Exists Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns1}property`), blankNodes[3], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ExistsExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}exists`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}expression`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that a given node expression produces true for all value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Expression constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that a given node expression produces true for all value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Expression constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}ExpressionConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ExpressionConstraintComponent-expression`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns4}comment`), f.literal('A filter shape expression is a blank node with exactly one value for sh:filterShape (which is a well-formed shape) and at most one value for sh:nodes (which is a well-formed node expression).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns4}label`), f.literal('Filter Shape Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns6}comment`), f.literal('A filter shape expression is a blank node with exactly one value for sh:filterShape (which is a well-formed shape) and at most one value for sh:nodes (which is a well-formed node expression).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns6}label`), f.literal('Filter Shape Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns1}property`), blankNodes[4], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns1}property`), blankNodes[5], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}filterShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FocusNodeOrConstantTermExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FocusNodeOrConstantTermExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FocusNodeOrConstantTermExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL functions.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns4}label`), f.literal('Function', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns4}comment`), f.literal('A function expression is a blank node that does not fulfill any of the syntax rules of the other node expression types and which is the subject of exactly one triple T where the object is a well-formed SHACL list, and each member of that list is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns4}label`), f.literal('Function Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns6}comment`), f.literal('The class of SHACL functions.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns6}label`), f.literal('Function', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Function`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns6}comment`), f.literal('A function expression is a blank node that does not fulfill any of the syntax rules of the other node expression types and which is the subject of exactly one triple T where the object is a well-formed SHACL list, and each member of that list is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns6}label`), f.literal('Function Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}FunctionExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns4}comment`), f.literal('A group concat expression is a blank node with exactly one value for the property sh:groupConcat which is a well-formed node expression. A group concat expression can have a single value for the property sh:separator which is literal with datatype xsd:string.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns4}label`), f.literal('Group Concat Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Graph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Graph`), f.namedNode(`${ns6}comment`), f.literal('The class of graphs.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Graph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Graph`), f.namedNode(`${ns6}label`), f.literal('Graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Graph`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns5}Ontology`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns6}comment`), f.literal('A group concat expression is a blank node with exactly one value for the property sh:groupConcat which is a well-formed node expression. A group concat expression can have a single value for the property sh:separator which is literal with datatype xsd:string.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns6}label`), f.literal('Group Concat Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns1}property`), blankNodes[6], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns1}property`), blankNodes[7], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}groupConcat`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}hasValue`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that one of the value nodes is a given RDF node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Has-value constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that one of the value nodes is a given RDF node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Has-value constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}HasValueConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}HasValueConstraintComponent-hasValue`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all IRIs.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns4}label`), f.literal('IRI', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all IRIs or literals.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns4}label`), f.literal('IRI or literal', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns4}comment`), f.literal('An if expression is a blank node with exactly one value for sh:if (which is a well-formed node expression), at most one value for sh:then (which is a well-formed node expression) and at most one value for sh:else (which is a well-formed node expression).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns4}label`), f.literal('If Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all IRIs.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRI`), f.namedNode(`${ns6}label`), f.literal('IRI', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all IRIs or literals.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(`${ns6}label`), f.literal('IRI or literal', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns6}comment`), f.literal('An if expression is a blank node with exactly one value for sh:if (which is a well-formed node expression), at most one value for sh:then (which is a well-formed node expression) and at most one value for sh:else (which is a well-formed node expression).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns6}label`), f.literal('If Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}property`), blankNodes[8], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}property`), blankNodes[9], f.namedNode(ns1)),
@@ -2048,1332 +2069,1598 @@ var shaclVocabularyFactory = ({ factory }) => {
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}else`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}if`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IfExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}then`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}in`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to exclusively enumerate the permitted value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('In constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to exclusively enumerate the permitted value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('In constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}InConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}InConstraintComponent-in`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns4}comment`), f.literal('The severity for an informational validation result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns4}label`), f.literal('Info', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns4}comment`), f.literal('An intersection expression is a blank node with exactly one value for the property sh:intersection which is a well-formed SHACL list with at least two members (which are well-formed node expressions).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns4}label`), f.literal('Intersection Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns6}comment`), f.literal('The severity for an informational validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Info`), f.namedNode(`${ns6}label`), f.literal('Info', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns6}comment`), f.literal('An intersection expression is a blank node with exactly one value for the property sh:intersection which is a well-formed SHACL list with at least two members (which are well-formed node expressions).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns6}label`), f.literal('Intersection Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns1}property`), blankNodes[11], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}intersection`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint-js`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint-js`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint-js`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}js`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint`), f.namedNode(`${ns4}comment`), f.literal('The class of constraints backed by a JavaScript function.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint`), f.namedNode(`${ns4}label`), f.literal('JavaScript-based constraint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraint`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component with the parameter sh:js linking to a sh:JSConstraint containing a sh:script.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('JavaScript constraint component', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}JSConstraint-js`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSExecutable`), f.namedNode(`${ns4}comment`), f.literal('Abstract base class of resources that declare an executable JavaScript.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSExecutable`), f.namedNode(`${ns4}label`), f.literal('JavaScript executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL functions that execute a JavaScript function when called.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns4}label`), f.literal('JavaScript function', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Function`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSFunction`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSLibrary`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSLibrary`), f.namedNode(`${ns4}comment`), f.literal('Represents a JavaScript library, typically identified by one or more URLs of files to include.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSLibrary`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSLibrary`), f.namedNode(`${ns4}label`), f.literal('JavaScript library', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSLibrary`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL rules expressed using JavaScript.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns4}label`), f.literal('JavaScript rule', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSRule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns4}comment`), f.literal('The class of targets that are based on JavaScript functions.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns4}label`), f.literal('JavaScript target', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTarget`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Target`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns4}comment`), f.literal('The (meta) class for parameterizable targets that are based on JavaScript functions.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns4}label`), f.literal('JavaScript target type', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSTargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}TargetType`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns4}comment`), f.literal('A SHACL validator based on JavaScript. This can be used to declare SHACL constraint components that perform JavaScript-based validation when used.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns4}label`), f.literal('JavaScript validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}JSValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}languageIn`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to enumerate language tags that all value nodes must have.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Language-in constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to enumerate language tags that all value nodes must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Language-in constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LanguageInConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}LanguageInConstraintComponent-languageIn`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}lessThan`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that each value node is smaller than all the nodes that have the focus node as subject and the value of a given property as predicate.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Less-than constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that each value node is smaller than all the nodes that can be reached from the focus node via a given property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Less-than constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LessThanConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}LessThanConstraintComponent-lessThan`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that every value node is smaller than all the nodes that have the focus node as subject and the value of a given property as predicate.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('less-than-or-equals constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that every value node is smaller than all the nodes that can be reached from the focus node via a given property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Less-than-or-equals constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}LessThanOrEqualsConstraintComponent-lessThanOrEquals`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns4}comment`), f.literal('A limit expression is a blank node with exactly one value for the property sh:limit which is a literal with datatype xsd:integer and with exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns4}label`), f.literal('Limit Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns6}comment`), f.literal('A limit expression is a blank node with exactly one value for the property sh:limit which is a literal with datatype xsd:integer and with exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns6}label`), f.literal('Limit Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns1}property`), blankNodes[12], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns1}property`), blankNodes[13], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}LimitExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}limit`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns4}comment`), f.literal('The node kind of all literals.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns4}label`), f.literal('Literal', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpression`), f.namedNode(`${ns6}comment`), f.literal('The base class of node expressions (instances) that take a list of parameters.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpression`), f.namedNode(`${ns6}label`), f.literal('List parameter expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpressionFunction`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpressionFunction`), f.namedNode(`${ns6}comment`), f.literal('The base class of node expression functions that take a list of parameters.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpressionFunction`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpressionFunction`), f.namedNode(`${ns6}label`), f.literal('List parameter expression function', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ListParameterExpressionFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all literals.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Literal`), f.namedNode(`${ns6}label`), f.literal('Literal', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}maxCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the maximum number of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Max-count constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the maximum number of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Max-count constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MaxCountConstraintComponent-maxCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}maxExclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a maximum exclusive value.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Max-exclusive constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a maximum exclusive value.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Max-exclusive constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExclusiveConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MaxExclusiveConstraintComponent-maxExclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns4}comment`), f.literal('A max expression is a blank node with exactly one value for the property sh:max which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns4}label`), f.literal('Max Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns6}comment`), f.literal('A max expression is a blank node with exactly one value for the property sh:max which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns6}label`), f.literal('Max Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns1}property`), blankNodes[14], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}max`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}maxInclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a maximum inclusive value.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Max-inclusive constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a maximum inclusive value.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Max-inclusive constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxInclusiveConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MaxInclusiveConstraintComponent-maxInclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}maxLength`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the maximum string length of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Max-length constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the maximum string length of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Max-length constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MaxLengthConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MaxLengthConstraintComponent-maxLength`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent-maxListLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent-maxListLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent-maxListLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent-maxListLength`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}maxListLength`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum length of a SHACL list. A violation is reported if the value is not a valid SHACL list.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Maximum list length constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MaxListLengthConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MaxListLengthConstraintComponent-maxListLength`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent-memberShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent-memberShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent-memberShape`), f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent-memberShape`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}memberShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('Can be used to specify constraints on the members of a given SHACL list. A violation is reported for each member of the list that does not comply with the constraints specified by the given shape. A violation is reported if the value is not a valid SHACL list.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Member shape constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MemberShapeConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MemberShapeConstraintComponent-memberShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the minimum number of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Min-count constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the minimum number of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Min-count constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MinCountConstraintComponent-minCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minExclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a minimum exclusive value.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Min-exclusive constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a minimum exclusive value.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Min-exclusive constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExclusiveConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MinExclusiveConstraintComponent-minExclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns4}comment`), f.literal('A min expression is a blank node with exactly one value for the property sh:min which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns4}label`), f.literal('Min Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns6}comment`), f.literal('A min expression is a blank node with exactly one value for the property sh:min which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns6}label`), f.literal('Min Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns1}property`), blankNodes[15], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}min`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minInclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a minimum inclusive value.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Min-inclusive constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the range of value nodes with a minimum inclusive value.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Min-inclusive constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinInclusiveConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MinInclusiveConstraintComponent-minInclusive`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minLength`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the minimum string length of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Min-length constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the minimum string length of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Min-length constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinLengthConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MinLengthConstraintComponent-minLength`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns4}comment`), f.literal('A minus expression is a blank node with exactly one value for the property sh:minus which is a well-formed node expression and exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns4}label`), f.literal('Minus Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent-minListLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent-minListLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent-minListLength`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent-minListLength`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minListLength`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum length of a SHACL list. A violation is reported if the value is not a valid SHACL list.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Minimum list length constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinListLengthConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}MinListLengthConstraintComponent-minListLength`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns6}comment`), f.literal('A minus expression is a blank node with exactly one value for the property sh:minus which is a well-formed node expression and exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns6}label`), f.literal('Minus Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns1}property`), blankNodes[16], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns1}property`), blankNodes[17], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}MinusExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}minus`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(`${ns6}comment`), f.literal('The base class of node expressions (instances) that take named parameters.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(`${ns6}label`), f.literal('Named parameter expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns6}comment`), f.literal('The base class of node expression functions that take named parameters.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns6}label`), f.literal('Named parameter expression function', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent-nodeByExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent-nodeByExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent-nodeByExpression`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodeByExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that all value nodes conform to the node shape(s) produced by the given node expression.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Node by expression constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeByExpressionConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}NodeByExpressionConstraintComponent-nodeByExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}node`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that all value nodes conform to the given node shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Node constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that all value nodes conform to the given node shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Node constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}NodeConstraintComponent-node`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns6}comment`), f.literal('The base class of node expression (instances).', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns6}label`), f.literal('Node expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns1}expression`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns1}values`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeExpression`), f.namedNode(`${ns1}xone`), blankNodes[18], f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns4}comment`), f.literal('The class of all node kinds, including sh:BlankNode, sh:IRI, sh:Literal or the combinations of these: sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral, sh:IRIOrLiteral.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns4}label`), f.literal('Node kind', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(`${ns6}comment`), f.literal('The base (meta) class of node expression functions.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(`${ns6}label`), f.literal('Node expression function', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns6}comment`), f.literal('The class of all node kinds, including sh:BlankNode, sh:IRI, sh:Literal or the combinations of these: sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral, sh:IRIOrLiteral.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns6}label`), f.literal('Node kind', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKind`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns1}in`), blankNodes[19], f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the RDF node kind of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Node-kind constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the RDF node kind of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Node-kind constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NodeKindConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}NodeKindConstraintComponent-nodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns4}comment`), f.literal('A node shape is a shape that specifies constraint that need to be met with respect to focus nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns4}label`), f.literal('Node shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns6}comment`), f.literal('A node shape is a shape that specifies constraints that need to be met with respect to focus nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns6}label`), f.literal('Node shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NodeShape`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}not`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that value nodes do not conform to a given shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Not constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that value nodes do not conform to a given shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Not constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}NotConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}NotConstraintComponent-not`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns4}comment`), f.literal('An offset expression is a blank node with exactly one value for the property sh:offset which is a literal with datatype xsd:integer and with exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns4}label`), f.literal('Offset Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns6}comment`), f.literal('An offset expression is a blank node with exactly one value for the property sh:offset which is a literal with datatype xsd:integer and with exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns6}label`), f.literal('Offset Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns1}property`), blankNodes[20], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns1}property`), blankNodes[21], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OffsetExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}offset`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}or`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the value nodes so that they conform to at least one out of several provided shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Or constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the value nodes so that they conform to at least one out of several provided shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Or constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}OrConstraintComponent-or`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns4}comment`), f.literal('An orderBy expression is a blank node with exactly one value for the property sh:orderBy which is a well-formed node expression and with exactly one value for the property sh:nodes which is a well-formed node expression. An orderBy expression can have one value for the property sh:desc which is either true or false.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns4}label`), f.literal('OrderBy Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns6}comment`), f.literal('An orderBy expression is a blank node with exactly one value for the property sh:orderBy which is a well-formed node expression and with exactly one value for the property sh:nodes which is a well-formed node expression. An orderBy expression can have one value for the property sh:desc which is either true or false.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns6}label`), f.literal('OrderBy Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns1}property`), blankNodes[22], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns1}property`), blankNodes[23], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns1}property`), blankNodes[24], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}OrderByExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}orderBy`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns4}comment`), f.literal('The class of parameter declarations, consisting of a path predicate and (possibly) information about allowed value type, cardinality and other characteristics.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns4}label`), f.literal('Parameter', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns4}comment`), f.literal('Superclass of components that can take parameters, especially functions and constraint components.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns4}label`), f.literal('Parameterizable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns4}comment`), f.literal('A path expression is a blank node with exactly one value of the property sh:path (which are well-formed property paths) and at most one value for sh:nodes (which is a well-formed node expression).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns4}label`), f.literal('Path Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns6}comment`), f.literal('The class of parameter declarations, consisting of a path predicate and (possibly) information about allowed value type, cardinality and other characteristics.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns6}label`), f.literal('Parameter', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameter`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns6}comment`), f.literal('Superclass of components that can take parameters, especially functions and constraint components.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns6}label`), f.literal('Parameterizable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Parameterizable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns6}comment`), f.literal('A path expression is a blank node with exactly one value of the property sh:path (which are well-formed property paths) and at most one value for sh:nodes (which is a well-formed node expression).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns6}label`), f.literal('Path Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns1}property`), blankNodes[25], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PathExpression`), f.namedNode(`${ns1}property`), blankNodes[26], f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns6}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}flags`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}pattern`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that every value node matches a given regular expression.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Pattern constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that every value node matches a given regular expression.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Pattern constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}PatternConstraintComponent-flags`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PatternConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}PatternConstraintComponent-pattern`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns4}comment`), f.literal('The class of prefix declarations, consisting of pairs of a prefix with a namespace.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns4}label`), f.literal('Prefix declaration', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns6}comment`), f.literal('The class of prefix declarations, consisting of pairs of a prefix with a namespace.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns6}label`), f.literal('Prefix declaration', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that all value nodes conform to the given property shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Property constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that all value nodes conform to the given property shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Property constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}PropertyConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}PropertyConstraintComponent-property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns4}comment`), f.literal('Instances of this class represent groups of property shapes that belong together.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns4}label`), f.literal('Property group', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns4}comment`), f.literal('A property shape is a shape that specifies constraints on the values of a focus node for a given property or path.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns4}label`), f.literal('Property shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns6}comment`), f.literal('Instances of this class represent groups of property shapes that belong together.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns6}label`), f.literal('Property group', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyGroup`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns6}comment`), f.literal('A property shape is a shape that specifies constraints on the values of a focus node for a given property or path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns6}label`), f.literal('Property shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}PropertyShape`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns6}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that a specified maximum number of value nodes conforms to a given shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Qualified-max-count constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that a specified maximum number of value nodes conforms to a given shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Qualified-max-count constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedMaxCount`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShape`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMaxCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns6}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to verify that a specified minimum number of value nodes conforms to a given shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Qualified-min-count constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that a specified minimum number of value nodes conforms to a given shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Qualified-min-count constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedMinCount`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShape`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}QualifiedMinCountConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}QualifiedMinCountConstraintComponent-qualifiedValueShapesDisjoint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns4}comment`), f.literal('A class of result annotations, which define the rules to derive the values of a given annotation property as extra values for a validation result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns4}label`), f.literal('Result annotation', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL rules. Never instantiated directly.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns4}label`), f.literal('Rule', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns4}comment`), f.literal('The class of SPARQL executables that are based on an ASK query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns4}label`), f.literal('SPARQL ASK executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns4}comment`), f.literal('A SPARQL ASK expression is a blank node with exactly one value for the property sh:ask which is string literal. The blank node may have values for the property sh:prefixes and these values are IRIs or blank nodes. Using the values of sh:prefixes as defined by 5.2.1 Prefix Declarations for SPARQL Queries, the value of sh:ask must be valid SPARQL 1.1 ASK query. The blank node may also have exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns4}label`), f.literal('SPARQL ASK Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(`${ns1}optional`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}reificationRequired`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reifierShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reifierShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent-reifierShape`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}reifierShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that the reifier conforms to a given shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('ReifierShape constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ReifierShapeConstraintComponent-reificationRequired`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ReifierShapeConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}ReifierShapeConstraintComponent-reifierShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns6}comment`), f.literal('A class of result annotations, which define the rules to derive the values of a given annotation property as extra values for a validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns6}label`), f.literal('Result annotation', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent-rootClass`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent-rootClass`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent-rootClass`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent-rootClass`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}rootClass`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that each value node is the given class or a (transitive) subclass of that class.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Root class constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}RootClassConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}RootClassConstraintComponent-rootClass`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns6}comment`), f.literal('The class of SHACL rules. Never instantiated directly.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns6}label`), f.literal('Rule', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Rule`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of SPARQL executables that are based on an ASK query.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL ASK executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns6}comment`), f.literal('A SPARQL ASK expression is a blank node with exactly one value for the property sh:ask which is string literal. The blank node may have values for the property sh:prefixes and these values are IRIs or blank nodes. Using the values of sh:prefixes as defined by 5.2.1 Prefix Declarations for SPARQL Queries, the value of sh:ask must be valid SPARQL 1.1 ASK query. The blank node may also have exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns6}label`), f.literal('SPARQL ASK Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns1}property`), blankNodes[27], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns1}property`), blankNodes[28], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns1}property`), blankNodes[29], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}ask`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}comment`), f.literal('The class of validators based on SPARQL ASK queries. The queries are evaluated for each value node and are supposed to return true if the given node conforms.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}label`), f.literal('SPARQL ASK validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns4}comment`), f.literal('The class of constraints based on SPARQL SELECT queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns4}label`), f.literal('SPARQL constraint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns6}comment`), f.literal('The class of validators based on SPARQL ASK queries. The queries are evaluated for each value node and are supposed to return true if the given node conforms.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns6}label`), f.literal('SPARQL ASK validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLAskValidator`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns6}comment`), f.literal('The class of constraints based on SPARQL SELECT queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns6}label`), f.literal('SPARQL constraint', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}sparql`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to define constraints based on SPARQL queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('SPARQL constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to define constraints based on SPARQL queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('SPARQL constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SPARQLConstraintComponent-sparql`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns4}comment`), f.literal('The class of SPARQL executables that are based on a CONSTRUCT query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns4}label`), f.literal('SPARQL CONSTRUCT executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns4}comment`), f.literal('The class of resources that encapsulate a SPARQL query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns4}label`), f.literal('SPARQL executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}comment`), f.literal('A function backed by a SPARQL query - either ASK or SELECT.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}label`), f.literal('SPARQL function', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Function`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL rules based on SPARQL CONSTRUCT queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}label`), f.literal('SPARQL CONSTRUCT rule', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of SPARQL executables that are based on a CONSTRUCT query.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL CONSTRUCT executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of SPARQL executables based on a SPARQL DESCRIBE.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL DESCRIBE executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of resources that encapsulate a SPARQL query.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns1}description`), f.literal('The prefixes that shall be applied before parsing the SPARQL query that gets derived from the sh:sparqlExpr expression. The object should define those prefixes using sh:declare.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns1}name`), f.literal('prefixes', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}prefixes`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns1}description`), f.literal('The SPARQL expression that is executed during evaluation of this node expression.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns1}keyParameter`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns1}name`), f.literal('SPARQL expr', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}sparqlExpr`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns6}comment`), f.literal('The class of node expressions based on SPARQL expressions (sh:sparqlExpr).', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns6}label`), f.literal('SPARQL expr expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SPARQLExprExpression-prefixes`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SPARQLExprExpression-sparqlExpr`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}comment`), f.literal('A function backed by a SPARQL query - either ASK or SELECT.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}label`), f.literal('SPARQL function', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Function`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLFunction`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns6}comment`), f.literal('The class of SHACL rules based on SPARQL CONSTRUCT queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns6}label`), f.literal('SPARQL CONSTRUCT rule', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns1}property`), blankNodes[30], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLRule`), f.namedNode(`${ns1}property`), blankNodes[31], f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns4}comment`), f.literal('The class of SPARQL executables based on a SELECT query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns4}label`), f.literal('SPARQL SELECT executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns4}comment`), f.literal('A SPARQL SELECT expression is a blank node with exactly one value for the property sh:select which is string literal. The blank node may have values for the property sh:prefixes and these values are IRIs or blank nodes. Using the values of sh:prefixes as defined by 5.2.1 Prefix Declarations for SPARQL Queries, the value of sh:select must be valid SPARQL 1.1 SELECT query with exactly one result variable. The blank node may also have exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns4}label`), f.literal('SPARQL SELECT Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of SPARQL executables based on a SELECT query.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL SELECT executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns6}comment`), f.literal('A SPARQL SELECT expression is a blank node with exactly one value for the property sh:select which is string literal. The blank node may have values for the property sh:prefixes and these values are IRIs or blank nodes. Using the values of sh:prefixes as defined by 5.2.1 Prefix Declarations for SPARQL Queries, the value of sh:select must be valid SPARQL 1.1 SELECT query with exactly one result variable. The blank node may also have exactly one value for the property sh:nodes which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns6}label`), f.literal('SPARQL SELECT Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns1}property`), blankNodes[32], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns1}property`), blankNodes[33], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns1}property`), blankNodes[34], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}select`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}comment`), f.literal('The class of validators based on SPARQL SELECT queries. The queries are evaluated for each focus node and are supposed to produce bindings for all focus nodes that do not conform.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}label`), f.literal('SPARQL SELECT validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}comment`), f.literal('The class of targets that are based on SPARQL queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}label`), f.literal('SPARQL target', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Target`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}comment`), f.literal('The (meta) class for parameterizable targets that are based on SPARQL queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}label`), f.literal('SPARQL target type', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}TargetType`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns4}comment`), f.literal('The class of SPARQL executables based on a SPARQL UPDATE.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns4}label`), f.literal('SPARQL UPDATE executable', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns4}comment`), f.literal('The class of validation result severity levels, including violation and warning levels.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns4}label`), f.literal('Severity', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns4}comment`), f.literal('A shape is a collection of constraints that may be targeted for certain nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns4}label`), f.literal('Shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns4}comment`), f.literal('A sum expression is a blank node with exactly one value for the property sh:sum which is a well-formed node expression.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns4}label`), f.literal('Sum Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns6}comment`), f.literal('The class of validators based on SPARQL SELECT queries. The queries are evaluated for each focus node and are supposed to produce bindings for all focus nodes that do not conform.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns6}label`), f.literal('SPARQL SELECT validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}comment`), f.literal('The class of targets that are based on SPARQL queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}label`), f.literal('SPARQL target', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTarget`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Target`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}comment`), f.literal('The (meta) class for parameterizable targets that are based on SPARQL queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}label`), f.literal('SPARQL target type', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLTargetType`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}TargetType`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns6}comment`), f.literal('The class of SPARQL executables based on a SPARQL UPDATE.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns6}label`), f.literal('SPARQL UPDATE executable', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns1}description`), f.literal('The prefixes that shall be applied before parsing the associated SPARQL query. The object should define those prefixes using sh:declare.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns1}name`), f.literal('prefixes', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}prefixes`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns1}description`), f.literal('The SELECT query that is executed during evaluation of this node expression. The output nodes are the bindings of the first result variable.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns1}keyParameter`), f.literal('true', f.namedNode(`${ns3}boolean`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns1}name`), f.literal('select', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}select`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NamedParameterExpressionFunction`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns6}comment`), f.literal('The class of node expressions based on SPARQL SELECT queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns6}label`), f.literal('Select expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NamedParameterExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SelectExpression-prefixes`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SelectExpression`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SelectExpression-select`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns6}comment`), f.literal('The class of validation result severity levels, including violation and warning levels.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns6}label`), f.literal('Severity', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Severity`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns6}comment`), f.literal('A shape is a collection of constraints that may be targeted for certain nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns6}label`), f.literal('Shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Shape`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns6}comment`), f.literal('A shape class is a class that is also a node shape. sh:ShapeClass can be used as rdf:type instead of the combination of rdfs:Class and sh:NodeShape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns6}label`), f.literal('Shape class', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapeClass`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapesGraph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapesGraph`), f.namedNode(`${ns6}comment`), f.literal('The class of graphs that typically act in the role of a SHACL shapes graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapesGraph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapesGraph`), f.namedNode(`${ns6}label`), f.literal('Shapes graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ShapesGraph`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Graph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}singleLine`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to specify that none of the value nodes may contain line breaks.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Single line constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SingleLineConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SingleLineConstraintComponent-singleLine`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent-someValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent-someValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent-someValue`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}someValue`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that at least one of the value nodes conform to the given shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Some value constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SomeValueConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SomeValueConstraintComponent-someValue`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent-subsetOf`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent-subsetOf`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent-subsetOf`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent-subsetOf`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}subsetOf`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to verify that the set of value nodes is a subset of the set of nodes that can be reached from the focus node using a given property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Subset-of constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SubsetOfConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}SubsetOfConstraintComponent-subsetOf`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns6}comment`), f.literal('A sum expression is a blank node with exactly one value for the property sh:sum which is a well-formed node expression.'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns6}label`), f.literal('Sum Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns1}property`), blankNodes[35], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}SumExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}sum`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns4}comment`), f.literal('The base class of targets such as those based on SPARQL queries.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns4}label`), f.literal('Target', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}comment`), f.literal('The (meta) class for parameterizable targets.	Instances of this are instantiated as values of the sh:target property.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}label`), f.literal('Target type', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns4}label`), f.literal('A rule based on triple (subject, predicate, object) pattern.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns6}comment`), f.literal('The base class of targets such as those based on SPARQL queries.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns6}label`), f.literal('Target', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Target`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns6}comment`), f.literal('The (meta) class for parameterizable targets.	Instances of this are instantiated as values of the sh:target property.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns6}label`), f.literal('Target type', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TargetType`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Trace`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Trace`), f.namedNode(`${ns6}comment`), f.literal('The severity for a trace validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Trace`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Trace`), f.namedNode(`${ns6}label`), f.literal('Trace', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns6}comment`), f.literal('A rule based on triple (subject, predicate, object) pattern.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns6}label`), f.literal('Triple rule', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns1}property`), blankNodes[36], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns1}property`), blankNodes[37], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}TripleRule`), f.namedNode(`${ns1}property`), blankNodes[38], f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns4}comment`), f.literal('A union expression is a blank node with exactly one value for the property sh:union which is a well-formed SHACL list with at least two members (which are well-formed node expressions).'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns4}label`), f.literal('Union Expression'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleTerm`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleTerm`), f.namedNode(`${ns6}comment`), f.literal('The node kind of all triple terms.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleTerm`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}TripleTerm`), f.namedNode(`${ns6}label`), f.literal('Triple term', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns6}comment`), f.literal('A union expression is a blank node with exactly one value for the property sh:union which is a well-formed SHACL list with at least two members (which are well-formed node expressions).'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns6}label`), f.literal('Union Expression'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns1}property`), blankNodes[39], f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}UnionExpression`), f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns1}union`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}uniqueLang`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to specify that no pair of value nodes may use the same language tag.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Unique-languages constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to specify that no pair of value nodes may use the same language tag.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Unique-languages constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}UniqueLangConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}UniqueLangConstraintComponent-uniqueLang`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns4}comment`), f.literal('The class of SHACL validation reports.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns4}label`), f.literal('Validation report', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns4}comment`), f.literal('The class of validation results.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns4}label`), f.literal('Validation result', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns4}comment`), f.literal('The class of validators, which provide instructions on how to process a constraint definition. This class serves as base class for the SPARQL-based validators and other possible implementations.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns4}label`), f.literal('Validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns4}subClassOf`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns4}comment`), f.literal('The severity for a violation validation result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns4}label`), f.literal('Violation', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns4}comment`), f.literal('The severity for a warning validation result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns4}label`), f.literal('Warning', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent-uniqueMembers`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent-uniqueMembers`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent-uniqueMembers`), f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent-uniqueMembers`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}uniqueMembers`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('Specifies that all members of a SHACL list must be unique. A violation is reported if the value is not a valid SHACL list.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Unique list members constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueMembersConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}UniqueMembersConstraintComponent-uniqueMembers`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent-uniqueValuesFor`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent-uniqueValuesFor`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent-uniqueValuesFor`), f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent-uniqueValuesFor`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}uniqueValuesFor`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to ensure that no two nodes targeted by the same shape have the same combination of values for a given set of properties.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Unique-values-for constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}UniqueValuesForConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}UniqueValuesForConstraintComponent-uniqueValuesFor`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns6}comment`), f.literal('The class of SHACL validation reports.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns6}label`), f.literal('Validation report', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationReport`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns6}comment`), f.literal('The class of validation results.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns6}label`), f.literal('Validation result', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ValidationResult`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns6}comment`), f.literal('The class of validators, which provide instructions on how to process a constraint definition. This class serves as base class for the SPARQL-based validators and other possible implementations.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns6}label`), f.literal('Validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Validator`), f.namedNode(`${ns6}subClassOf`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns6}comment`), f.literal('The severity for a violation validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Violation`), f.namedNode(`${ns6}label`), f.literal('Violation', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns6}comment`), f.literal('The severity for a warning validation result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}Warning`), f.namedNode(`${ns6}label`), f.literal('Warning', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(`${ns1}path`), f.namedNode(`${ns1}xone`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('A constraint component that can be used to restrict the value nodes so that they conform to exactly one out of several provided shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('Exactly one constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('A constraint component that can be used to restrict the value nodes so that they conform to exactly one out of several provided shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('Exactly one constraint component', 'en'), f.namedNode(ns1)),
         f.quad(f.namedNode(`${ns1}XoneConstraintComponent`), f.namedNode(`${ns1}parameter`), f.namedNode(`${ns1}XoneConstraintComponent-xone`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns4}comment`), f.literal('The (single) value of this property must be a list of path elements, representing the elements of alternative paths.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns4}label`), f.literal('alternative path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns4}comment`), f.literal('RDF list of shapes to validate the value nodes against.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns4}label`), f.literal('and', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}comment`), f.literal('The annotation property that shall be set.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}label`), f.literal('annotation property', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns4}comment`), f.literal('The (default) values of the annotation property.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns4}label`), f.literal('annotation value', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}comment`), f.literal('The name of the SPARQL variable from the SELECT clause that shall be used for the values.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}label`), f.literal('annotation variable name', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}comment`), f.literal('The SPARQL ASK query to execute.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}label`), f.literal('ask', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns4}comment`), f.literal('The type that all value nodes must have.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns4}label`), f.literal('class', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns4}comment`), f.literal('If set to true then the shape is closed.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns4}label`), f.literal('closed', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}comment`), f.literal('The shapes that the focus nodes need to conform to before a rule is executed on them.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}label`), f.literal('condition', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}comment`), f.literal('True if the validation did not produce any validation results, and false otherwise.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}label`), f.literal('conforms', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}comment`), f.literal('The SPARQL CONSTRUCT query to execute.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}label`), f.literal('construct', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}count`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns4}comment`), f.literal('Specifies an RDF datatype that all value nodes must have.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns4}label`), f.literal('datatype', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Datatype`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns4}comment`), f.literal('If set to true then all nodes conform to this.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns4}label`), f.literal('deactivated', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}comment`), f.literal('Links a resource with its namespace prefix declarations.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}label`), f.literal('declare', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns4}comment`), f.literal('A default value for a property, for example for user interface tools to pre-populate input fields.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns4}label`), f.literal('default value', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}desc`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns4}comment`), f.literal('Human-readable descriptions for the property in the context of the surrounding shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns4}label`), f.literal('description', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}comment`), f.literal('Links a result with other results that provide more details, for example to describe violations against nested shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}label`), f.literal('detail', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns4}comment`), f.literal('Specifies a property where the set of values must be disjoint with the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns4}label`), f.literal('disjoint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}distinct`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}else`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}comment`), f.literal('An entailment regime that indicates what kind of inferencing is required by a shapes graph.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}label`), f.literal('entailment', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns4}comment`), f.literal('Specifies a property that must have the same values as the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns4}label`), f.literal('equals', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}exists`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns4}comment`), f.literal('The node expression that must return true for the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns4}label`), f.literal('expression', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns4}comment`), f.literal('The shape that all input nodes of the expression need to conform to.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns4}label`), f.literal('filter shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns4}comment`), f.literal('An optional flag to be used with regular expression pattern matching.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns4}label`), f.literal('flags', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns4}comment`), f.literal('The focus node that was validated when the result was produced.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns4}label`), f.literal('focus node', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}comment`), f.literal('Can be used to link to a property group to indicate that a property shape belongs to a group of related property shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}label`), f.literal('group', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}PropertyGroup`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}groupConcat`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns4}comment`), f.literal('Specifies a value that must be among the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns4}label`), f.literal('has value', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}if`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns4}comment`), f.literal('An optional RDF list of properties that are also permitted in addition to those explicitly enumerated via sh:property/sh:path.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns4}label`), f.literal('ignored properties', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns4}comment`), f.literal('Specifies a list of allowed values so that each value node must be among the members of the given list.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns4}label`), f.literal('in', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}intersection`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}intersection`), f.namedNode(`${ns4}comment`), f.literal('A list of node expressions that shall be intersected.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}intersection`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}intersection`), f.namedNode(`${ns4}label`), f.literal('intersection', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns4}comment`), f.literal('The (single) value of this property represents an inverse path (object to subject).', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns4}label`), f.literal('inverse path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}js`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}js`), f.namedNode(`${ns4}comment`), f.literal('Constraints expressed in JavaScript.'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}js`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}js`), f.namedNode(`${ns4}label`), f.literal('JavaScript constraint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}js`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}JSConstraint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns4}comment`), f.literal('The name of the JavaScript function to execute.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}JSExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns4}label`), f.literal('JavaScript function name', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsFunctionName`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibrary`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibrary`), f.namedNode(`${ns4}comment`), f.literal('Declares which JavaScript libraries are needed to execute this.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibrary`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibrary`), f.namedNode(`${ns4}label`), f.literal('JavaScript library', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibrary`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}JSLibrary`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns4}comment`), f.literal('Declares the URLs of a JavaScript library. This should be the absolute URL of a JavaScript file. Implementations may redirect those to local files.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}JSLibrary`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns4}label`), f.literal('JavaScript library URL', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}jsLibraryURL`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}anyURI`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns4}comment`), f.literal('Outlines how human-readable labels of instances of the associated Parameterizable shall be produced. The values can contain {?paramName} as placeholders for the actual values of the given parameter.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns4}label`), f.literal('label template', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns4}comment`), f.literal('Specifies a list of language tags that all value nodes must have.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns4}label`), f.literal('language in', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns4}comment`), f.literal('Specifies a property that must have smaller values than the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns4}label`), f.literal('less than', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns4}comment`), f.literal('Specifies a property that must have smaller or equal values than the value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns4}label`), f.literal('less than or equals', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}limit`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}max`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns4}comment`), f.literal('Specifies the maximum number of values in the set of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns4}label`), f.literal('max count', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns4}comment`), f.literal('Specifies the maximum exclusive value of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns4}label`), f.literal('max exclusive', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns4}comment`), f.literal('Specifies the maximum inclusive value of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns4}label`), f.literal('max inclusive', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns4}comment`), f.literal('Specifies the maximum string length of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns4}label`), f.literal('max length', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns4}comment`), f.literal('A human-readable message (possibly with placeholders for variables) explaining the cause of the result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns4}label`), f.literal('message', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}min`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns4}comment`), f.literal('Specifies the minimum number of values in the set of value nodes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns4}label`), f.literal('min count', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns4}comment`), f.literal('Specifies the minimum exclusive value of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns4}label`), f.literal('min exclusive', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns4}comment`), f.literal('Specifies the minimum inclusive value of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns4}label`), f.literal('min inclusive', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns4}comment`), f.literal('Specifies the minimum string length of each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns4}label`), f.literal('min length', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}minus`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns4}comment`), f.literal('Human-readable labels for the property in the context of the surrounding shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns4}label`), f.literal('name', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}comment`), f.literal('The namespace associated with a prefix in a prefix declaration.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}label`), f.literal('namespace', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}anyURI`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns4}comment`), f.literal('Specifies the node shape that all value nodes must conform to.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns4}label`), f.literal('node', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns4}comment`), f.literal('Specifies the node kind (e.g. IRI or literal) each value node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns4}label`), f.literal('node kind', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}comment`), f.literal('The validator(s) used to evaluate a constraint in the context of a node shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}label`), f.literal('shape validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodes`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodes`), f.namedNode(`${ns4}comment`), f.literal('The node expression producing the input nodes of a filter shape expression.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodes`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}nodes`), f.namedNode(`${ns4}label`), f.literal('nodes', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns4}comment`), f.literal('Specifies a shape that the value nodes must not conform to.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns4}label`), f.literal('not', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns4}comment`), f.literal('An expression producing the nodes that shall be inferred as objects.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns4}label`), f.literal('object', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}offset`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns4}comment`), f.literal('The (single) value of this property represents a path that is matched one or more times.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns4}label`), f.literal('one or more path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}comment`), f.literal('Indicates whether a parameter is optional.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}label`), f.literal('optional', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns4}comment`), f.literal('Specifies a list of shapes so that the value nodes must conform to at least one of the shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns4}label`), f.literal('or', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns4}comment`), f.literal('Specifies the relative order of this compared to its siblings. For example use 0 for the first, 1 for the second.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns4}label`), f.literal('order', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}orderBy`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}comment`), f.literal('The parameters of a function or constraint component.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}label`), f.literal('parameter', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}comment`), f.literal('Specifies the property path of a property shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}label`), f.literal('path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns4}comment`), f.literal('Specifies a regular expression pattern that the string representations of the value nodes must match.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns4}label`), f.literal('pattern', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns4}comment`), f.literal('An expression producing the properties that shall be inferred as predicates.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns4}label`), f.literal('predicate', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}comment`), f.literal('The prefix of a prefix declaration.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}label`), f.literal('prefix', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}comment`), f.literal('The prefixes that shall be applied before parsing the associated SPARQL query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}label`), f.literal('prefixes', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}range`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to its property shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}label`), f.literal('property', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}comment`), f.literal('The validator(s) used to evaluate a constraint in the context of a property shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}label`), f.literal('property validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns4}comment`), f.literal('The maximum number of value nodes that can conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns4}label`), f.literal('qualified max count', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns4}comment`), f.literal('The minimum number of value nodes that must conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns4}label`), f.literal('qualified min count', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns4}comment`), f.literal('The shape that a specified number of values must conform to.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns4}label`), f.literal('qualified value shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}comment`), f.literal('Can be used to mark the qualified value shape to be disjoint with its sibling shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}label`), f.literal('qualified value shapes disjoint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}comment`), f.literal('The validation results contained in a validation report.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}label`), f.literal('result', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}ValidationResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}comment`), f.literal('Links a SPARQL validator with zero or more sh:ResultAnnotation instances, defining how to derive additional result properties based on the variables of the SELECT query.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}label`), f.literal('result annotation', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns4}comment`), f.literal('Human-readable messages explaining the cause of the result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns4}label`), f.literal('result message', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}comment`), f.literal('The path of a validation result, based on the path of the validated property shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}label`), f.literal('result path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}comment`), f.literal('The severity of the result, e.g. warning.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}label`), f.literal('result severity', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}comment`), f.literal('The expected type of values returned by the associated function.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Function`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}label`), f.literal('return type', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}comment`), f.literal('The rules linked to a shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}label`), f.literal('rule', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}comment`), f.literal('The SPARQL SELECT query to execute.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}label`), f.literal('select', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}separator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}comment`), f.literal('Defines the severity that validation results produced by a shape must have. Defaults to sh:Violation.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}label`), f.literal('severity', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}comment`), f.literal('Shapes graphs that should be used when validating this data graph.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}label`), f.literal('shapes graph', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}range`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}comment`), f.literal('If true then the validation engine was certain that the shapes graph has passed all SHACL syntax requirements during the validation process.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}label`), f.literal('shapes graph well-formed', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns4}comment`), f.literal('The constraint that was validated when the result was produced.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns4}label`), f.literal('source constraint', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}comment`), f.literal('The constraint component that is the source of the result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}label`), f.literal('source constraint component', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}comment`), f.literal('The shape that is was validated when the result was produced.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}label`), f.literal('source shape', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}comment`), f.literal('Links a shape with SPARQL constraints.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}label`), f.literal('constraint (in SPARQL)', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns4}comment`), f.literal('An expression producing the resources that shall be inferred as subjects.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns4}label`), f.literal('subject', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}comment`), f.literal('Suggested shapes graphs for this ontology. The values of this property may be used in the absence of specific sh:shapesGraph statements.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}label`), f.literal('suggested shapes graph', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}range`), f.namedNode(`${ns3}Ontology`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}sum`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to a target specified by an extension language, for example instances of sh:SPARQLTarget.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}label`), f.literal('target', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Target`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to a class, indicating that all instances of the class must conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}label`), f.literal('target class', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Class`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to individual nodes, indicating that these nodes must conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns4}label`), f.literal('target node', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to a property, indicating that all all objects of triples that have the given property as their predicate must conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}label`), f.literal('target objects of', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}comment`), f.literal('Links a shape to a property, indicating that all subjects of triples that have the given property as their predicate must conform to the shape.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}label`), f.literal('target subjects of', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}then`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}this`), f.namedNode(`${ns2}type`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}this`), f.namedNode(`${ns4}comment`), f.literal('A node expression that represents the current focus node.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}this`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}this`), f.namedNode(`${ns4}label`), f.literal('this', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}union`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}union`), f.namedNode(`${ns4}comment`), f.literal('A list of node expressions that shall be used together.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}union`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}union`), f.namedNode(`${ns4}label`), f.literal('union', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns4}comment`), f.literal('Specifies whether all node values must have a unique (or no) language tag.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns4}label`), f.literal('unique languages', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}comment`), f.literal('The SPARQL UPDATE to execute.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}label`), f.literal('update', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}range`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}comment`), f.literal('The validator(s) used to evaluate constraints of either node or property shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}label`), f.literal('validator', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns4}comment`), f.literal('An RDF node that has caused the result.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns4}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns4}label`), f.literal('value', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}values`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns4}comment`), f.literal('Specifies a list of shapes so that the value nodes must conform to exactly one of the shapes.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns4}label`), f.literal('exactly one', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns4}range`), f.namedNode(`${ns2}List`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}comment`), f.literal('The (single) value of this property represents a path that is matched zero or more times.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}label`), f.literal('zero or more path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns2}type`), f.namedNode(`${ns2}Property`), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns4}comment`), f.literal('The (single) value of this property represents a path that is matched zero or one times.', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns4}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns4}label`), f.literal('zero or one path', 'en'), f.namedNode(ns1)),
-        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns4}range`), f.namedNode(`${ns4}Resource`), f.namedNode(ns1)),
-        f.quad(blankNodes[4], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[4], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[4], f.namedNode(`${ns1}node`), f.namedNode(`${ns5}ShapeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}agentInstruction`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}agentInstruction`), f.namedNode(`${ns6}comment`), f.literal('Can be used to store instructions that shall be sent as input for external agents that understand natural language.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}agentInstruction`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}agentInstruction`), f.namedNode(`${ns6}label`), f.literal('agent instruction', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns6}comment`), f.literal('The (single) value of this property must be a list of path elements, representing the elements of alternative paths.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns6}label`), f.literal('alternative path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}alternativePath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns6}comment`), f.literal('RDF list of shapes to validate the value nodes against.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns6}label`), f.literal('and', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}and`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns6}comment`), f.literal('The annotation property that shall be set.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns6}label`), f.literal('annotation property', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationProperty`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns6}comment`), f.literal('The (default) values of the annotation property.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationValue`), f.namedNode(`${ns6}label`), f.literal('annotation value', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns6}comment`), f.literal('The name of the SPARQL variable from the SELECT clause that shall be used for the values.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns6}label`), f.literal('annotation variable name', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}annotationVarName`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL ASK query to execute.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLAskExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns6}label`), f.literal('ask', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ask`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}bodyExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}bodyExpression`), f.namedNode(`${ns6}comment`), f.literal('A node expression that is the implementation/body of a custom node expression function.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}bodyExpression`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}NodeExpressionFunction`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}bodyExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}bodyExpression`), f.namedNode(`${ns6}label`), f.literal('body expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns6}comment`), f.literal('The type that all value nodes must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}class`), f.namedNode(`${ns6}label`), f.literal('class', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns6}comment`), f.literal('If set to true then the shape is closed.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns6}label`), f.literal('closed', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}closed`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns6}comment`), f.literal('A hint on how code generators should represent the associated shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns6}label`), f.literal('code identifier', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}codeIdentifier`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns6}comment`), f.literal('The shapes that the focus nodes need to conform to before a rule is executed on them.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns6}label`), f.literal('condition', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}condition`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns6}comment`), f.literal('Severity levels that are evaluated in the conformance check.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns6}label`), f.literal('conformance disallows', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}comment`), f.literal('True if the validation did not produce any validation results with a severity level of the set of disallowed levels, and false otherwise.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}label`), f.literal('conforms', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conforms`), f.namedNode(`${ns6}seeAlso`), f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}comment`), f.literal('The subject conforms to the object if validation did not produce any validation results with a severity level of the set of disallowed levels.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}DataGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}label`), f.literal('conforms to', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ShapesGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}seeAlso`), f.literal('https://www.dublincore.org/specifications/dublin-core/dcmi-terms/terms/conformsTo/'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}conformsTo`), f.namedNode(`${ns6}seeAlso`), f.namedNode(`${ns1}conformanceDisallows`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL CONSTRUCT query to execute.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLConstructExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns6}label`), f.literal('construct', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}construct`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}count`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}comment`), f.literal('Specifies an RDF datatype that all value nodes must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}label`), f.literal('datatype', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns6}comment`), f.literal('If set to true then all nodes conform to this.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}deactivated`), f.namedNode(`${ns6}label`), f.literal('deactivated', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns6}comment`), f.literal('Links a resource with its namespace prefix declarations.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns6}label`), f.literal('declare', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}declare`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns6}comment`), f.literal('A default value for a property, for example for user interface tools to pre-populate input fields.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}defaultValue`), f.namedNode(`${ns6}label`), f.literal('default value', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}desc`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL DESCRIBE to execute.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLDescribeExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns6}label`), f.literal('describe', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}describe`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns6}comment`), f.literal('Human-readable descriptions for the property in the context of the surrounding shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}description`), f.namedNode(`${ns6}label`), f.literal('description', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns6}comment`), f.literal('Links a result with other results that provide more details, for example to describe violations against nested shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns6}label`), f.literal('detail', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}detail`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns6}comment`), f.literal('Specifies a property path where the set of values must be disjoint with the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}disjoint`), f.namedNode(`${ns6}label`), f.literal('disjoint', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}distinct`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}else`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns6}comment`), f.literal('An entailment regime that indicates what kind of inferencing is required by a shapes graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ShapesGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns6}label`), f.literal('entailment', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}entailment`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns6}comment`), f.literal('Specifies a property path that must have the same values as the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}equals`), f.namedNode(`${ns6}label`), f.literal('equals', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}exists`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns6}comment`), f.literal('The node expression that must return true for the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}expression`), f.namedNode(`${ns6}label`), f.literal('expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}filterShape`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:filterShape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns6}comment`), f.literal('An optional flag to be used with regular expression pattern matching.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns6}label`), f.literal('flags', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}flags`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns6}comment`), f.literal('The focus node that was validated when the result was produced.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}focusNode`), f.namedNode(`${ns6}label`), f.literal('focus node', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}formalized`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}formalized`), f.namedNode(`${ns6}comment`), f.literal('Can be used as reification of sh:intent triples to indicate whether the intended interpretation has already been formalized using SHACL in the same shapes graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}formalized`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}formalized`), f.namedNode(`${ns6}label`), f.literal('formalized', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}formalized`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns6}comment`), f.literal('Can be used to link to a property group to indicate that a property shape belongs to a group of related property shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns6}label`), f.literal('group', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}group`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}PropertyGroup`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}groupConcat`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns6}comment`), f.literal('Specifies a value that must be among the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}hasValue`), f.namedNode(`${ns6}label`), f.literal('has value', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}if`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns6}comment`), f.literal('An optional RDF list of properties that are also permitted in addition to those explicitly enumerated via sh:property/sh:path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns6}label`), f.literal('ignored properties', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}ignoredProperties`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns6}comment`), f.literal('Specifies a list of allowed values so that each value node must be among the members of the given list.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns6}label`), f.literal('in', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}in`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}intent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}intent`), f.namedNode(`${ns6}comment`), f.literal('Provides human-readable descriptions of one or more intended rules, assumptions, or constraints associated with its subject (e.g., a shape). Can be used as input for external agents that understand natural language.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}intent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}intent`), f.namedNode(`${ns6}label`), f.literal('intent', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}intersection`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:intersection.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns6}comment`), f.literal('The (single) value of this property represents an inverse path (object to subject).', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns6}label`), f.literal('inverse path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}inversePath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns6}comment`), f.literal('Set to true for the parameter of a named parameter expression function that uniquely identifies it.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns6}label`), f.literal('key parameter', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}keyParameter`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns6}comment`), f.literal('Outlines how human-readable labels of instances of the associated Parameterizable shall be produced. The values can contain {?paramName} as placeholders for the actual values of the given parameter.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}labelTemplate`), f.namedNode(`${ns6}label`), f.literal('label template', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns6}comment`), f.literal('Specifies a list of language tags that all value nodes must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns6}label`), f.literal('language in', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}languageIn`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns6}comment`), f.literal('Specifies a property path that must have smaller values than the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThan`), f.namedNode(`${ns6}label`), f.literal('less than', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns6}comment`), f.literal('Specifies a property path that must have smaller or equal values than the value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}lessThanOrEquals`), f.namedNode(`${ns6}label`), f.literal('less than or equals', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}limit`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}max`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum number of values in the set of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns6}label`), f.literal('max count', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxCount`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum exclusive value of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxExclusive`), f.namedNode(`${ns6}label`), f.literal('max exclusive', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum inclusive value of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxInclusive`), f.namedNode(`${ns6}label`), f.literal('max inclusive', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum string length of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns6}label`), f.literal('max length', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxLength`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxListLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxListLength`), f.namedNode(`${ns6}comment`), f.literal('Specifies the maximum length that a given SHACL list must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxListLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxListLength`), f.namedNode(`${ns6}label`), f.literal('Maximum list length', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}maxListLength`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}memberShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}memberShape`), f.namedNode(`${ns6}comment`), f.literal('Specifies the shape that all members of SHACL lists must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}memberShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}memberShape`), f.namedNode(`${ns6}label`), f.literal('member shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}memberShape`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns6}comment`), f.literal('A human-readable message (possibly with placeholders for variables) explaining the cause of the result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}message`), f.namedNode(`${ns6}label`), f.literal('message', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}min`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum number of values in the set of value nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns6}label`), f.literal('min count', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minCount`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum exclusive value of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minExclusive`), f.namedNode(`${ns6}label`), f.literal('min exclusive', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum inclusive value of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minInclusive`), f.namedNode(`${ns6}label`), f.literal('min inclusive', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum string length of each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns6}label`), f.literal('min length', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minLength`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minListLength`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minListLength`), f.namedNode(`${ns6}comment`), f.literal('Specifies the minimum length that a given SHACL list must have.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minListLength`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minListLength`), f.namedNode(`${ns6}label`), f.literal('Minimum list length', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minListLength`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minus`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}minus`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:remove.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns6}comment`), f.literal('Human-readable labels for the property in the context of the surrounding shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}name`), f.namedNode(`${ns6}label`), f.literal('name', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns6}comment`), f.literal('The namespace associated with a prefix in a prefix declaration.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns6}label`), f.literal('namespace', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}namespace`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}anyURI`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns6}comment`), f.literal('Specifies the node shape that all value nodes must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns6}label`), f.literal('node', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}node`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeByExpression`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeByExpression`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to node expressions, indicating the node shape(s) that all value nodes must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeByExpression`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeByExpression`), f.namedNode(`${ns6}label`), f.literal('node by expression', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns6}comment`), f.literal('Specifies the node kind (e.g. IRI or literal) each value node.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns6}label`), f.literal('node kind', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}NodeKind`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns6}comment`), f.literal('The validator(s) used to evaluate a constraint in the context of a node shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns6}label`), f.literal('node validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodeValidator`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}nodes`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:nodes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns6}comment`), f.literal('Specifies a shape that the value nodes must not conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns6}label`), f.literal('not', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}not`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns6}comment`), f.literal('An expression producing the nodes that shall be inferred as objects.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}object`), f.namedNode(`${ns6}label`), f.literal('object', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}offset`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns6}comment`), f.literal('The (single) value of this property represents a path that is matched one or more times.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns6}label`), f.literal('one or more path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}oneOrMorePath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns6}comment`), f.literal('Indicates whether a parameter is optional.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns6}label`), f.literal('optional', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}optional`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns6}comment`), f.literal('Specifies a list of shapes so that the value nodes must conform to at least one of the shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns6}label`), f.literal('or', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}or`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns6}comment`), f.literal('Specifies the relative order of this compared to its siblings. For example use 0 for the first, 1 for the second.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}order`), f.namedNode(`${ns6}label`), f.literal('order', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}orderBy`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns6}comment`), f.literal('The parameters of a function or constraint component.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Parameterizable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns6}label`), f.literal('parameter', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}parameter`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Parameter`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns6}comment`), f.literal('Specifies the property path of a property shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}path`), f.namedNode(`${ns6}label`), f.literal('path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns6}comment`), f.literal('Specifies a regular expression pattern that the string representations of the value nodes must match.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns6}label`), f.literal('pattern', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}pattern`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns6}comment`), f.literal('An expression producing the properties that shall be inferred as predicates.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}predicate`), f.namedNode(`${ns6}label`), f.literal('predicate', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns6}comment`), f.literal('The prefix of a prefix declaration.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}PrefixDeclaration`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns6}label`), f.literal('prefix', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefix`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns6}comment`), f.literal('The prefixes that shall be applied before parsing the associated SPARQL query. The objects should define those prefixes using sh:declare.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}prefixes`), f.namedNode(`${ns6}label`), f.literal('prefixes', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to its property shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns6}label`), f.literal('property', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}property`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}PropertyShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns6}comment`), f.literal('The validator(s) used to evaluate a constraint in the context of a property shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns6}label`), f.literal('property validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}propertyValidator`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns6}comment`), f.literal('The maximum number of value nodes that can conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns6}label`), f.literal('qualified max count', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMaxCount`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns6}comment`), f.literal('The minimum number of value nodes that must conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns6}label`), f.literal('qualified min count', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedMinCount`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns6}comment`), f.literal('The shape that a specified number of values must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns6}label`), f.literal('qualified value shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShape`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}comment`), f.literal('Can be used to mark the qualified value shape to be disjoint with its sibling shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}label`), f.literal('qualified value shapes disjoint', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}qualifiedValueShapesDisjoint`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reificationRequired`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reificationRequired`), f.namedNode(`${ns6}comment`), f.literal('Can be used to mark the reification statements required.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reificationRequired`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reificationRequired`), f.namedNode(`${ns6}label`), f.literal('reification required', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reificationRequired`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reifierShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reifierShape`), f.namedNode(`${ns6}comment`), f.literal('The shape that the reified triples must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reifierShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reifierShape`), f.namedNode(`${ns6}label`), f.literal('reifier shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}reifierShape`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}NodeShape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns6}comment`), f.literal('The validation results contained in a validation report.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns6}label`), f.literal('result', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}result`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ValidationResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns6}comment`), f.literal('Links a SPARQL validator with zero or more sh:ResultAnnotation instances, defining how to derive additional result properties based on the variables of the SELECT query.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLSelectValidator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns6}label`), f.literal('result annotation', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultAnnotation`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ResultAnnotation`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns6}comment`), f.literal('Human-readable messages explaining the cause of the result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultMessage`), f.namedNode(`${ns6}label`), f.literal('result message', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns6}comment`), f.literal('The path of a validation result, based on the path of the validated property shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns6}label`), f.literal('result path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultPath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns6}comment`), f.literal('The severity of the result, e.g. warning.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns6}label`), f.literal('result severity', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}resultSeverity`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns6}comment`), f.literal('The expected type of values returned by the associated function.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Function`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns6}label`), f.literal('return type', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}returnType`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rootClass`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rootClass`), f.namedNode(`${ns6}comment`), f.literal('Specifies a class so that each value node must be that class or a (transitive) subclass of that class.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rootClass`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rootClass`), f.namedNode(`${ns6}label`), f.literal('root class', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns6}comment`), f.literal('The rules linked to a shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns6}label`), f.literal('rule', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}rule`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Rule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL SELECT query to execute.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLSelectExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns6}label`), f.literal('select', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}select`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}separator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns6}comment`), f.literal('Defines the severity that validation results produced by a shape or constraint must have. Defaults to sh:Violation.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns6}label`), f.literal('severity', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}severity`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Severity`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shape`), f.namedNode(`${ns6}comment`), f.literal('Links from a node in the data graph to a shape that it is expected to conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shape`), f.namedNode(`${ns6}label`), f.literal('shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shape`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns6}comment`), f.literal('Shapes graphs that should be used when validating this data graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}DataGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns6}label`), f.literal('shapes graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraph`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ShapesGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns6}comment`), f.literal('If true then the validation engine was certain that the shapes graph has passed all SHACL syntax requirements during the validation process.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns6}label`), f.literal('shapes graph well-formed', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}shapesGraphWellFormed`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}singleLine`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}singleLine`), f.namedNode(`${ns6}comment`), f.literal('Specifies whether none of the value nodes may contain a line break.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}singleLine`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}singleLine`), f.namedNode(`${ns6}label`), f.literal('single line', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}singleLine`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}someValue`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}someValue`), f.namedNode(`${ns6}comment`), f.literal('Specifies the shape that at least one value node must conform to.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}someValue`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}someValue`), f.namedNode(`${ns6}label`), f.literal('some value', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}someValue`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns6}comment`), f.literal('The constraint that was validated when the result was produced.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraint`), f.namedNode(`${ns6}label`), f.literal('source constraint', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns6}comment`), f.literal('The constraint component that is the source of the result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns6}label`), f.literal('source constraint component', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceConstraintComponent`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns6}comment`), f.literal('The shape that is was validated when the result was produced.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns6}label`), f.literal('source shape', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sourceShape`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns6}comment`), f.literal('Links a shape with SPARQL constraints.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns6}label`), f.literal('constraint (in SPARQL)', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparql`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}SPARQLConstraint`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL expression that is executed during evaluation of a node expression.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLExprExpression`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns6}label`), f.literal('SPARQL expr', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sparqlExpr`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns6}comment`), f.literal('An expression producing the resources that shall be inferred as subjects.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}TripleRule`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subject`), f.namedNode(`${ns6}label`), f.literal('subject', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subsetOf`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subsetOf`), f.namedNode(`${ns6}comment`), f.literal('Specifies a property path where the set of value nodes must be a subset of the values of that property path.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subsetOf`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}subsetOf`), f.namedNode(`${ns6}label`), f.literal('subset of', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns6}comment`), f.literal('Suggested shapes graphs for this ontology. The values of this property may be used in the absence of specific sh:shapesGraph statements.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}DataGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns6}label`), f.literal('suggested shapes graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}suggestedShapesGraph`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ShapesGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}sum`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to a target specified by an extension language, for example instances of sh:SPARQLTarget.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns6}label`), f.literal('target', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}target`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Target`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to a class, indicating that all instances of the class must conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns6}label`), f.literal('target class', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetClass`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Class`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to node expressions, indicating that the output nodes must conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetNode`), f.namedNode(`${ns6}label`), f.literal('target node', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to a property, indicating that all all objects of triples that have the given property as their predicate must conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns6}label`), f.literal('target objects of', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetObjectsOf`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns6}comment`), f.literal('Links a shape to a property, indicating that all subjects of triples that have the given property as their predicate must conform to the shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns6}label`), f.literal('target subjects of', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetSubjectsOf`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns6}comment`), f.literal('Links a (subject) shape to an (object) shape, indicating that all nodes from the data graph that conform to the given (object) shape must conform to the (subject) shape.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns6}label`), f.literal('target where', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}targetWhere`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}then`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}this`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:var.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}union`), f.namedNode(`${ns6}comment`), f.literal('Deprecated with SHACL 1.2: replaced by shnex:concat.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns6}comment`), f.literal('Specifies whether all node values must have a unique (or no) language tag.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns6}label`), f.literal('unique languages', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueLang`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueMembers`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueMembers`), f.namedNode(`${ns6}comment`), f.literal('Specifies that all members of a SHACL list must be unique.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueMembers`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueMembers`), f.namedNode(`${ns6}label`), f.literal('Unique list members', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueMembers`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueValuesFor`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueValuesFor`), f.namedNode(`${ns6}comment`), f.literal('Specifies one or more properties (as a URI or rdf:List of URIs) for which no two nodes targeted by the same shape may have the same combination of values.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueValuesFor`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}uniqueValuesFor`), f.namedNode(`${ns6}label`), f.literal('unique values for', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}unit`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}unit`), f.namedNode(`${ns6}comment`), f.literal('The code of a unit that the (literal) value nodes should be interpreted with. Recommended values are plain strings from the UCUM and ISO 4217 standards for units of measure and currencies respectively, or unit URIs from QUDT or a similar ontology.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}unit`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}Shape`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}unit`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}unit`), f.namedNode(`${ns6}label`), f.literal('unit', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns6}comment`), f.literal('The SPARQL UPDATE to execute.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}SPARQLUpdateExecutable`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns6}label`), f.literal('update', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}update`), f.namedNode(`${ns6}range`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns6}comment`), f.literal('The subject Validation Report was generated using the object Shapes Graph.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns6}label`), f.literal('used shapes graph', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}usedShapesGraph`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ShapesGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns6}comment`), f.literal('A Validation Report that exists for the subject.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}DataGraph`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns6}label`), f.literal('validation report', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validationReport`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}ValidationReport`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns6}comment`), f.literal('The validator(s) used to evaluate constraints of either node or property shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}ConstraintComponent`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns6}label`), f.literal('validator', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}validator`), f.namedNode(`${ns6}range`), f.namedNode(`${ns1}Validator`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns6}comment`), f.literal('An RDF node that has caused the result.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns6}domain`), f.namedNode(`${ns1}AbstractResult`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}value`), f.namedNode(`${ns6}label`), f.literal('value', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}values`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns6}comment`), f.literal('Specifies a list of shapes so that the value nodes must conform to exactly one of the shapes.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns6}label`), f.literal('exactly one', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}xone`), f.namedNode(`${ns6}range`), f.namedNode(`${ns4}List`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns6}comment`), f.literal('The (single) value of this property represents a path that is matched zero or more times.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns6}label`), f.literal('zero or more path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns4}type`), f.namedNode(`${ns4}Property`), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns6}comment`), f.literal('The (single) value of this property represents a path that is matched zero or one times.', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns6}isDefinedBy`), f.namedNode(ns1), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns6}label`), f.literal('zero or one path', 'en'), f.namedNode(ns1)),
+        f.quad(f.namedNode(`${ns1}zeroOrOnePath`), f.namedNode(`${ns6}range`), f.namedNode(`${ns6}Resource`), f.namedNode(ns1)),
+        f.quad(blankNodes[4], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[4], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[4], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}ShapeShape`), f.namedNode(ns1)),
         f.quad(blankNodes[4], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}filterShape`), f.namedNode(ns1)),
-        f.quad(blankNodes[40], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}IfExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[40], f.namedNode(`${ns2}rest`), blankNodes[41], f.namedNode(ns1)),
-        f.quad(blankNodes[16], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[16], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[40], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}IfExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[40], f.namedNode(`${ns4}rest`), blankNodes[41], f.namedNode(ns1)),
+        f.quad(blankNodes[16], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[16], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[16], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[16], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[32], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(blankNodes[32], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[32], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[32], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(blankNodes[32], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[32], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[32], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}select`), f.namedNode(ns1)),
-        f.quad(blankNodes[6], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(blankNodes[6], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[6], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(blankNodes[6], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[6], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}separator`), f.namedNode(ns1)),
-        f.quad(blankNodes[42], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(ns1)),
-        f.quad(blankNodes[42], f.namedNode(`${ns2}rest`), blankNodes[43], f.namedNode(ns1)),
-        f.quad(blankNodes[19], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
-        f.quad(blankNodes[19], f.namedNode(`${ns2}rest`), blankNodes[44], f.namedNode(ns1)),
-        f.quad(blankNodes[45], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}MinExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[45], f.namedNode(`${ns2}rest`), blankNodes[46], f.namedNode(ns1)),
-        f.quad(blankNodes[47], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[47], f.namedNode(`${ns2}rest`), blankNodes[48], f.namedNode(ns1)),
-        f.quad(blankNodes[25], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[25], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[25], f.namedNode(`${ns1}node`), f.namedNode(`${ns5}PathShape`), f.namedNode(ns1)),
+        f.quad(blankNodes[42], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}BlankNodeOrLiteral`), f.namedNode(ns1)),
+        f.quad(blankNodes[42], f.namedNode(`${ns4}rest`), blankNodes[43], f.namedNode(ns1)),
+        f.quad(blankNodes[19], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
+        f.quad(blankNodes[19], f.namedNode(`${ns4}rest`), blankNodes[44], f.namedNode(ns1)),
+        f.quad(blankNodes[45], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}MinExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[45], f.namedNode(`${ns4}rest`), blankNodes[46], f.namedNode(ns1)),
+        f.quad(blankNodes[47], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}SPARQLAskExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[47], f.namedNode(`${ns4}rest`), blankNodes[48], f.namedNode(ns1)),
+        f.quad(blankNodes[25], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[25], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[25], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}PathShape`), f.namedNode(ns1)),
         f.quad(blankNodes[25], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}path`), f.namedNode(ns1)),
-        f.quad(blankNodes[49], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}MinusExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[49], f.namedNode(`${ns2}rest`), blankNodes[50], f.namedNode(ns1)),
-        f.quad(blankNodes[46], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}MaxExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[46], f.namedNode(`${ns2}rest`), blankNodes[51], f.namedNode(ns1)),
-        f.quad(blankNodes[52], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}LimitExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[52], f.namedNode(`${ns2}rest`), blankNodes[53], f.namedNode(ns1)),
-        f.quad(blankNodes[8], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[49], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}MinusExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[49], f.namedNode(`${ns4}rest`), blankNodes[50], f.namedNode(ns1)),
+        f.quad(blankNodes[46], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}MaxExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[46], f.namedNode(`${ns4}rest`), blankNodes[51], f.namedNode(ns1)),
+        f.quad(blankNodes[52], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}LimitExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[52], f.namedNode(`${ns4}rest`), blankNodes[53], f.namedNode(ns1)),
+        f.quad(blankNodes[8], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[8], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[8], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}then`), f.namedNode(ns1)),
-        f.quad(blankNodes[44], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
-        f.quad(blankNodes[44], f.namedNode(`${ns2}rest`), blankNodes[54], f.namedNode(ns1)),
-        f.quad(blankNodes[55], f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns2}rest`), f.namedNode(ns1)),
-        f.quad(blankNodes[5], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[0], f.namedNode(`${ns1}namespace`), f.literal('http://www.w3.org/ns/shacl#', f.namedNode(`${ns3}anyURI`)), f.namedNode(ns1)),
+        f.quad(blankNodes[0], f.namedNode(`${ns1}prefix`), f.literal('sh'), f.namedNode(ns1)),
+        f.quad(blankNodes[44], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}IRI`), f.namedNode(ns1)),
+        f.quad(blankNodes[44], f.namedNode(`${ns4}rest`), blankNodes[54], f.namedNode(ns1)),
+        f.quad(blankNodes[55], f.namedNode(`${ns1}zeroOrMorePath`), f.namedNode(`${ns4}rest`), f.namedNode(ns1)),
+        f.quad(blankNodes[5], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[5], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[5], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[56], f.namedNode(`${ns2}first`), blankNodes[57], f.namedNode(ns1)),
-        f.quad(blankNodes[56], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1)),
-        f.quad(blankNodes[0], f.namedNode(`${ns1}namespace`), f.literal('http://www.w3.org/ns/shacl#'), f.namedNode(ns1)),
-        f.quad(blankNodes[0], f.namedNode(`${ns1}prefix`), f.literal('sh'), f.namedNode(ns1)),
+        f.quad(blankNodes[56], f.namedNode(`${ns4}first`), blankNodes[57], f.namedNode(ns1)),
+        f.quad(blankNodes[56], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1)),
         f.quad(blankNodes[58], f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNode`), f.namedNode(ns1)),
         f.quad(blankNodes[58], f.namedNode(`${ns1}not`), blankNodes[59], f.namedNode(ns1)),
-        f.quad(blankNodes[18], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}FocusNodeOrConstantTermExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[18], f.namedNode(`${ns2}rest`), blankNodes[60], f.namedNode(ns1)),
-        f.quad(blankNodes[15], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[15], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[18], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}FocusNodeOrConstantTermExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[18], f.namedNode(`${ns4}rest`), blankNodes[60], f.namedNode(ns1)),
+        f.quad(blankNodes[15], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[15], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[15], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[15], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}min`), f.namedNode(ns1)),
-        f.quad(blankNodes[30], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[30], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[30], f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(blankNodes[30], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}prefixes`), f.namedNode(ns1)),
-        f.quad(blankNodes[61], f.namedNode(`${ns2}first`), blankNodes[55], f.namedNode(ns1)),
-        f.quad(blankNodes[61], f.namedNode(`${ns2}rest`), blankNodes[62], f.namedNode(ns1)),
-        f.quad(blankNodes[1], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[1], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[61], f.namedNode(`${ns4}first`), blankNodes[55], f.namedNode(ns1)),
+        f.quad(blankNodes[61], f.namedNode(`${ns4}rest`), blankNodes[62], f.namedNode(ns1)),
+        f.quad(blankNodes[1], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[1], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[1], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[1], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}count`), f.namedNode(ns1)),
-        f.quad(blankNodes[12], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[12], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[12], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[12], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[12], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[12], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[33], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[33], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[33], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[33], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[63], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[63], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[63], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}ListShape`), f.namedNode(ns1)),
+        f.quad(blankNodes[63], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[63], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[63], f.namedNode(`${ns1}node`), f.namedNode(`${ns8}ListShape`), f.namedNode(ns1)),
         f.quad(blankNodes[63], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}intersection`), f.namedNode(ns1)),
         f.quad(blankNodes[63], f.namedNode(`${ns1}property`), blankNodes[64], f.namedNode(ns1)),
-        f.quad(blankNodes[13], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(blankNodes[13], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[13], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[13], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(blankNodes[13], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[13], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[13], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}limit`), f.namedNode(ns1)),
-        f.quad(blankNodes[59], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}ExistsExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[59], f.namedNode(`${ns2}rest`), blankNodes[40], f.namedNode(ns1)),
-        f.quad(blankNodes[36], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[36], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[59], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}ExistsExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[59], f.namedNode(`${ns4}rest`), blankNodes[40], f.namedNode(ns1)),
+        f.quad(blankNodes[36], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[36], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[36], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[36], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}object`), f.namedNode(ns1)),
-        f.quad(blankNodes[2], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[2], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[2], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[2], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[2], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[2], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}distinct`), f.namedNode(ns1)),
-        f.quad(blankNodes[65], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[65], f.namedNode(`${ns2}rest`), blankNodes[66], f.namedNode(ns1)),
+        f.quad(blankNodes[65], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}IntersectionExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[65], f.namedNode(`${ns4}rest`), blankNodes[66], f.namedNode(ns1)),
         f.quad(blankNodes[57], f.namedNode(`${ns1}xone`), blankNodes[59], f.namedNode(ns1)),
-        f.quad(blankNodes[34], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[34], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[34], f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(blankNodes[34], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}prefixes`), f.namedNode(ns1)),
-        f.quad(blankNodes[67], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[67], f.namedNode(`${ns2}rest`), blankNodes[68], f.namedNode(ns1)),
-        f.quad(blankNodes[20], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[20], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[67], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}GroupConcatExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[67], f.namedNode(`${ns4}rest`), blankNodes[68], f.namedNode(ns1)),
+        f.quad(blankNodes[20], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[20], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[20], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[20], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
         f.quad(blankNodes[69], f.namedNode(`${ns1}property`), blankNodes[63], f.namedNode(ns1)),
-        f.quad(blankNodes[27], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(blankNodes[27], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[27], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[27], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(blankNodes[27], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[27], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[27], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}ask`), f.namedNode(ns1)),
-        f.quad(blankNodes[28], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[28], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[28], f.namedNode(`${ns1}nodeKind`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
         f.quad(blankNodes[28], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}prefixes`), f.namedNode(ns1)),
-        f.quad(blankNodes[64], f.namedNode(`${ns1}minCount`), f.literal('2', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[64], f.namedNode(`${ns1}minCount`), f.literal('2', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[64], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[64], f.namedNode(`${ns1}path`), blankNodes[61], f.namedNode(ns1)),
-        f.quad(blankNodes[22], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}boolean`), f.namedNode(ns1)),
-        f.quad(blankNodes[22], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[22], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}boolean`), f.namedNode(ns1)),
+        f.quad(blankNodes[22], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[22], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}desc`), f.namedNode(ns1)),
-        f.quad(blankNodes[29], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[29], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[29], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[29], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[41], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[41], f.namedNode(`${ns2}rest`), blankNodes[70], f.namedNode(ns1)),
-        f.quad(blankNodes[62], f.namedNode(`${ns2}first`), f.namedNode(`${ns2}first`), f.namedNode(ns1)),
-        f.quad(blankNodes[62], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1)),
-        f.quad(blankNodes[48], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[48], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1)),
-        f.quad(blankNodes[26], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[41], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}FilterShapeExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[41], f.namedNode(`${ns4}rest`), blankNodes[70], f.namedNode(ns1)),
+        f.quad(blankNodes[62], f.namedNode(`${ns4}first`), f.namedNode(`${ns4}first`), f.namedNode(ns1)),
+        f.quad(blankNodes[62], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1)),
+        f.quad(blankNodes[48], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}SPARQLSelectExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[48], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1)),
+        f.quad(blankNodes[26], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[26], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[26], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[71], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}CountExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[71], f.namedNode(`${ns2}rest`), blankNodes[45], f.namedNode(ns1)),
-        f.quad(blankNodes[7], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[7], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[71], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}CountExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[71], f.namedNode(`${ns4}rest`), blankNodes[45], f.namedNode(ns1)),
+        f.quad(blankNodes[7], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[7], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[7], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[7], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}groupConcat`), f.namedNode(ns1)),
-        f.quad(blankNodes[54], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
-        f.quad(blankNodes[54], f.namedNode(`${ns2}rest`), blankNodes[72], f.namedNode(ns1)),
-        f.quad(blankNodes[23], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[23], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[54], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}Literal`), f.namedNode(ns1)),
+        f.quad(blankNodes[54], f.namedNode(`${ns4}rest`), blankNodes[72], f.namedNode(ns1)),
+        f.quad(blankNodes[23], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[23], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[23], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[23], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}nodes`), f.namedNode(ns1)),
-        f.quad(blankNodes[21], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}integer`), f.namedNode(ns1)),
-        f.quad(blankNodes[21], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[21], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[21], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}integer`), f.namedNode(ns1)),
+        f.quad(blankNodes[21], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[21], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[21], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}offset`), f.namedNode(ns1)),
-        f.quad(blankNodes[50], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}DistinctExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[50], f.namedNode(`${ns2}rest`), blankNodes[71], f.namedNode(ns1)),
-        f.quad(blankNodes[14], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[14], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[50], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}DistinctExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[50], f.namedNode(`${ns4}rest`), blankNodes[71], f.namedNode(ns1)),
+        f.quad(blankNodes[14], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[14], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[14], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[14], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}max`), f.namedNode(ns1)),
-        f.quad(blankNodes[51], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}SumExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[51], f.namedNode(`${ns2}rest`), blankNodes[67], f.namedNode(ns1)),
-        f.quad(blankNodes[68], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}OrderByExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[68], f.namedNode(`${ns2}rest`), blankNodes[52], f.namedNode(ns1)),
-        f.quad(blankNodes[60], f.namedNode(`${ns2}first`), blankNodes[58], f.namedNode(ns1)),
-        f.quad(blankNodes[60], f.namedNode(`${ns2}rest`), blankNodes[56], f.namedNode(ns1)),
-        f.quad(blankNodes[24], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[24], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[51], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}SumExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[51], f.namedNode(`${ns4}rest`), blankNodes[67], f.namedNode(ns1)),
+        f.quad(blankNodes[68], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}OrderByExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[68], f.namedNode(`${ns4}rest`), blankNodes[52], f.namedNode(ns1)),
+        f.quad(blankNodes[60], f.namedNode(`${ns4}first`), blankNodes[58], f.namedNode(ns1)),
+        f.quad(blankNodes[60], f.namedNode(`${ns4}rest`), blankNodes[56], f.namedNode(ns1)),
+        f.quad(blankNodes[24], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[24], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[24], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[24], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}orderBy`), f.namedNode(ns1)),
-        f.quad(blankNodes[35], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[35], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[35], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[35], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[35], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[35], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}sum`), f.namedNode(ns1)),
-        f.quad(blankNodes[3], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[3], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[3], f.namedNode(`${ns1}node`), f.namedNode(`${ns5}ShapeShape`), f.namedNode(ns1)),
+        f.quad(blankNodes[3], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[3], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[3], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}ShapeShape`), f.namedNode(ns1)),
         f.quad(blankNodes[3], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}exists`), f.namedNode(ns1)),
-        f.quad(blankNodes[37], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[37], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[37], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[37], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[37], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[37], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}subject`), f.namedNode(ns1)),
         f.quad(blankNodes[11], f.namedNode(`${ns1}and`), blankNodes[73], f.namedNode(ns1)),
-        f.quad(blankNodes[11], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[11], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[11], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}ListShape`), f.namedNode(ns1)),
+        f.quad(blankNodes[11], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[11], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[11], f.namedNode(`${ns1}node`), f.namedNode(`${ns8}ListShape`), f.namedNode(ns1)),
         f.quad(blankNodes[11], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}intersection`), f.namedNode(ns1)),
-        f.quad(blankNodes[9], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[9], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[9], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[9], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[9], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[9], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}if`), f.namedNode(ns1)),
-        f.quad(blankNodes[53], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}OffsetExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[53], f.namedNode(`${ns2}rest`), blankNodes[47], f.namedNode(ns1)),
-        f.quad(blankNodes[72], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
-        f.quad(blankNodes[72], f.namedNode(`${ns2}rest`), blankNodes[42], f.namedNode(ns1)),
-        f.quad(blankNodes[70], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}PathExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[70], f.namedNode(`${ns2}rest`), blankNodes[65], f.namedNode(ns1)),
-        f.quad(blankNodes[38], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[38], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[53], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}OffsetExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[53], f.namedNode(`${ns4}rest`), blankNodes[47], f.namedNode(ns1)),
+        f.quad(blankNodes[72], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}BlankNodeOrIRI`), f.namedNode(ns1)),
+        f.quad(blankNodes[72], f.namedNode(`${ns4}rest`), blankNodes[42], f.namedNode(ns1)),
+        f.quad(blankNodes[70], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}PathExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[70], f.namedNode(`${ns4}rest`), blankNodes[65], f.namedNode(ns1)),
+        f.quad(blankNodes[38], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[38], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[38], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[38], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}predicate`), f.namedNode(ns1)),
         f.quad(blankNodes[39], f.namedNode(`${ns1}and`), blankNodes[74], f.namedNode(ns1)),
-        f.quad(blankNodes[39], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[39], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[39], f.namedNode(`${ns1}node`), f.namedNode(`${ns7}ListShape`), f.namedNode(ns1)),
+        f.quad(blankNodes[39], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[39], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[39], f.namedNode(`${ns1}node`), f.namedNode(`${ns8}ListShape`), f.namedNode(ns1)),
         f.quad(blankNodes[39], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}union`), f.namedNode(ns1)),
-        f.quad(blankNodes[66], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}UnionExpression`), f.namedNode(ns1)),
-        f.quad(blankNodes[66], f.namedNode(`${ns2}rest`), blankNodes[49], f.namedNode(ns1)),
-        f.quad(blankNodes[10], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[66], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}UnionExpression`), f.namedNode(ns1)),
+        f.quad(blankNodes[66], f.namedNode(`${ns4}rest`), blankNodes[49], f.namedNode(ns1)),
+        f.quad(blankNodes[10], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[10], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[10], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}else`), f.namedNode(ns1)),
-        f.quad(blankNodes[17], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[17], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[17], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[17], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[17], f.namedNode(`${ns1}node`), f.namedNode(`${ns1}NodeExpression`), f.namedNode(ns1)),
         f.quad(blankNodes[17], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}minus`), f.namedNode(ns1)),
-        f.quad(blankNodes[74], f.namedNode(`${ns2}first`), blankNodes[75], f.namedNode(ns1)),
-        f.quad(blankNodes[74], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1)),
-        f.quad(blankNodes[73], f.namedNode(`${ns2}first`), blankNodes[75], f.namedNode(ns1)),
-        f.quad(blankNodes[73], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1)),
-        f.quad(blankNodes[31], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns6}string`), f.namedNode(ns1)),
-        f.quad(blankNodes[31], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
-        f.quad(blankNodes[31], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns6}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[74], f.namedNode(`${ns4}first`), blankNodes[75], f.namedNode(ns1)),
+        f.quad(blankNodes[74], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1)),
+        f.quad(blankNodes[73], f.namedNode(`${ns4}first`), blankNodes[75], f.namedNode(ns1)),
+        f.quad(blankNodes[73], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1)),
+        f.quad(blankNodes[31], f.namedNode(`${ns1}datatype`), f.namedNode(`${ns3}string`), f.namedNode(ns1)),
+        f.quad(blankNodes[31], f.namedNode(`${ns1}maxCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
+        f.quad(blankNodes[31], f.namedNode(`${ns1}minCount`), f.literal('1', f.namedNode(`${ns3}integer`)), f.namedNode(ns1)),
         f.quad(blankNodes[31], f.namedNode(`${ns1}path`), f.namedNode(`${ns1}construct`), f.namedNode(ns1)),
-        f.quad(blankNodes[43], f.namedNode(`${ns2}first`), f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(ns1)),
-        f.quad(blankNodes[43], f.namedNode(`${ns2}rest`), f.namedNode(`${ns2}nil`), f.namedNode(ns1))
+        f.quad(blankNodes[43], f.namedNode(`${ns4}first`), f.namedNode(`${ns1}IRIOrLiteral`), f.namedNode(ns1)),
+        f.quad(blankNodes[43], f.namedNode(`${ns4}rest`), f.namedNode(`${ns4}nil`), f.namedNode(ns1))
     ];
 };
+
+function getDefaultExportFromCjs (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+}
+
+var addAll_1;
+var hasRequiredAddAll;
+
+function requireAddAll () {
+	if (hasRequiredAddAll) return addAll_1;
+	hasRequiredAddAll = 1;
+	function addAll (dataset, quads) {
+	  for (const quad of quads) {
+	    dataset.add(quad);
+	  }
+
+	  return dataset
+	}
+
+	addAll_1 = addAll;
+	return addAll_1;
+}
+
+var addAllExports = requireAddAll();
+var addAll = /*@__PURE__*/getDefaultExportFromCjs(addAllExports);
 
 class NodeSet extends TermSet {
     addAll(nodes) {
@@ -3623,12 +3910,16 @@ class ShapesGraph {
     _shapes;
     _shapeNodesWithConstraints;
     _shapesWithTarget;
-    constructor(context) {
+    constructor(context, { additionalVocabularies = [] }) {
         this.context = context;
         // Collect all defined constraint components
         const { sh } = context.ns;
+        const vocabularyDataset = context.factory.dataset();
+        for (const additionalVocabulary of [shaclVocabularyFactory, ...additionalVocabularies]) {
+            addAll(vocabularyDataset, additionalVocabulary(context));
+        }
         const shaclVocabulary = context.factory.clownface({
-            dataset: context.factory.dataset(shaclVocabularyFactory(context)),
+            dataset: vocabularyDataset,
         });
         const componentNodes = getInstancesOf(shaclVocabulary.node(sh.ConstraintComponent), context.ns);
         this._components = [...componentNodes].map((node) => new ConstraintComponent(node, context, shaclVocabulary));
@@ -3893,10 +4184,6 @@ class Shape {
             return [focusNode];
         }
     }
-}
-
-function getDefaultExportFromCjs (x) {
-	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
 }
 
 var browser = {exports: {}};
@@ -4379,17 +4666,17 @@ var hasRequiredBrowser;
 function requireBrowser () {
 	if (hasRequiredBrowser) return browser.exports;
 	hasRequiredBrowser = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		/**
 		 * This is the web browser implementation of `debug()`.
 		 */
 
-		exports$1.formatArgs = formatArgs;
-		exports$1.save = save;
-		exports$1.load = load;
-		exports$1.useColors = useColors;
-		exports$1.storage = localstorage();
-		exports$1.destroy = (() => {
+		exports.formatArgs = formatArgs;
+		exports.save = save;
+		exports.load = load;
+		exports.useColors = useColors;
+		exports.storage = localstorage();
+		exports.destroy = (() => {
 			let warned = false;
 
 			return () => {
@@ -4404,7 +4691,7 @@ function requireBrowser () {
 		 * Colors.
 		 */
 
-		exports$1.colors = [
+		exports.colors = [
 			'#0000CC',
 			'#0000FF',
 			'#0033CC',
@@ -4569,7 +4856,7 @@ function requireBrowser () {
 		 *
 		 * @api public
 		 */
-		exports$1.log = console.debug || console.log || (() => {});
+		exports.log = console.debug || console.log || (() => {});
 
 		/**
 		 * Save `namespaces`.
@@ -4580,9 +4867,9 @@ function requireBrowser () {
 		function save(namespaces) {
 			try {
 				if (namespaces) {
-					exports$1.storage.setItem('debug', namespaces);
+					exports.storage.setItem('debug', namespaces);
 				} else {
-					exports$1.storage.removeItem('debug');
+					exports.storage.removeItem('debug');
 				}
 			} catch (error) {
 				// Swallow
@@ -4599,7 +4886,7 @@ function requireBrowser () {
 		function load() {
 			let r;
 			try {
-				r = exports$1.storage.getItem('debug') || exports$1.storage.getItem('DEBUG') ;
+				r = exports.storage.getItem('debug') || exports.storage.getItem('DEBUG') ;
 			} catch (error) {
 				// Swallow
 				// XXX (@Qix-) should we be logging these?
@@ -4635,7 +4922,7 @@ function requireBrowser () {
 			}
 		}
 
-		module.exports = requireCommon()(exports$1);
+		module.exports = requireCommon()(exports);
 
 		const {formatters} = module.exports;
 
@@ -5071,6 +5358,8 @@ namespace("http://www.w3.org/ns/auth/acl#");
 
 namespace("https://www.w3.org/ns/activitystreams#");
 
+namespace("https://barnard59.zazuko.com/vocab#");
+
 namespace("http://purl.org/ontology/bibo/");
 
 namespace("http://creativecommons.org/ns#");
@@ -5078,6 +5367,8 @@ namespace("http://creativecommons.org/ns#");
 namespace("http://www.w3.org/ns/auth/cert#");
 
 namespace("http://www.w3.org/2011/content#");
+
+namespace("https://code.described.at/");
 
 namespace("http://qudt.org/vocab/constant/");
 
@@ -5087,6 +5378,8 @@ const builder$2 = namespace("http://www.w3.org/ns/csvw#");
 const strict$2 = builder$2;
 
 namespace("http://commontag.org/ns#");
+
+namespace("https://cube.link/");
 
 namespace("http://qudt.org/vocab/currency/");
 
@@ -5114,7 +5407,7 @@ namespace("http://usefulinc.com/ns/doap#");
 
 namespace("https://ekgf.github.io/dprod/");
 
-namespace("http://www.w3.org/ns/dpv#");
+namespace("https://w3id.org/dpv#");
 
 namespace("http://www.w3.org/ns/dqv#");
 
@@ -5137,6 +5430,8 @@ namespace("http://www.opengis.net/ont/geosparql#");
 namespace("http://www.opengis.net/def/function/geosparql/");
 
 namespace("http://www.opengis.net/def/rule/geosparql/");
+
+namespace("https://w3id.org/semanticarts/ns/ontology/gist/");
 
 namespace("http://www.opengis.net/ont/gml#");
 
@@ -5176,6 +5471,8 @@ namespace("http://www.loc.gov/mads/rdf/v1#");
 
 namespace("http://www.w3.org/2000/10/swap/math#");
 
+namespace("https://cube.link/meta/");
+
 namespace("http://www.w3.org/ns/oa#");
 
 namespace("http://ogp.me/ns#");
@@ -5187,6 +5484,8 @@ namespace("http://www.w3.org/ns/org#");
 namespace("http://www.w3.org/2002/07/owl#");
 
 namespace("http://www.w3.org/ns/pim/space#");
+
+namespace("https://pipeline.described.at/");
 
 namespace("http://qudt.org/vocab/prefix/");
 
@@ -5208,6 +5507,8 @@ const strict$1 = builder$1;
 namespace("http://www.w3.org/ns/rdfa#");
 
 namespace("http://www.w3.org/2000/01/rdf-schema#");
+
+namespace("https://cube.link/relation/");
 
 namespace("http://purl.org/stuff/rev#");
 
@@ -5314,73 +5615,73 @@ class Registry {
         return this.validators.get(datatype);
     }
 }
-const validators$1 = new Registry();
-validators$1.register(strict.anySimpleType, () => true);
-validators$1.register(strict.anyAtomicType, () => true);
-validators$1.register(strict.string, () => true);
-validators$1.register(strict.normalizedString, value => isNormalized(value));
-validators$1.register(strict.token, value => (isNormalized(value) &&
-    !value.startsWith(' ') &&
-    !value.endsWith(' ') &&
-    !value.includes('  ')));
+const validators = new Registry();
+validators.register(strict.anySimpleType, () => true);
+validators.register(strict.anyAtomicType, () => true);
+validators.register(strict.string, () => true);
+validators.register(strict.normalizedString, value => isNormalized(value));
+validators.register(strict.token, value => (isNormalized(value)
+    && !value.startsWith(' ')
+    && !value.endsWith(' ')
+    && !value.includes('  ')));
 function isNormalized(value) {
     const forbiddenChars = ['\n', '\r', '\t'];
     return !forbiddenChars.some(forbiddenChar => value.includes(forbiddenChar));
 }
 const languagePattern = /^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$/;
-validators$1.register(strict.language, value => languagePattern.test(value));
+validators.register(strict.language, value => languagePattern.test(value));
 const anyURIPattern = /^[^\ufffe\uffff]*$/;
-validators$1.register(strict.anyURI, value => anyURIPattern.test(value));
+validators.register(strict.anyURI, value => anyURIPattern.test(value));
 const signSeg = '(\\+|-)?';
 const integerPattern = new RegExp(`^${signSeg}\\d+$`);
-validators$1.register(strict.integer, value => integerPattern.test(value));
-validators$1.register(strict.nonNegativeInteger, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('0')));
-validators$1.register(strict.positiveInteger, value => (integerPattern.test(value) &&
-    BigInt(value) > BigInt('0')));
-validators$1.register(strict.nonPositiveInteger, value => (integerPattern.test(value) &&
-    BigInt(value) <= BigInt('0')));
-validators$1.register(strict.negativeInteger, value => (integerPattern.test(value) &&
-    BigInt(value) < BigInt('0')));
-validators$1.register(strict.int, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('-2147483647') &&
-    BigInt(value) <= BigInt('2147483648')));
-validators$1.register(strict.unsignedInt, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('0') &&
-    BigInt(value) <= BigInt('4294967295')));
-validators$1.register(strict.long, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('-9223372036854775808') &&
-    BigInt(value) <= BigInt('9223372036854775807')));
-validators$1.register(strict.unsignedLong, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('0') &&
-    BigInt(value) <= BigInt('18446744073709551615')));
-validators$1.register(strict.short, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('-32768') &&
-    BigInt(value) <= BigInt('32767')));
-validators$1.register(strict.unsignedShort, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('0') &&
-    BigInt(value) <= BigInt('65535')));
-validators$1.register(strict.byte, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('-128') &&
-    BigInt(value) <= BigInt('127')));
-validators$1.register(strict.unsignedByte, value => (integerPattern.test(value) &&
-    BigInt(value) >= BigInt('0') &&
-    BigInt(value) <= BigInt('255')));
-validators$1.register(strict.boolean, value => (value === '1' ||
-    value === 'true' ||
-    value === '0' ||
-    value === 'false'));
+validators.register(strict.integer, value => integerPattern.test(value));
+validators.register(strict.nonNegativeInteger, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('0')));
+validators.register(strict.positiveInteger, value => (integerPattern.test(value)
+    && BigInt(value) > BigInt('0')));
+validators.register(strict.nonPositiveInteger, value => (integerPattern.test(value)
+    && BigInt(value) <= BigInt('0')));
+validators.register(strict.negativeInteger, value => (integerPattern.test(value)
+    && BigInt(value) < BigInt('0')));
+validators.register(strict.int, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('-2147483648')
+    && BigInt(value) <= BigInt('2147483647')));
+validators.register(strict.unsignedInt, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('0')
+    && BigInt(value) <= BigInt('4294967295')));
+validators.register(strict.long, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('-9223372036854775808')
+    && BigInt(value) <= BigInt('9223372036854775807')));
+validators.register(strict.unsignedLong, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('0')
+    && BigInt(value) <= BigInt('18446744073709551615')));
+validators.register(strict.short, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('-32768')
+    && BigInt(value) <= BigInt('32767')));
+validators.register(strict.unsignedShort, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('0')
+    && BigInt(value) <= BigInt('65535')));
+validators.register(strict.byte, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('-128')
+    && BigInt(value) <= BigInt('127')));
+validators.register(strict.unsignedByte, value => (integerPattern.test(value)
+    && BigInt(value) >= BigInt('0')
+    && BigInt(value) <= BigInt('255')));
+validators.register(strict.boolean, value => (value === '1'
+    || value === 'true'
+    || value === '0'
+    || value === 'false'));
 const decimalSeg = `${signSeg}(\\d+\\.?\\d*|\\.\\d+)`;
-const decimalPattern = new RegExp(`^${signSeg}${decimalSeg}$`);
-validators$1.register(strict.decimal, value => decimalPattern.test(value));
-validators$1.register(strict.float, validateFloat);
-validators$1.register(strict.double, validateFloat);
-const floatPattern = new RegExp(`^${signSeg}${decimalSeg}((E|e)(\\+|-)?\\d+)?$`);
+const decimalPattern = new RegExp(`^${decimalSeg}$`);
+validators.register(strict.decimal, value => decimalPattern.test(value));
+validators.register(strict.float, validateFloat);
+validators.register(strict.double, validateFloat);
+const floatPattern = new RegExp(`^${decimalSeg}((E|e)(\\+|-)?\\d+)?$`);
 function validateFloat(value) {
-    return (value === 'INF' ||
-        value === '-INF' ||
-        value === 'NaN' ||
-        floatPattern.test(value));
+    return (value === 'INF'
+        || value === '-INF'
+        || value === 'NaN'
+        || floatPattern.test(value));
 }
 const dateSignSeg = '-?';
 const durationYearSeg = '\\d+Y';
@@ -5394,11 +5695,11 @@ const durationTimeSeg = `T((${durationHourSeg}(${durationMinuteSeg})?(${duration
 const durationDayTimeSeg = `(${durationDaySeg}(${durationTimeSeg})?|${durationTimeSeg})`;
 const durationSeg = `${dateSignSeg}P((${durationYearMonthSeg}(${durationDayTimeSeg})?)|${durationDayTimeSeg})`;
 const durationPattern = new RegExp(`^${durationSeg}$`);
-validators$1.register(strict.duration, value => durationPattern.test(value));
+validators.register(strict.duration, value => durationPattern.test(value));
 const dayTimeDurationPattern = new RegExp(`^${dateSignSeg}P${durationDayTimeSeg}$`);
-validators$1.register(strict.dayTimeDuration, value => dayTimeDurationPattern.test(value));
+validators.register(strict.dayTimeDuration, value => dayTimeDurationPattern.test(value));
 const yearMonthDurationPattern = new RegExp(`^${dateSignSeg}P${durationYearMonthSeg}$`);
-validators$1.register(strict.yearMonthDuration, value => yearMonthDurationPattern.test(value));
+validators.register(strict.yearMonthDuration, value => yearMonthDurationPattern.test(value));
 const yearSeg = `${dateSignSeg}(([1-9]\\d{3,})|(0\\d{3}))`;
 const timezoneSeg = '(((\\+|-)\\d{2}:\\d{2})|Z)';
 const monthSeg = '\\d{2}';
@@ -5406,25 +5707,25 @@ const daySeg = '\\d{2}';
 const dateSeg = `${yearSeg}-${monthSeg}-${daySeg}`;
 const timeSeg = '\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?';
 const dateTimePattern = new RegExp(`^${dateSeg}T${timeSeg}${timezoneSeg}?$`);
-validators$1.register(strict.dateTime, value => dateTimePattern.test(value));
+validators.register(strict.dateTime, value => dateTimePattern.test(value));
 const dateTimeStampPattern = new RegExp(`^${dateSeg}T${timeSeg}${timezoneSeg}$`);
-validators$1.register(strict.dateTimeStamp, value => dateTimeStampPattern.test(value));
+validators.register(strict.dateTimeStamp, value => dateTimeStampPattern.test(value));
 const datePattern = new RegExp(`^${dateSeg}${timezoneSeg}?$`);
-validators$1.register(strict.date, value => datePattern.test(value));
-const dayPattern = new RegExp(`^${daySeg}${timezoneSeg}?$`);
-validators$1.register(strict.gDay, value => dayPattern.test(value));
+validators.register(strict.date, value => datePattern.test(value));
+const dayPattern = new RegExp(`^---${daySeg}${timezoneSeg}?$`);
+validators.register(strict.gDay, value => dayPattern.test(value));
 const monthPattern = new RegExp(`^--${monthSeg}${timezoneSeg}?$`);
-validators$1.register(strict.gMonth, value => monthPattern.test(value));
-const monthDayPattern = new RegExp(`^${monthSeg}-${daySeg}${timezoneSeg}?$`);
-validators$1.register(strict.gMonthDay, value => monthDayPattern.test(value));
+validators.register(strict.gMonth, value => monthPattern.test(value));
+const monthDayPattern = new RegExp(`^--${monthSeg}-${daySeg}${timezoneSeg}?$`);
+validators.register(strict.gMonthDay, value => monthDayPattern.test(value));
 const yearPattern = new RegExp(`^${yearSeg}${timezoneSeg}?$`);
-validators$1.register(strict.gYear, value => yearPattern.test(value));
+validators.register(strict.gYear, value => yearPattern.test(value));
 const yearMonthPattern = new RegExp(`^${yearSeg}-${monthSeg}${timezoneSeg}?$`);
-validators$1.register(strict.gYearMonth, value => yearMonthPattern.test(value));
+validators.register(strict.gYearMonth, value => yearMonthPattern.test(value));
 const timePattern = new RegExp(`^${timeSeg}${timezoneSeg}?$`);
-validators$1.register(strict.time, value => timePattern.test(value));
+validators.register(strict.time, value => timePattern.test(value));
 const hexBinaryPattern = /^([0-9a-fA-F]{2})*$/;
-validators$1.register(strict.hexBinary, value => hexBinaryPattern.test(value));
+validators.register(strict.hexBinary, value => hexBinaryPattern.test(value));
 const b64CharSeg = '[A-Za-z0-9+/]';
 const b16CharSeg = '[AEIMQUYcgkosw048]';
 const b04CharSeg = '[AQgw]';
@@ -5437,30 +5738,30 @@ const b64QuadSeg = `(${b64Seg}{4})`;
 const b64FinalQuadSeg = `(${b64Seg}{3}${b64CharSeg})`;
 const b64FinalSeg = `(${b64FinalQuadSeg}|${b64Padded16Seg}|${b64Padded8Seg})`;
 const b64Pattern = new RegExp(`^(${b64QuadSeg}*${b64FinalSeg})?$`);
-validators$1.register(strict.base64Binary, value => b64Pattern.test(value));
-validators$1.register(strict$2.JSON, value => {
+validators.register(strict.base64Binary, value => b64Pattern.test(value));
+validators.register(strict$2.JSON, (value) => {
     try {
         JSON.parse(value);
         return true;
     }
-    catch (e) {
+    catch {
         return false;
     }
 });
 // TODO
-validators$1.register(strict.NOTATION, () => true);
-validators$1.register(strict.QName, () => true);
-validators$1.register(strict.Name, () => true);
-validators$1.register(strict.NCName, () => true);
-validators$1.register(strict.ENTITY, () => true);
-validators$1.register(strict.ID, () => true);
-validators$1.register(strict.IDREF, () => true);
-validators$1.register(strict.NMTOKEN, () => true);
-validators$1.register(strict.ENTITIES, () => true);
-validators$1.register(strict.IDREFS, () => true);
-validators$1.register(strict.NMTOKENS, () => true);
-validators$1.register(strict$1.XMLLiteral, () => true);
-validators$1.register(strict$1.HTML, () => true);
+validators.register(strict.NOTATION, () => true);
+validators.register(strict.QName, () => true);
+validators.register(strict.Name, () => true);
+validators.register(strict.NCName, () => true);
+validators.register(strict.ENTITY, () => true);
+validators.register(strict.ID, () => true);
+validators.register(strict.IDREF, () => true);
+validators.register(strict.NMTOKEN, () => true);
+validators.register(strict.ENTITIES, () => true);
+validators.register(strict.IDREFS, () => true);
+validators.register(strict.NMTOKENS, () => true);
+validators.register(strict$1.XMLLiteral, () => true);
+validators.register(strict$1.HTML, () => true);
 
 /**
  * Validate that a term's value is valid in regards to its declared datatype.
@@ -5469,7 +5770,7 @@ function validateTerm(term) {
     if (term.termType !== 'Literal') {
         throw new Error('Cannot validate non-literal terms');
     }
-    const validator = validators$1.find(term.datatype);
+    const validator = validators.find(term.datatype);
     if (validator) {
         return validator(term.value);
     }
@@ -5532,6 +5833,7 @@ function requireDefaultGraph () {
 	    }
 	};
 	DefaultGraph.DefaultGraph = DefaultGraph$1;
+	// eslint-disable-next-line ts/naming-convention
 	DefaultGraph$1.INSTANCE = new DefaultGraph$1();
 	
 	return DefaultGraph;
@@ -5580,10 +5882,11 @@ function requireLiteral () {
 	 */
 	let Literal$1 = class Literal {
 	    constructor(value, languageOrDatatype) {
+	        var _a;
 	        this.termType = 'Literal';
 	        this.value = value;
 	        if (typeof languageOrDatatype === 'string') {
-	            this.language = languageOrDatatype;
+	            this.language = languageOrDatatype.toLowerCase();
 	            this.datatype = Literal.RDF_LANGUAGE_STRING;
 	            this.direction = '';
 	        }
@@ -5594,11 +5897,11 @@ function requireLiteral () {
 	                this.direction = '';
 	            }
 	            else {
-	                this.language = languageOrDatatype.language;
+	                this.language = languageOrDatatype.language.toLowerCase();
 	                this.datatype = languageOrDatatype.direction ?
 	                    Literal.RDF_DIRECTIONAL_LANGUAGE_STRING :
 	                    Literal.RDF_LANGUAGE_STRING;
-	                this.direction = languageOrDatatype.direction || '';
+	                this.direction = (_a = languageOrDatatype.direction) !== null && _a !== void 0 ? _a : '';
 	            }
 	        }
 	        else {
@@ -5615,8 +5918,11 @@ function requireLiteral () {
 	    }
 	};
 	Literal.Literal = Literal$1;
+	// eslint-disable-next-line ts/naming-convention
 	Literal$1.RDF_LANGUAGE_STRING = new NamedNode_1.NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
+	// eslint-disable-next-line ts/naming-convention
 	Literal$1.RDF_DIRECTIONAL_LANGUAGE_STRING = new NamedNode_1.NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString');
+	// eslint-disable-next-line ts/naming-convention
 	Literal$1.XSD_STRING = new NamedNode_1.NamedNode('http://www.w3.org/2001/XMLSchema#string');
 	
 	return Literal;
@@ -5703,9 +6009,10 @@ function requireDataFactory () {
 	 */
 	let DataFactory$1 = class DataFactory {
 	    constructor(options) {
+	        var _a;
 	        this.blankNodeCounter = 0;
-	        options = options || {};
-	        this.blankNodePrefix = options.blankNodePrefix || `df_${dataFactoryCounter++}_`;
+	        options = options !== null && options !== void 0 ? options : {};
+	        this.blankNodePrefix = (_a = options.blankNodePrefix) !== null && _a !== void 0 ? _a : `df_${dataFactoryCounter++}_`;
 	    }
 	    /**
 	     * @param value The IRI for the named node.
@@ -5723,7 +6030,7 @@ function requireDataFactory () {
 	     * @see BlankNode
 	     */
 	    blankNode(value) {
-	        return new BlankNode_1.BlankNode(value || `${this.blankNodePrefix}${this.blankNodeCounter++}`);
+	        return new BlankNode_1.BlankNode(value !== null && value !== void 0 ? value : `${this.blankNodePrefix}${this.blankNodeCounter++}`);
 	    }
 	    /**
 	     * @param value              The literal value.
@@ -5765,7 +6072,7 @@ function requireDataFactory () {
 	     * @see Quad
 	     */
 	    quad(subject, predicate, object, graph) {
-	        return new Quad_1.Quad(subject, predicate, object, graph || this.defaultGraph());
+	        return new Quad_1.Quad(subject, predicate, object, graph !== null && graph !== void 0 ? graph : this.defaultGraph());
 	    }
 	    /**
 	     * Create a deep copy of the given term using this data factory.
@@ -5777,22 +6084,30 @@ function requireDataFactory () {
 	        //  https://github.com/microsoft/TypeScript/issues/26933
 	        switch (original.termType) {
 	            case 'NamedNode':
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.namedNode(original.value);
 	            case 'BlankNode':
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.blankNode(original.value);
 	            case 'Literal':
 	                if (original.language) {
+	                    // eslint-disable-next-line ts/no-unsafe-return
 	                    return this.literal(original.value, original.language);
 	                }
 	                if (!original.datatype.equals(Literal_1.Literal.XSD_STRING)) {
+	                    // eslint-disable-next-line ts/no-unsafe-return
 	                    return this.literal(original.value, this.fromTerm(original.datatype));
 	                }
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.literal(original.value);
 	            case 'Variable':
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.variable(original.value);
 	            case 'DefaultGraph':
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.defaultGraph();
 	            case 'Quad':
+	                // eslint-disable-next-line ts/no-unsafe-return
 	                return this.quad(this.fromTerm(original.subject), this.fromTerm(original.predicate), this.fromTerm(original.object), this.fromTerm(original.graph));
 	        }
 	    }
@@ -5821,7 +6136,7 @@ var hasRequiredRdfDataFactory;
 function requireRdfDataFactory () {
 	if (hasRequiredRdfDataFactory) return rdfDataFactory;
 	hasRequiredRdfDataFactory = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (rdfDataFactory && rdfDataFactory.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -5833,17 +6148,17 @@ function requireRdfDataFactory () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (rdfDataFactory && rdfDataFactory.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (rdfDataFactory && rdfDataFactory.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		__exportStar(requireBlankNode(), exports$1);
-		__exportStar(requireDataFactory(), exports$1);
-		__exportStar(requireDefaultGraph(), exports$1);
-		__exportStar(requireLiteral(), exports$1);
-		__exportStar(requireNamedNode(), exports$1);
-		__exportStar(requireQuad(), exports$1);
-		__exportStar(requireVariable(), exports$1);
+		Object.defineProperty(exports, "__esModule", { value: true });
+		__exportStar(requireBlankNode(), exports);
+		__exportStar(requireDataFactory(), exports);
+		__exportStar(requireDefaultGraph(), exports);
+		__exportStar(requireLiteral(), exports);
+		__exportStar(requireNamedNode(), exports);
+		__exportStar(requireQuad(), exports);
+		__exportStar(requireVariable(), exports);
 		
 	} (rdfDataFactory));
 	return rdfDataFactory;
@@ -6195,7 +6510,7 @@ var hasRequiredHandler;
 function requireHandler () {
 	if (hasRequiredHandler) return handler;
 	hasRequiredHandler = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (handler && handler.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -6207,15 +6522,15 @@ function requireHandler () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (handler && handler.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (handler && handler.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		__exportStar(requireTypeHandlerBoolean(), exports$1);
-		__exportStar(requireTypeHandlerDate(), exports$1);
-		__exportStar(requireTypeHandlerNumberDouble(), exports$1);
-		__exportStar(requireTypeHandlerNumberInteger(), exports$1);
-		__exportStar(requireTypeHandlerString(), exports$1);
+		Object.defineProperty(exports, "__esModule", { value: true });
+		__exportStar(requireTypeHandlerBoolean(), exports);
+		__exportStar(requireTypeHandlerDate(), exports);
+		__exportStar(requireTypeHandlerNumberDouble(), exports);
+		__exportStar(requireTypeHandlerNumberInteger(), exports);
+		__exportStar(requireTypeHandlerString(), exports);
 		
 	} (handler));
 	return handler;
@@ -6238,7 +6553,7 @@ var hasRequiredRdfLiteral;
 function requireRdfLiteral () {
 	if (hasRequiredRdfLiteral) return rdfLiteral;
 	hasRequiredRdfLiteral = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (rdfLiteral && rdfLiteral.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -6250,21 +6565,21 @@ function requireRdfLiteral () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (rdfLiteral && rdfLiteral.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (rdfLiteral && rdfLiteral.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.fromRdf = fromRdf;
-		exports$1.toRdf = toRdf;
-		exports$1.getTermRaw = getTermRaw;
-		exports$1.getSupportedRdfDatatypes = getSupportedRdfDatatypes;
-		exports$1.getSupportedJavaScriptPrimitives = getSupportedJavaScriptPrimitives;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.fromRdf = fromRdf;
+		exports.toRdf = toRdf;
+		exports.getTermRaw = getTermRaw;
+		exports.getSupportedRdfDatatypes = getSupportedRdfDatatypes;
+		exports.getSupportedJavaScriptPrimitives = getSupportedJavaScriptPrimitives;
 		const rdf_data_factory_1 = requireRdfDataFactory();
 		const handler_1 = requireHandler();
 		const Translator_1 = requireTranslator();
-		__exportStar(requireHandler(), exports$1);
-		__exportStar(requireITypeHandler(), exports$1);
-		__exportStar(requireTranslator(), exports$1);
+		__exportStar(requireHandler(), exports);
+		__exportStar(requireITypeHandler(), exports);
+		__exportStar(requireTranslator(), exports);
 		const DF = new rdf_data_factory_1.DataFactory();
 		// Construct translator with built-in handlers
 		const translator = new Translator_1.Translator();
@@ -6334,6 +6649,7 @@ function requireRdfLiteral () {
 var rdfLiteralExports = requireRdfLiteral();
 
 const validateAnd = {
+    component: ns.sh.AndConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const andNode = constraint.getParameterValue(sh.and);
@@ -6347,12 +6663,14 @@ const validateAnd = {
     },
 };
 const validateClass = {
+    component: ns.sh.ClassConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const classNode = constraint.getParameterValue(ns.sh.class);
         return isInstanceOf(context.$data.node(valueNode), context.$data.node(classNode), context.ns);
     },
 };
 const validateClosed = {
+    component: ns.sh.ClosedConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh, xsd } = context.ns;
         const closedNode = constraint.getParameterValue(sh.closed);
@@ -6383,6 +6701,7 @@ const validateClosed = {
     validationMessage: 'Predicate is not allowed (closed shape)',
 };
 const validateDatatype = {
+    component: ns.sh.DatatypeConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const datatypeNode = constraint.getParameterValue(sh.datatype);
@@ -6396,6 +6715,7 @@ const validateDatatype = {
     validationMessage: 'Value does not have datatype {$datatype}',
 };
 const validateDisjoint = {
+    component: ns.sh.DisjointConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const disjointNode = constraint.getParameterValue(sh.disjoint);
@@ -6404,6 +6724,7 @@ const validateDisjoint = {
     validationMessage: 'Value node must not also be one of the values of {$disjoint}',
 };
 const validateEquals = {
+    component: ns.sh.EqualsConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const path = constraint.shape.pathObject;
@@ -6443,6 +6764,7 @@ const validateEquals = {
     nodeValidationMessage: 'Must have same values as {$equals}',
 };
 const validateHasValue = {
+    component: ns.sh.HasValueConstraintComponent,
     nodeValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const hasValueNode = constraint.getParameterValue(sh.hasValue);
@@ -6459,28 +6781,34 @@ const validateHasValue = {
     propertyValidationMessage: 'Missing expected value {$hasValue}',
 };
 const validateIn = {
+    component: ns.sh.InConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         return constraint.nodeSet.has(valueNode);
     },
     validationMessage: 'Value is not one of the allowed values: {$in}',
 };
 const validateLanguageIn = {
+    component: ns.sh.LanguageInConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         if (valueNode.termType !== 'Literal') {
             return false;
         }
-        const valueLanguage = valueNode.language;
-        if (!valueLanguage || valueLanguage === '') {
+        const valueLanguage = valueNode.language.toLowerCase();
+        if (!valueLanguage) {
             return false;
         }
         const languageInNode = constraint.getParameterValue(sh.languageIn);
         const allowedLanguages = rdfListToArray(context.$shapes.node(languageInNode));
-        return allowedLanguages.some(allowedLanguage => valueLanguage.startsWith(allowedLanguage.value));
+        return allowedLanguages.some(allowedLanguage => {
+            const range = allowedLanguage.value.toLowerCase();
+            return range === '*' || valueLanguage === range || valueLanguage.startsWith(`${range}-`);
+        });
     },
     validationMessage: 'Language does not match any of {$languageIn}',
 };
 const validateLessThan = {
+    component: ns.sh.LessThanConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const valuePath = constraint.shape.pathObject;
@@ -6501,6 +6829,7 @@ const validateLessThan = {
     propertyValidationMessage: 'Value is not less than value of {$lessThan}',
 };
 const validateLessThanOrEquals = {
+    component: ns.sh.LessThanOrEqualsConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const valuePath = constraint.shape.pathObject;
@@ -6521,6 +6850,7 @@ const validateLessThanOrEquals = {
     propertyValidationMessage: 'Value is not less than or equal to value of {$lessThanOrEquals}',
 };
 const validateMaxCount = {
+    component: ns.sh.MaxCountConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const path = constraint.shape.pathObject;
@@ -6531,6 +6861,7 @@ const validateMaxCount = {
     propertyValidationMessage: 'More than {$maxCount} values',
 };
 const validateMaxExclusive = {
+    component: ns.sh.MaxExclusiveConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const maxExclusiveNode = constraint.getParameterValue(sh.maxExclusive);
@@ -6540,6 +6871,7 @@ const validateMaxExclusive = {
     validationMessage: 'Value is not less than {$maxExclusive}',
 };
 const validateMaxInclusive = {
+    component: ns.sh.MaxInclusiveConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const maxInclusiveNode = constraint.getParameterValue(sh.maxInclusive);
@@ -6549,17 +6881,19 @@ const validateMaxInclusive = {
     validationMessage: 'Value is not less than or equal to {$maxInclusive}',
 };
 const validateMaxLength = {
+    component: ns.sh.MaxLengthConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         if (valueNode.termType === 'BlankNode') {
             return false;
         }
         const { sh } = context.ns;
         const maxLengthNode = constraint.getParameterValue(sh.maxLength);
-        return valueNode.value.length <= Number(maxLengthNode.value);
+        return Array.from(valueNode.value).length <= Number(maxLengthNode.value);
     },
     validationMessage: 'Value has more than {$maxLength} characters',
 };
 const validateMinCount = {
+    component: ns.sh.MinCountConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const path = constraint.pathObject;
@@ -6570,6 +6904,7 @@ const validateMinCount = {
     propertyValidationMessage: 'Less than {$minCount} values',
 };
 const validateMinExclusive = {
+    component: ns.sh.MinExclusiveConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const minExclusiveNode = constraint.getParameterValue(sh.minExclusive);
@@ -6579,6 +6914,7 @@ const validateMinExclusive = {
     validationMessage: 'Value is not greater than {$minExclusive}',
 };
 const validateMinInclusive = {
+    component: ns.sh.MinInclusiveConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const minInclusiveNode = constraint.getParameterValue(sh.minInclusive);
@@ -6588,17 +6924,19 @@ const validateMinInclusive = {
     validationMessage: 'Value is not greater than or equal to {$minInclusive}',
 };
 const validateMinLength = {
+    component: ns.sh.MinLengthConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         if (valueNode.termType === 'BlankNode') {
             return false;
         }
         const { sh } = context.ns;
         const minLengthNode = constraint.getParameterValue(sh.minLength);
-        return valueNode.value.length >= Number(minLengthNode.value);
+        return Array.from(valueNode.value).length >= Number(minLengthNode.value);
     },
     validationMessage: 'Value has less than {$minLength} characters',
 };
 const validateNodeKind = {
+    component: ns.sh.NodeKindConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const nodeKindNode = constraint.getParameterValue(sh.nodeKind);
@@ -6621,6 +6959,7 @@ const validateNodeKind = {
     validationMessage: 'Value does not have node kind {$nodeKind}',
 };
 const validateNode = {
+    component: ns.sh.NodeConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const nodeNode = constraint.getParameterValue(sh.node);
@@ -6629,6 +6968,7 @@ const validateNode = {
     validationMessage: 'Value does not have shape {$node}',
 };
 const validateNot = {
+    component: ns.sh.NotConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const notNode = constraint.getParameterValue(sh.not);
@@ -6637,6 +6977,7 @@ const validateNot = {
     validationMessage: 'Value does have shape {$not}',
 };
 const validateOr = {
+    component: ns.sh.OrConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const orNode = constraint.getParameterValue(sh.or);
@@ -6645,6 +6986,7 @@ const validateOr = {
     },
 };
 const validatePattern = {
+    component: ns.sh.PatternConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         if (valueNode.termType === 'BlankNode') {
             return false;
@@ -6652,12 +6994,32 @@ const validatePattern = {
         const { sh } = context.ns;
         const flagsNode = constraint.getParameterValue(sh.flags);
         const patternNode = constraint.getParameterValue(sh.pattern);
-        const re = flagsNode ? new RegExp(patternNode.value, flagsNode.value) : new RegExp(patternNode.value);
+        let flags = flagsNode?.value || '';
+        const pattern = flags.includes('x') ? removePatternWhitespace(patternNode.value) : patternNode.value;
+        flags = flags.replace(/x/g, '');
+        let re;
+        if (!flags.includes('u')) {
+            try {
+                re = new RegExp(pattern, `${flags}u`);
+            }
+            catch (error) {
+                if (error instanceof SyntaxError) {
+                    re = new RegExp(pattern, flags);
+                }
+                else {
+                    throw error;
+                }
+            }
+        }
+        else {
+            re = new RegExp(pattern, flags);
+        }
         return re.test(valueNode.value);
     },
     validationMessage: 'Value does not match pattern "{$pattern}"',
 };
 const validateQualifiedMaxCount = {
+    component: ns.sh.QualifiedMaxCountConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const count = validateQualifiedHelper(context, focusNode, constraint);
@@ -6667,6 +7029,7 @@ const validateQualifiedMaxCount = {
     propertyValidationMessage: 'More than {$qualifiedMaxCount} values have shape {$qualifiedValueShape}',
 };
 const validateQualifiedMinCount = {
+    component: ns.sh.QualifiedMinCountConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const count = validateQualifiedHelper(context, focusNode, constraint);
@@ -6710,6 +7073,7 @@ function validateQualifiedConformsToASibling(context, value, siblingShapes) {
     return false;
 }
 const validateUniqueLang = {
+    component: ns.sh.UniqueLangConstraintComponent,
     propertyValidate(context, focusNode, valueNode, constraint) {
         const { sh, xsd } = context.ns;
         const uniqueLangNode = constraint.getParameterValue(sh.uniqueLang);
@@ -6744,18 +7108,53 @@ const validateUniqueLang = {
     propertyValidationMessage: 'Language "{?lang}" used more than once',
 };
 const validateXone = {
+    component: ns.sh.XoneConstraintComponent,
     validate(context, focusNode, valueNode, constraint) {
         const { sh } = context.ns;
         const xoneNode = constraint.getParameterValue(sh.xone);
         const shapes = rdfListToArray(context.$shapes.node(xoneNode));
-        const conformsCount = shapes
-            .map(shape => context.nodeConformsToShape(valueNode, shape))
-            .filter(Boolean)
-            .length;
-        return conformsCount === 1;
+        const conformsPositions = [];
+        for (let i = 0; i < shapes.length; i++) {
+            const shape = shapes[i];
+            if (context.nodeConformsToShape(valueNode, shape)) {
+                conformsPositions.push(i + 1);
+            }
+        }
+        if (conformsPositions.length === 0) {
+            return ['no shapes matched'];
+        }
+        if (conformsPositions.length > 1) {
+            return ['multiple matches, at positions ' + conformsPositions.join(', ')];
+        }
+        return [];
     },
 };
 // Private helper functions
+function removePatternWhitespace(pattern) {
+    let result = '';
+    let inCharacterClass = false;
+    let escaped = false;
+    for (const character of pattern) {
+        // XPath's x flag removes only XML whitespace, before interpreting escapes.
+        if (!inCharacterClass && /[ \t\r\n]/.test(character)) {
+            continue;
+        }
+        result += character;
+        if (escaped) {
+            escaped = false;
+        }
+        else if (character === '\\') {
+            escaped = true;
+        }
+        else if (character === '[') {
+            inCharacterClass = true;
+        }
+        else if (character === ']') {
+            inCharacterClass = false;
+        }
+    }
+    return result;
+}
 /**
  * Compare 2 terms.
  *
@@ -6767,6 +7166,9 @@ const validateXone = {
  */
 function compareTerms(term1, term2, ns) {
     if (!term1 || !term2 || term1.termType !== 'Literal' || term2.termType !== 'Literal') {
+        return null;
+    }
+    if (!validateTerm(term1) || !validateTerm(term2)) {
         return null;
     }
     // Check that if one of the compared nodes is a datetime with a timezone,
@@ -6781,77 +7183,64 @@ function compareTerms(term1, term2, ns) {
         return null;
     }
     if (typeof value1 === 'string') {
-        return value1.localeCompare(value2);
+        // fromRdf also returns strings for datatypes it cannot convert. Only
+        // xsd:string literals have SPARQL's code point string ordering.
+        if (!ns.xsd.string.equals(term1.datatype) || !ns.xsd.string.equals(term2.datatype)) {
+            return null;
+        }
+        const characters1 = Array.from(value1);
+        const characters2 = Array.from(value2);
+        for (let i = 0; i < Math.min(characters1.length, characters2.length); i++) {
+            const difference = characters1[i].codePointAt(0) - characters2[i].codePointAt(0);
+            if (difference !== 0) {
+                return difference;
+            }
+        }
+        return characters1.length - characters2.length;
     }
-    else {
-        return value1 - value2;
+    // Calendar datatypes converted to Date objects are not interchangeable.
+    if (typeof value1 === 'object' && !term1.datatype.equals(term2.datatype)) {
+        return null;
     }
+    const difference = value1 - value2;
+    return Number.isNaN(difference) ? null : difference;
 }
 function hasTimezone(node, ns) {
     const pattern = /^.*(((\+|-)\d{2}:\d{2})|Z)$/;
     return ns.xsd.dateTime.equals(node.datatype) && pattern.test(node.value);
 }
-var validators = {
-    validateAnd,
-    validateClass,
-    validateClosed,
-    validateDatatype,
-    validateDisjoint,
-    validateEquals,
-    validateHasValue,
-    validateIn,
-    validateLanguageIn,
-    validateLessThan,
-    validateLessThanOrEquals,
-    validateMaxCount,
-    validateMaxExclusive,
-    validateMaxInclusive,
-    validateMaxLength,
-    validateMinCount,
-    validateMinExclusive,
-    validateMinInclusive,
-    validateMinLength,
-    validateNode,
-    validateNodeKind,
-    validateNot,
-    validateOr,
-    validatePattern,
-    validateQualifiedMaxCount,
-    validateQualifiedMinCount,
-    validateUniqueLang,
-    validateXone,
-};
 
-var defaultValidators = [
-    [ns.sh.AndConstraintComponent, validators.validateAnd],
-    [ns.sh.ClassConstraintComponent, validators.validateClass],
-    [ns.sh.ClosedConstraintComponent, validators.validateClosed],
-    [ns.sh.DatatypeConstraintComponent, validators.validateDatatype],
-    [ns.sh.DisjointConstraintComponent, validators.validateDisjoint],
-    [ns.sh.EqualsConstraintComponent, validators.validateEquals],
-    [ns.sh.HasValueConstraintComponent, validators.validateHasValue],
-    [ns.sh.InConstraintComponent, validators.validateIn],
-    [ns.sh.LanguageInConstraintComponent, validators.validateLanguageIn],
-    [ns.sh.LessThanConstraintComponent, validators.validateLessThan],
-    [ns.sh.LessThanOrEqualsConstraintComponent, validators.validateLessThanOrEquals],
-    [ns.sh.MaxCountConstraintComponent, validators.validateMaxCount],
-    [ns.sh.MaxExclusiveConstraintComponent, validators.validateMaxExclusive],
-    [ns.sh.MaxInclusiveConstraintComponent, validators.validateMaxInclusive],
-    [ns.sh.MaxLengthConstraintComponent, validators.validateMaxLength],
-    [ns.sh.MinCountConstraintComponent, validators.validateMinCount],
-    [ns.sh.MinExclusiveConstraintComponent, validators.validateMinExclusive],
-    [ns.sh.MinInclusiveConstraintComponent, validators.validateMinInclusive],
-    [ns.sh.MinLengthConstraintComponent, validators.validateMinLength],
-    [ns.sh.NodeConstraintComponent, validators.validateNode],
-    [ns.sh.NodeKindConstraintComponent, validators.validateNodeKind],
-    [ns.sh.NotConstraintComponent, validators.validateNot],
-    [ns.sh.OrConstraintComponent, validators.validateOr],
-    [ns.sh.PatternConstraintComponent, validators.validatePattern],
-    [ns.sh.QualifiedMaxCountConstraintComponent, validators.validateQualifiedMaxCount],
-    [ns.sh.QualifiedMinCountConstraintComponent, validators.validateQualifiedMinCount],
-    [ns.sh.UniqueLangConstraintComponent, validators.validateUniqueLang],
-    [ns.sh.XoneConstraintComponent, validators.validateXone],
-];
+var defaultValidators = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  validateAnd: validateAnd,
+  validateClass: validateClass,
+  validateClosed: validateClosed,
+  validateDatatype: validateDatatype,
+  validateDisjoint: validateDisjoint,
+  validateEquals: validateEquals,
+  validateHasValue: validateHasValue,
+  validateIn: validateIn,
+  validateLanguageIn: validateLanguageIn,
+  validateLessThan: validateLessThan,
+  validateLessThanOrEquals: validateLessThanOrEquals,
+  validateMaxCount: validateMaxCount,
+  validateMaxExclusive: validateMaxExclusive,
+  validateMaxInclusive: validateMaxInclusive,
+  validateMaxLength: validateMaxLength,
+  validateMinCount: validateMinCount,
+  validateMinExclusive: validateMinExclusive,
+  validateMinInclusive: validateMinInclusive,
+  validateMinLength: validateMinLength,
+  validateNode: validateNode,
+  validateNodeKind: validateNodeKind,
+  validateNot: validateNot,
+  validateOr: validateOr,
+  validatePattern: validatePattern,
+  validateQualifiedMaxCount: validateQualifiedMaxCount,
+  validateQualifiedMinCount: validateQualifiedMinCount,
+  validateUniqueLang: validateUniqueLang,
+  validateXone: validateXone
+});
 
 /**
  * Validates RDF data based on a set of RDF shapes.
@@ -6862,7 +7251,7 @@ class SHACLValidator {
      * @param shapes - Dataset containing the SHACL shapes for validation
      * @param {object} [options] - Validator options
      */
-    constructor(shapes, options) {
+    constructor(shapes, { constraintValidators = [], ...options } = {}) {
         options = options || {};
         this.factory = options.factory || factory;
         this.ns = prepareNamespaces(this.factory);
@@ -6870,8 +7259,13 @@ class SHACLValidator {
         const dataset = this.factory.dataset([...shapes]);
         this.$shapes = this.factory.clownface({ dataset });
         this.$data = this.factory.clownface();
-        this.validators = this.factory.termMap(defaultValidators);
-        this.shapesGraph = new ShapesGraph(this);
+        this.validators = this.factory.termMap([
+            ...Object.values(defaultValidators).map(toMapInit),
+            ...constraintValidators.flatMap(obj => Object.values(obj)).map(toMapInit),
+        ]);
+        this.shapesGraph = new ShapesGraph(this, {
+            additionalVocabularies: options.constraintVocabularies,
+        });
         this.validationEngine = new ValidationEngine(this, options);
         if (options.importGraph) {
             this.importGraph = options.importGraph;
@@ -6965,6 +7359,9 @@ class SHACLValidator {
         };
         await loadFromDataset(this.$shapes.dataset);
     }
+}
+function toMapInit(validator) {
+    return [validator.component, validator];
 }
 
 export { SHACLValidator as default };

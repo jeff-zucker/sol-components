@@ -1,3 +1,4 @@
+/*! vendored ical.js@2.2.1 */
 if (typeof globalThis.process === "undefined") {
   globalThis.process = {
     env: {}, browser: true, version: "", versions: { node: "" },

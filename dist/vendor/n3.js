@@ -4303,7 +4303,7 @@ var hasRequiredBuffer;
 function requireBuffer () {
 	if (hasRequiredBuffer) return buffer;
 	hasRequiredBuffer = 1;
-	(function (exports$1) {
+	(function (exports) {
 
 		const base64 = requireBase64Js();
 		const ieee754 = requireIeee754();
@@ -4312,12 +4312,12 @@ function requireBuffer () {
 		    ? Symbol['for']('nodejs.util.inspect.custom') // eslint-disable-line dot-notation
 		    : null;
 
-		exports$1.Buffer = Buffer;
-		exports$1.SlowBuffer = SlowBuffer;
-		exports$1.INSPECT_MAX_BYTES = 50;
+		exports.Buffer = Buffer;
+		exports.SlowBuffer = SlowBuffer;
+		exports.INSPECT_MAX_BYTES = 50;
 
 		const K_MAX_LENGTH = 0x7fffffff;
-		exports$1.kMaxLength = K_MAX_LENGTH;
+		exports.kMaxLength = K_MAX_LENGTH;
 
 		/**
 		 * If `Buffer.TYPED_ARRAY_SUPPORT`:
@@ -4913,7 +4913,7 @@ function requireBuffer () {
 
 		Buffer.prototype.inspect = function inspect () {
 		  let str = '';
-		  const max = exports$1.INSPECT_MAX_BYTES;
+		  const max = exports.INSPECT_MAX_BYTES;
 		  str = this.toString('hex', 0, max).replace(/(.{2})/g, '$1 ').trim();
 		  if (this.length > max) str += ' ... ';
 		  return '<Buffer ' + str + '>'
@@ -8351,6 +8351,33 @@ function requireBrowser$1 () {
 	return browser.exports;
 }
 
+var process_1;
+var hasRequiredProcess;
+
+function requireProcess () {
+	if (hasRequiredProcess) return process_1;
+	hasRequiredProcess = 1;
+
+	/* wraps the internal process module, circumventing issues with some polyfills (see #539) */
+	const process = ((base, esmKey, keys, isValid) => {
+	  if (esmKey in base && base[esmKey] === true) {
+	    let candidate;
+	    for (const key of keys) {
+	      if (!(key in base)) {
+	        continue
+	      }
+	      candidate = base[key];
+	      if (isValid(candidate)) {
+	        return candidate
+	      }
+	    }
+	  }
+	  return base
+	})(requireBrowser$1(), '__esModule', ['default', 'process'], (candidate) => 'nextTick' in candidate);
+	process_1 = process;
+	return process_1;
+}
+
 var utils;
 var hasRequiredUtils;
 
@@ -8694,7 +8721,7 @@ function requireEndOfStream () {
 
 	/* replacement start */
 
-	const process = requireBrowser$1();
+	const process = requireProcess();
 
 	/* replacement end */
 
@@ -8985,7 +9012,7 @@ function requireDestroy () {
 
 	/* replacement start */
 
-	const process = requireBrowser$1();
+	const process = requireProcess();
 
 	/* replacement end */
 
@@ -9323,8 +9350,13 @@ function requireLegacy () {
 
 	  // Don't leave dangling pipes when there are errors.
 	  function onerror(er) {
+	    var _this$listenerCount;
 	    cleanup();
-	    if (EE.listenerCount(this, 'error') === 0) {
+	    if (
+	      ((_this$listenerCount = this.listenerCount) === null || _this$listenerCount === undefined
+	        ? undefined
+	        : _this$listenerCount.call(this, 'error')) === 0
+	    ) {
 	      this.emit('error', er);
 	    }
 	  }
@@ -9657,7 +9689,7 @@ var hasRequiredSafeBuffer;
 function requireSafeBuffer () {
 	if (hasRequiredSafeBuffer) return safeBuffer.exports;
 	hasRequiredSafeBuffer = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		/* eslint-disable node/no-deprecated-api */
 		var buffer = requireBuffer();
 		var Buffer = buffer.Buffer;
@@ -9672,8 +9704,8 @@ function requireSafeBuffer () {
 		  module.exports = buffer;
 		} else {
 		  // Copy properties from require('buffer')
-		  copyProps(buffer, exports$1);
-		  exports$1.Buffer = SafeBuffer;
+		  copyProps(buffer, exports);
+		  exports.Buffer = SafeBuffer;
 		}
 
 		function SafeBuffer (arg, encodingOrOffset, length) {
@@ -10016,7 +10048,7 @@ function requireFrom () {
 
 	/* replacement start */
 
-	const process = requireBrowser$1();
+	const process = requireProcess();
 
 	/* replacement end */
 
@@ -10122,7 +10154,7 @@ function requireReadable () {
 
 	/* replacement start */
 
-	const process = requireBrowser$1();
+	const process = requireProcess();
 
 	/* replacement end */
 
@@ -11399,7 +11431,7 @@ function requireWritable () {
 
 	/* replacement start */
 
-	const process = requireBrowser$1();
+	const process = requireProcess();
 
 	/* replacement end */
 
@@ -12198,7 +12230,7 @@ var hasRequiredDuplexify;
 function requireDuplexify () {
 	if (hasRequiredDuplexify) return duplexify;
 	hasRequiredDuplexify = 1;
-	const process = requireBrowser$1()
+	const process = requireProcess()
 
 	/* replacement end */
 
@@ -12856,7 +12888,7 @@ var hasRequiredPipeline;
 function requirePipeline () {
 	if (hasRequiredPipeline) return pipeline_1;
 	hasRequiredPipeline = 1;
-	const process = requireBrowser$1()
+	const process = requireProcess()
 
 	/* replacement end */
 	// Ported from https://github.com/mafintosh/pump with

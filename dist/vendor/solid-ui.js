@@ -22,7 +22,7 @@ function getAugmentedNamespace(n) {
 			var isInstance = false;
       try {
         isInstance = this instanceof a;
-      } catch {}
+      } catch (e) {}
 			if (isInstance) {
         return Reflect.construct(f, arguments, this.constructor);
 			}
@@ -12671,7 +12671,7 @@ var hasRequiredMimeTypes;
 function requireMimeTypes () {
 	if (hasRequiredMimeTypes) return mimeTypes;
 	hasRequiredMimeTypes = 1;
-	(function (exports$1) {
+	(function (exports) {
 
 		/**
 		 * Module dependencies.
@@ -12695,17 +12695,17 @@ function requireMimeTypes () {
 		 * @public
 		 */
 
-		exports$1.charset = charset;
-		exports$1.charsets = { lookup: charset };
-		exports$1.contentType = contentType;
-		exports$1.extension = extension;
-		exports$1.extensions = Object.create(null);
-		exports$1.lookup = lookup;
-		exports$1.types = Object.create(null);
-		exports$1._extensionConflicts = [];
+		exports.charset = charset;
+		exports.charsets = { lookup: charset };
+		exports.contentType = contentType;
+		exports.extension = extension;
+		exports.extensions = Object.create(null);
+		exports.lookup = lookup;
+		exports.types = Object.create(null);
+		exports._extensionConflicts = [];
 
 		// Populate the extensions/types maps
-		populateMaps(exports$1.extensions, exports$1.types);
+		populateMaps(exports.extensions, exports.types);
 
 		/**
 		 * Get the default charset for a MIME type.
@@ -12748,7 +12748,7 @@ function requireMimeTypes () {
 		    return false
 		  }
 
-		  var mime = str.indexOf('/') === -1 ? exports$1.lookup(str) : str;
+		  var mime = str.indexOf('/') === -1 ? exports.lookup(str) : str;
 
 		  if (!mime) {
 		    return false
@@ -12756,7 +12756,7 @@ function requireMimeTypes () {
 
 		  // TODO: use content-type or other module
 		  if (mime.indexOf('charset') === -1) {
-		    var charset = exports$1.charset(mime);
+		    var charset = exports.charset(mime);
 		    if (charset) mime += '; charset=' + charset.toLowerCase();
 		  }
 
@@ -12779,7 +12779,7 @@ function requireMimeTypes () {
 		  var match = EXTRACT_TYPE_REGEXP.exec(type);
 
 		  // get extensions
-		  var exts = match && exports$1.extensions[match[1].toLowerCase()];
+		  var exts = match && exports.extensions[match[1].toLowerCase()];
 
 		  if (!exts || !exts.length) {
 		    return false
@@ -12809,7 +12809,7 @@ function requireMimeTypes () {
 		    return false
 		  }
 
-		  return exports$1.types[extension] || false
+		  return exports.types[extension] || false
 		}
 
 		/**
@@ -12843,7 +12843,7 @@ function requireMimeTypes () {
 		        type
 		      );
 		      if (legacyType !== types[extension]) {
-		        exports$1._extensionConflicts.push([extension, legacyType, types[extension]]);
+		        exports._extensionConflicts.push([extension, legacyType, types[extension]]);
 		      }
 		    }
 		  });
@@ -12865,10 +12865,10 @@ function requireMimeTypes () {
 		  var score1 = type1 ? SOURCE_RANK.indexOf(db[type1].source) : 0;
 
 		  if (
-		    exports$1.types[extension] !== 'application/octet-stream' &&
+		    exports.types[extension] !== 'application/octet-stream' &&
 		    (score0 > score1 ||
 		      (score0 === score1 &&
-		        exports$1.types[extension]?.slice(0, 12) === 'application/'))
+		        exports.types[extension]?.slice(0, 12) === 'application/'))
 		  ) {
 		    return type0
 		  }

@@ -11201,7 +11201,7 @@ var hasRequiredEntities;
 function requireEntities () {
 	if (hasRequiredEntities) return entities;
 	hasRequiredEntities = 1;
-	(function (exports$1) {
+	(function (exports) {
 
 		var freeze = requireConventions().freeze;
 
@@ -11213,7 +11213,7 @@ function requireEntities () {
 		 * @see https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references#Predefined_entities_in_XML
 		 *      Wikipedia
 		 */
-		exports$1.XML_ENTITIES = freeze({
+		exports.XML_ENTITIES = freeze({
 			amp: '&',
 			apos: "'",
 			gt: '>',
@@ -11238,7 +11238,7 @@ function requireEntities () {
 		 * @see https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references#Entities_representing_special_characters_in_XHTML
 		 *      Wikpedia (XHTML)
 		 */
-		exports$1.HTML_ENTITIES = freeze({
+		exports.HTML_ENTITIES = freeze({
 			Aacute: '\u00C1',
 			aacute: '\u00E1',
 			Abreve: '\u0102',
@@ -13371,7 +13371,7 @@ function requireEntities () {
 		 * Use `HTML_ENTITIES` instead.
 		 * @see {@link HTML_ENTITIES}
 		 */
-		exports$1.entityMap = exports$1.HTML_ENTITIES; 
+		exports.entityMap = exports.HTML_ENTITIES; 
 	} (entities));
 	return entities;
 }
@@ -22039,7 +22039,7 @@ var hasRequiredBrowserPonyfill;
 function requireBrowserPonyfill () {
 	if (hasRequiredBrowserPonyfill) return browserPonyfill.exports;
 	hasRequiredBrowserPonyfill = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		// Save global object in a variable
 		var __global__ =
 		(typeof globalThis !== 'undefined' && globalThis) ||
@@ -22058,7 +22058,7 @@ function requireBrowserPonyfill () {
 		// "globalThis" that's going to be patched
 		(function(globalThis) {
 
-		((function (exports$1) {
+		((function (exports) {
 
 		  /* eslint-disable no-prototype-builtins */
 		  var g =
@@ -22571,18 +22571,18 @@ function requireBrowserPonyfill () {
 		    return new Response(null, {status: status, headers: {location: url}})
 		  };
 
-		  exports$1.DOMException = g.DOMException;
+		  exports.DOMException = g.DOMException;
 		  try {
-		    new exports$1.DOMException();
+		    new exports.DOMException();
 		  } catch (err) {
-		    exports$1.DOMException = function(message, name) {
+		    exports.DOMException = function(message, name) {
 		      this.message = message;
 		      this.name = name;
 		      var error = Error(message);
 		      this.stack = error.stack;
 		    };
-		    exports$1.DOMException.prototype = Object.create(Error.prototype);
-		    exports$1.DOMException.prototype.constructor = exports$1.DOMException;
+		    exports.DOMException.prototype = Object.create(Error.prototype);
+		    exports.DOMException.prototype.constructor = exports.DOMException;
 		  }
 
 		  function fetch(input, init) {
@@ -22590,7 +22590,7 @@ function requireBrowserPonyfill () {
 		      var request = new Request(input, init);
 
 		      if (request.signal && request.signal.aborted) {
-		        return reject(new exports$1.DOMException('Aborted', 'AbortError'))
+		        return reject(new exports.DOMException('Aborted', 'AbortError'))
 		      }
 
 		      var xhr = new XMLHttpRequest();
@@ -22632,7 +22632,7 @@ function requireBrowserPonyfill () {
 
 		      xhr.onabort = function() {
 		        setTimeout(function() {
-		          reject(new exports$1.DOMException('Aborted', 'AbortError'));
+		          reject(new exports.DOMException('Aborted', 'AbortError'));
 		        }, 0);
 		      };
 
@@ -22703,12 +22703,12 @@ function requireBrowserPonyfill () {
 		    g.Response = Response;
 		  }
 
-		  exports$1.Headers = Headers;
-		  exports$1.Request = Request;
-		  exports$1.Response = Response;
-		  exports$1.fetch = fetch;
+		  exports.Headers = Headers;
+		  exports.Request = Request;
+		  exports.Response = Response;
+		  exports.fetch = fetch;
 
-		  return exports$1;
+		  return exports;
 
 		}))({});
 		})(__globalThis__);
@@ -22717,13 +22717,13 @@ function requireBrowserPonyfill () {
 		delete __globalThis__.fetch.polyfill;
 		// Choose between native implementation (__global__) or custom implementation (__globalThis__)
 		var ctx = __global__.fetch ? __global__ : __globalThis__;
-		exports$1 = ctx.fetch; // To enable: import fetch from 'cross-fetch'
-		exports$1.default = ctx.fetch; // For TypeScript consumers without esModuleInterop.
-		exports$1.fetch = ctx.fetch; // To enable: import {fetch} from 'cross-fetch'
-		exports$1.Headers = ctx.Headers;
-		exports$1.Request = ctx.Request;
-		exports$1.Response = ctx.Response;
-		module.exports = exports$1; 
+		exports = ctx.fetch; // To enable: import fetch from 'cross-fetch'
+		exports.default = ctx.fetch; // For TypeScript consumers without esModuleInterop.
+		exports.fetch = ctx.fetch; // To enable: import {fetch} from 'cross-fetch'
+		exports.Headers = ctx.Headers;
+		exports.Request = ctx.Request;
+		exports.Response = ctx.Response;
+		module.exports = exports; 
 	} (browserPonyfill, browserPonyfill.exports));
 	return browserPonyfill.exports;
 }
@@ -28289,7 +28289,7 @@ var hasRequiredLib;
 function requireLib () {
 	if (hasRequiredLib) return lib;
 	hasRequiredLib = 1;
-	(function (exports$1) {
+	(function (exports) {
 
 		const RDFC10 = requireRDFC10();
 		const RDFC10Sync = requireRDFC10Sync();
@@ -28301,7 +28301,7 @@ function requireLib () {
 		      if(typeof input !== 'string') {
 		        throw new Error('N-Quads input must be a string.');
 		      }
-		      return exports$1.NQuads.parse(input);
+		      return exports.NQuads.parse(input);
 		    }
 		    throw new Error(
 		      `Unknown canonicalization input format: "${options.inputFormat}".`);
@@ -28328,8 +28328,8 @@ function requireLib () {
 		}
 
 		// expose helpers
-		exports$1.NQuads = requireNQuads$1();
-		exports$1.IdentifierIssuer = requireIdentifierIssuer();
+		exports.NQuads = requireNQuads$1();
+		exports.IdentifierIssuer = requireIdentifierIssuer();
 
 		/**
 		 * Asynchronously canonizes an RDF dataset.
@@ -28380,7 +28380,7 @@ function requireLib () {
 		 * @returns {Promise<object>} - A Promise that resolves to the canonicalized
 		 *   RDF Dataset.
 		 */
-		exports$1.canonize = async function(input, options = {}) {
+		exports.canonize = async function(input, options = {}) {
 		  const dataset = _inputToDataset(input, options);
 		  _checkOutputFormat(options);
 
@@ -28454,7 +28454,7 @@ function requireLib () {
 		 * @returns {Promise<object>} - A Promise that resolves to the canonicalized
 		 *   RDF Dataset.
 		 */
-		exports$1._canonizeSync = function(input, options = {}) {
+		exports._canonizeSync = function(input, options = {}) {
 		  const dataset = _inputToDataset(input, options);
 		  _checkOutputFormat(options);
 
