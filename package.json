@@ -63,9 +63,9 @@
     "build:manifest": "node tools/build-manifest.mjs"
   },
   "dependencies": {
-    "dompurify": "^3.4.17",
+    "dompurify": "^3.5.0",
     "ical.js": "^2.2.1",
-    "marked": "^18.0.0",
+    "marked": "^18.3.0",
     "rdflib": "^2.4.1"
   },
   "peerDependencies": {
@@ -120,8 +120,8 @@
     "rdf-validate-shacl": "^0.6.5",
     "rollup": "^4.13.0",
     "shaclc-write": "^1.6.3",
-    "solid-logic": "^6.0.0",
-    "solid-ui": "^5.0.1"
+    "solid-logic": "^6.2.0",
+    "solid-ui": "^5.1.0"
   },
   "jest": {
     "testEnvironment": "node",
